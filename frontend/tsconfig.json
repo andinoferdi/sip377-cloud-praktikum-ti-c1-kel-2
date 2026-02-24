@@ -1,0 +1,104 @@
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/layout/*": [
+        "./src/features/dashboard/components/layout/*"
+      ],
+      "@/context/*": [
+        "./src/app/_shared/providers/*"
+      ],
+      "@/lib/zod/*": [
+        "./src/features/auth/schemas/*"
+      ],
+      "@/components/common/*": [
+        "./src/features/dashboard/components/common/*"
+      ],
+      "@/components/form/*": [
+        "./src/features/dashboard/components/form/*"
+      ],
+      "@/components/ecommerce/*": [
+        "./src/features/dashboard/components/ecommerce/*"
+      ],
+      "@/components/charts/*": [
+        "./src/features/dashboard/components/charts/*"
+      ],
+      "@/components/tables/*": [
+        "./src/features/dashboard/components/tables/*"
+      ],
+      "@/components/chats/*": [
+        "./src/features/dashboard/components/chats/*"
+      ],
+      "@/components/calendar/*": [
+        "./src/features/dashboard/components/calendar/*"
+      ],
+      "@/components/example/*": [
+        "./src/features/dashboard/components/example/*"
+      ],
+      "@/components/header/*": [
+        "./src/features/dashboard/components/header/*"
+      ],
+      "@/components/user-profile/*": [
+        "./src/features/dashboard/components/user-profile/*"
+      ],
+      "@/components/videos/*": [
+        "./src/features/dashboard/components/videos/*"
+      ],
+      "@/components/ai-text-generator/*": [
+        "./src/features/dashboard/components/ai-text-generator/*"
+      ],
+      "@/components/sections/*": [
+        "./src/features/marketing/components/sections/*"
+      ],
+      "@/components/layout/*": [
+        "./src/components/layout/*"
+      ],
+      "@/components/generator/*": [
+        "./src/features/ai/components/generator/*"
+      ],
+      "@/components/auth/*": [
+        "./src/features/auth/components/*"
+      ],
+      "@/components/gradient-blob": [
+        "./src/features/marketing/components/gradient-blob"
+      ],
+      "@/components/copy-to-clipboard": [
+        "./src/features/ai/components/copy-to-clipboard"
+      ],
+      "@/*": [
+        "./src/*"
+      ]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}
