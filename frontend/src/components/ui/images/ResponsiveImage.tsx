@@ -1,0 +1,18 @@
+import Image from "next/image";
+import React from "react";
+
+export default function ResponsiveImage() {
+  return (
+    <div className="relative">
+      <div className="overflow-hidden">
+        <Image
+          src="/images/grid-image/image-01.png"
+          alt="Cover"
+          className="w-full border border-[var(--token-gray-200)] rounded-xl dark:border-[var(--color-border-dark-soft)]"
+          width={1054}
+          height={600}
+        />
+      </div>
+    </div>
+  );
+}
