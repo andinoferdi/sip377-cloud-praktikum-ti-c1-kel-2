@@ -38,7 +38,7 @@ export default function BrandLogo({
     <span className={cn("inline-flex items-center gap-2", className)}>
       <Image
         src="/images/Logo.png"
-        alt="SIPOS Logo"
+        alt="CloudTrack Campus Logo"
         width={iconSize}
         height={iconSize}
         priority={priority}
@@ -52,7 +52,7 @@ export default function BrandLogo({
             textClassName
           )}
         >
-          SIPOS
+          CloudTrack Campus
         </span>
       )}
     </span>

@@ -1,35 +1,14 @@
-export type MarketingNavHash = '' | '#features' | '#pricing' | '#help';
-
 export const navItems = [
   {
-    type: 'link',
-    href: '/',
-    label: 'Home',
-    hash: '',
+    href: "/#alur",
+    label: "Alur",
   },
   {
-    type: 'link',
-    label: 'Features',
-    href: '/#features',
-    hash: '#features',
+    href: "/#simulasi",
+    label: "Simulasi",
   },
   {
-    type: 'link',
-    label: 'Pricing',
-    href: '/#pricing',
-    hash: '#pricing',
+    href: "/#kontrak",
+    label: "Kontrak",
   },
-  {
-    type: 'link',
-    label: 'Help',
-    href: '/#help',
-    hash: '#help',
-  },
-] satisfies NavItem[];
-
-type NavItem = {
-  type: 'link';
-  href: string;
-  label: string;
-  hash: MarketingNavHash;
-};
+] as const;

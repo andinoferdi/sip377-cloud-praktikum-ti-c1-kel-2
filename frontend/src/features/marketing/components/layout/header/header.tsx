@@ -3,10 +3,9 @@ import { CloseIcon, MenuIcon } from '@/icons/icons';
 import BrandLogo from '@/components/ui/brand-logo';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import DesktopNav from './desktop-nav';
-import MainMobileNav from './main-mobile-nav';
 import ThemeToggle from './theme-toggle';
 import { usePathname } from 'next/navigation';
+import { navItems } from './nav-items';
 
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -20,14 +19,9 @@ export default function Header() {
   }, [pathname]);
 
   useEffect(() => {
-    const closeOnHashChange = () => {
-      setMobileMenuOpen(false);
-    };
-
-    window.addEventListener('hashchange', closeOnHashChange);
-    return () => {
-      window.removeEventListener('hashchange', closeOnHashChange);
-    };
+    const closeMenu = () => setMobileMenuOpen(false);
+    window.addEventListener('hashchange', closeMenu);
+    return () => window.removeEventListener('hashchange', closeMenu);
   }, []);
 
   useEffect(() => {
@@ -64,7 +58,17 @@ export default function Header() {
             </Link>
           </div>
 
-          <DesktopNav />
+          <nav className="hidden lg:flex lg:items-center gap-2 bg-[var(--color-gray-50)] dark:bg-[var(--color-surface-dark-elevated)] rounded-full p-1 max-h-fit">
+            {navItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="text-[var(--token-gray-600)] dark:text-[var(--token-gray-300)] text-sm px-4 py-1.5 rounded-full hover:text-primary-600 dark:hover:text-primary-300 hover:bg-[var(--token-white)] dark:hover:bg-[var(--token-white-5)] font-medium transition-colors"
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
 
           <div className="flex items-center gap-4 justify-self-end">
             <ThemeToggle />
@@ -79,28 +83,26 @@ export default function Header() {
             >
               {mobileMenuOpen ? <CloseIcon /> : <MenuIcon />}
             </button>
-
-            <Link
-              href="/login"
-              className="text-sm hidden lg:block font-medium text-[var(--token-gray-700)] dark:text-[var(--token-gray-400)] hover:text-primary-500"
-            >
-              Login
-            </Link>
-
-            <Link
-              href="/register"
-              className="lg:inline-flex items-center px-5 py-3 gradient-btn hidden text-sm text-[var(--token-white)] rounded-full button-bg h-11"
-            >
-              Register
-            </Link>
           </div>
         </div>
       </div>
 
-      <MainMobileNav
-        isOpen={mobileMenuOpen}
-        onNavigate={() => setMobileMenuOpen(false)}
-      />
+      {mobileMenuOpen && (
+        <div className="lg:hidden absolute top-full left-0 right-0 border-b border-[var(--token-gray-200)] dark:border-[var(--color-border-dark-soft)] bg-[var(--token-white)] dark:bg-[var(--color-surface-dark-base)]">
+          <nav className="px-4 py-4 space-y-1">
+            {navItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="block rounded-lg px-3 py-2 text-sm font-medium text-[var(--token-gray-700)] dark:text-[var(--token-gray-300)] hover:bg-[var(--token-gray-100)] dark:hover:bg-[var(--token-white-5)]"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+        </div>
+      )}
     </header>
   );
 }
