@@ -250,21 +250,11 @@ html.theme-switching *::after {
 
 [data-theme="dark"] .marketing-dark-canvas {
   background-color: var(--color-marketing-dark-canvas);
-  background-image:
-    radial-gradient(
-      60% 45% at 78% 18%,
-      color-mix(in oklab, var(--color-primary-500) 24%, transparent) 0%,
-      transparent 72%
-    ),
-    radial-gradient(
-      46% 38% at 15% -2%,
-      color-mix(in oklab, var(--color-primary-600) 18%, transparent) 0%,
-      transparent 70%
-    );
+  background-image: none;
 }
 
 [data-theme="dark"] .marketing-dark-canvas::before {
-  content: "";
+  content: none;
   position: absolute;
   inset: 0;
   z-index: 0;

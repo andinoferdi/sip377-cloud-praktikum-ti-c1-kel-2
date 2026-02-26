@@ -23,7 +23,7 @@ describe("fetcher", () => {
       }),
     );
 
-    const result = await fetcher<{ status: string }>("/api/health");
+    const result = await fetcher<{ status: string }>("/mock-endpoint");
 
     expect(result).toEqual({ status: "ok" });
   });
@@ -36,7 +36,7 @@ describe("fetcher", () => {
       }),
     );
 
-    await fetcher<{ ok: boolean }>("/api/health", {
+    await fetcher<{ ok: boolean }>("/mock-endpoint", {
       method: "POST",
       json: { ok: true },
     });
@@ -54,7 +54,7 @@ describe("fetcher", () => {
       }),
     );
 
-    await fetcher<{ ok: boolean }>("/api/health", {
+    await fetcher<{ ok: boolean }>("/mock-endpoint", {
       method: "POST",
       body: "raw-body",
     });
@@ -73,7 +73,7 @@ describe("fetcher", () => {
       }),
     );
 
-    await expect(fetcher("/api/health")).rejects.toMatchObject({
+    await expect(fetcher("/mock-endpoint")).rejects.toMatchObject({
       name: "ApiError",
       message: "Invalid payload",
       status: 422,
@@ -88,7 +88,7 @@ describe("fetcher", () => {
       }),
     );
 
-    await expect(fetcher("/api/health")).rejects.toMatchObject({
+    await expect(fetcher("/mock-endpoint")).rejects.toMatchObject({
       name: "ApiError",
       message: "Service unavailable",
       status: 503,
@@ -98,7 +98,7 @@ describe("fetcher", () => {
   it("throws ApiError with status 0 on network error", async () => {
     fetchMock.mockRejectedValueOnce(new Error("Network failed"));
 
-    await expect(fetcher("/api/health")).rejects.toEqual(
+    await expect(fetcher("/mock-endpoint")).rejects.toEqual(
       expect.objectContaining<ApiError>({
         name: "ApiError",
         message: "Network failed",

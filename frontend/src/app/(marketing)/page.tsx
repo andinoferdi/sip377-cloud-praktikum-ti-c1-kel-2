@@ -1,5 +1,5 @@
-import PosLanding from '@/features/marketing/components/sections/pos-landing';
+import PresencePage from "@/features/presence/components/presence-page";
 
 export default async function Home() {
-  return <PosLanding />;
+  return <PresencePage />;
 }
