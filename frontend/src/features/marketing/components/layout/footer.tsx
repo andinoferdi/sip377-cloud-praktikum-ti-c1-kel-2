@@ -12,8 +12,8 @@ export default function Footer() {
               <BrandLogo size="md" />
             </Link>
             <p className="mt-2 max-w-xl text-sm text-(--token-gray-600) dark:text-(--token-gray-300)">
-              Front-end demo Modul 1 presensi QR dinamis. Seluruh interaksi pada
-              halaman ini berjalan menggunakan simulasi lokal.
+              Front-end demo Modul 1 presensi QR dinamis dengan dukungan mode
+              mock lokal dan mode GAS.
             </p>
           </div>
 

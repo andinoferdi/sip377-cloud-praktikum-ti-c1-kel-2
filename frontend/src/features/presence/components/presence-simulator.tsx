@@ -191,8 +191,9 @@ export default function PresenceSimulator() {
             Simulasi Interaktif
           </h2>
           <p className="mt-2 max-w-3xl text-sm text-(--token-gray-600) dark:text-(--token-gray-300)">
-            Simulasi ini menggunakan state lokal untuk meniru perilaku endpoint
-            Modul 1. Data akan hilang saat halaman dimuat ulang.
+            Gunakan mode mock untuk simulasi lokal, atau mode GAS untuk request
+            langsung ke backend deployment. Data mode mock akan hilang saat
+            halaman dimuat ulang.
           </p>
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <Button

@@ -30,8 +30,8 @@ export default function PresenceFlow() {
             Alur End-to-End
           </h2>
           <p className="mt-2 max-w-3xl text-sm text-(--token-gray-600) dark:text-(--token-gray-300)">
-            Urutan proses berikut dipakai sebagai acuan simulasi UI pada tahap
-            awal, sebelum backend GAS tersedia.
+            Urutan proses berikut dipakai sebagai acuan demo UI. Anda bisa
+            mengujinya di mode mock atau mode GAS.
           </p>
         </div>
         <div className="grid gap-3 md:grid-cols-2">

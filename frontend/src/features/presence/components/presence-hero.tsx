@@ -13,19 +13,19 @@ export default function PresenceHero() {
               CloudTrack Campus - Demo UI Presensi QR Dinamis
             </h1>
             <p className="mt-4 max-w-3xl text-sm leading-6 text-(--token-gray-600) dark:text-(--token-gray-300) md:text-base">
-              Halaman ini fokus pada alur front-end. Backend Google Apps Script
-              belum dihubungkan, sehingga semua aksi generate token, check-in,
-              dan cek status masih berjalan dengan state lokal di browser.
+              Halaman ini fokus pada alur front-end Modul 1. Anda dapat
+              menjalankan simulasi dalam mode mock lokal atau langsung ke
+              backend Google Apps Script melalui mode GAS.
             </p>
             <div className="mt-6 flex flex-wrap gap-2 text-xs font-medium">
               <span className="rounded-full border border-soft px-3 py-1 text-(--token-gray-700) dark:text-(--token-gray-300)">
                 Tema utama ungu dipertahankan
               </span>
               <span className="rounded-full border border-soft px-3 py-1 text-(--token-gray-700) dark:text-(--token-gray-300)">
-                Respons API mock mengikuti format standar
+                Kontrak respons mengikuti format standar
               </span>
               <span className="rounded-full border border-soft px-3 py-1 text-(--token-gray-700) dark:text-(--token-gray-300)">
-                Siap disambungkan ke backend GAS
+                Mode GAS siap dipakai
               </span>
             </div>
           </div>

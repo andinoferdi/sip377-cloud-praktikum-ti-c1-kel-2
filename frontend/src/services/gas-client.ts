@@ -15,9 +15,8 @@ function trimTrailingSlash(value: string) {
   return value.replace(/\/+$/, "");
 }
 
-function normalizePath(path: string) {
-  if (!path) return "";
-  return path.startsWith("/") ? path : `/${path}`;
+function normalizeGasPath(path: string) {
+  return path.replace(/^\/+/, "");
 }
 
 export function getGasBaseUrl() {
@@ -36,7 +35,12 @@ export function buildGasUrl(path: string, query?: QueryParams) {
     );
   }
 
-  const url = new URL(`${trimTrailingSlash(base)}${normalizePath(path)}`);
+  const url = new URL(trimTrailingSlash(base));
+  const normalizedPath = normalizeGasPath(path);
+
+  if (normalizedPath) {
+    url.searchParams.set("path", normalizedPath);
+  }
 
   if (query) {
     for (const [key, value] of Object.entries(query)) {
@@ -55,9 +59,18 @@ export async function requestGas<T>(
   const method = options.method ?? "GET";
   const url = buildGasUrl(path, options.query);
 
+  if (method === "POST" && options.json !== undefined) {
+    return fetcher<T>(url, {
+      method,
+      body: JSON.stringify(options.json),
+      redirect: "follow",
+      signal: options.signal,
+    });
+  }
+
   return fetcher<T>(url, {
     method,
-    json: options.json,
+    redirect: "follow",
     signal: options.signal,
   });
 }
