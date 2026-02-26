@@ -1,9 +1,15 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { QRCodeSVG } from "qrcode.react";
 import Button from "@/components/ui/button/Button";
 import { Card } from "@/components/ui/card/card";
 import { Input } from "@/components/ui/inputs";
+import {
+  formatRemainingSeconds,
+  getNextRefreshAt,
+  isTokenExpired,
+} from "@/features/presence/lib/presence-token-timing";
 import { createPresenceSimulationEngine } from "@/features/presence/lib/mock-presence-engine";
 import { presenceGasService } from "@/features/presence/services/presence-gas-service";
 import type {
@@ -23,7 +29,17 @@ type SummaryState = {
   last_ts: string | null;
 };
 
+type QrState = {
+  qrToken: string | null;
+  expiresAt: string | null;
+  isExpired: boolean;
+  autoRefreshEnabled: boolean;
+  nextRefreshAt: string | null;
+};
+
 type SimulatorMode = "mock" | "gas";
+
+type GenerateReason = "manual" | "auto";
 
 function getCurrentIsoTimestamp() {
   return new Date().toISOString();
@@ -52,7 +68,9 @@ const DEFAULT_STATUS_FORM: StatusRequest = {
 
 export default function PresenceSimulator() {
   const engine = useRef(createPresenceSimulationEngine());
+  const autoRefreshRunningRef = useRef(false);
   const gasEnabled = hasGasBaseUrl();
+
   const [generateForm, setGenerateForm] = useState(DEFAULT_GENERATE_FORM);
   const [checkInForm, setCheckInForm] = useState(DEFAULT_CHECKIN_FORM);
   const [statusForm, setStatusForm] = useState(DEFAULT_STATUS_FORM);
@@ -64,6 +82,13 @@ export default function PresenceSimulator() {
     presence_id: null,
     status: null,
     last_ts: null,
+  });
+  const [qrState, setQrState] = useState<QrState>({
+    qrToken: null,
+    expiresAt: null,
+    isExpired: false,
+    autoRefreshEnabled: true,
+    nextRefreshAt: null,
   });
   const [lastResponse, setLastResponse] = useState<ApiResponse<unknown> | null>(
     null,
@@ -77,13 +102,42 @@ export default function PresenceSimulator() {
     return JSON.stringify(lastResponse, null, 2);
   }, [lastResponse]);
 
-  const handleGenerateToken = async () => {
+  const setQrFromGenerateResponse = (token: string, expiresAt: string) => {
+    setQrState((previous) => {
+      const expired = isTokenExpired(expiresAt);
+      return {
+        ...previous,
+        qrToken: token,
+        expiresAt,
+        isExpired: expired,
+        nextRefreshAt: getNextRefreshAt(expiresAt, previous.autoRefreshEnabled),
+      };
+    });
+  };
+
+  const generateToken = useCallback(async (reason: GenerateReason = "manual") => {
+    if (isSubmitting) {
+      return;
+    }
+
+    const payload: GenerateQrRequest = {
+      ...generateForm,
+      ts: getCurrentIsoTimestamp(),
+    };
+
+    if (reason === "auto") {
+      autoRefreshRunningRef.current = true;
+    }
+
+    setGenerateForm((previous) => ({ ...previous, ts: payload.ts }));
     setIsSubmitting(true);
+
     try {
       const response =
         mode === "gas"
-          ? await presenceGasService.generateToken(generateForm)
-          : engine.current.generateToken(generateForm);
+          ? await presenceGasService.generateToken(payload)
+          : engine.current.generateToken(payload);
+
       setLastResponse(response);
 
       if (!response.ok) {
@@ -96,18 +150,20 @@ export default function PresenceSimulator() {
         expires_at: response.data.expires_at,
       }));
 
+      setQrFromGenerateResponse(response.data.qr_token, response.data.expires_at);
+
       setCheckInForm((previous) => ({
         ...previous,
-        course_id: generateForm.course_id,
-        session_id: generateForm.session_id,
+        course_id: payload.course_id,
+        session_id: payload.session_id,
         qr_token: response.data.qr_token,
         ts: getCurrentIsoTimestamp(),
       }));
 
       setStatusForm((previous) => ({
         ...previous,
-        course_id: generateForm.course_id,
-        session_id: generateForm.session_id,
+        course_id: payload.course_id,
+        session_id: payload.session_id,
       }));
     } catch (error) {
       setLastResponse({
@@ -116,7 +172,14 @@ export default function PresenceSimulator() {
       });
     } finally {
       setIsSubmitting(false);
+      if (reason === "auto") {
+        autoRefreshRunningRef.current = false;
+      }
     }
+  }, [generateForm, isSubmitting, mode]);
+
+  const handleGenerateToken = async () => {
+    await generateToken("manual");
   };
 
   const handleCheckIn = async () => {
@@ -182,6 +245,58 @@ export default function PresenceSimulator() {
       setIsSubmitting(false);
     }
   };
+
+  useEffect(() => {
+    if (!qrState.expiresAt) {
+      return;
+    }
+
+    const updateStatus = () => {
+      const expired = isTokenExpired(qrState.expiresAt);
+      setQrState((previous) => {
+        if (previous.expiresAt !== qrState.expiresAt || previous.isExpired === expired) {
+          return previous;
+        }
+        return {
+          ...previous,
+          isExpired: expired,
+        };
+      });
+    };
+
+    updateStatus();
+    const intervalId = window.setInterval(updateStatus, 1000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [qrState.expiresAt]);
+
+  useEffect(() => {
+    if (!qrState.autoRefreshEnabled || !qrState.expiresAt || !qrState.qrToken) {
+      return;
+    }
+
+    const expiresAtMs = Date.parse(qrState.expiresAt);
+    if (Number.isNaN(expiresAtMs)) {
+      return;
+    }
+
+    const timeoutMs = Math.max(expiresAtMs - Date.now(), 0);
+
+    const timeoutId = window.setTimeout(() => {
+      if (autoRefreshRunningRef.current) {
+        return;
+      }
+      void generateToken("auto");
+    }, timeoutMs);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [qrState.autoRefreshEnabled, qrState.expiresAt, qrState.qrToken, generateToken]);
+
+  const remainingSeconds = formatRemainingSeconds(qrState.expiresAt);
 
   return (
     <section id="simulasi" className="scroll-mt-28 py-10 md:py-14">
@@ -281,7 +396,7 @@ export default function PresenceSimulator() {
                   }
                 />
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
@@ -303,6 +418,59 @@ export default function PresenceSimulator() {
                 >
                   {isSubmitting ? "Memproses..." : "Generate"}
                 </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-full"
+                  onClick={() => void generateToken("manual")}
+                  disabled={isSubmitting || !qrState.qrToken}
+                >
+                  Refresh sekarang
+                </Button>
+              </div>
+
+              <div className="rounded-xl border border-soft p-4">
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <p className="text-xs font-medium text-(--token-gray-600) dark:text-(--token-gray-300)">
+                    QR Presensi (token-only)
+                  </p>
+                  <span
+                    className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                      qrState.isExpired
+                        ? "bg-red-500/15 text-red-700 dark:text-red-300"
+                        : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+                    }`}
+                  >
+                    {qrState.isExpired ? "Expired" : "Active"}
+                  </span>
+                </div>
+
+                {qrState.qrToken ? (
+                  <div className="space-y-3">
+                    <div className="flex justify-center rounded-xl bg-white p-3">
+                      <QRCodeSVG value={qrState.qrToken} size={180} level="H" />
+                    </div>
+                    <p className="break-all text-xs font-semibold text-(--token-gray-800) dark:text-(--token-white)">
+                      {qrState.qrToken}
+                    </p>
+                    <p className="text-xs text-(--token-gray-500) dark:text-(--token-gray-400)">
+                      expires_at: {qrState.expiresAt ?? "-"}
+                    </p>
+                    <p className="text-xs text-(--token-gray-500) dark:text-(--token-gray-400)">
+                      Auto refresh tiap 2 menit {qrState.autoRefreshEnabled ? "aktif" : "nonaktif"}.
+                    </p>
+                    <p className="text-xs text-(--token-gray-500) dark:text-(--token-gray-400)">
+                      next_refresh_at: {qrState.nextRefreshAt ?? "-"}
+                    </p>
+                    <p className="text-xs text-(--token-gray-500) dark:text-(--token-gray-400)">
+                      sisa waktu: {remainingSeconds}s
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-xs text-(--token-gray-500) dark:text-(--token-gray-400)">
+                    QR belum tersedia. Klik Generate untuk membuat token baru.
+                  </p>
+                )}
               </div>
             </div>
           </Card>
