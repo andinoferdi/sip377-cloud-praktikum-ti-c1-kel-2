@@ -1,5 +1,5 @@
-import Footer from '@/features/marketing/components/layout/footer';
-import Header from '@/features/marketing/components/layout/header/header';
+import Footer from '@/app/home/components/layout/footer';
+import Header from '@/app/home/components/layout/header/header';
 import type { ReactNode } from 'react';
 
 type SiteShellProps = {

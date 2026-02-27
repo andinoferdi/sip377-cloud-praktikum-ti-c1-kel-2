@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import { ThemeProvider } from 'next-themes';
 import { Poppins } from 'next/font/google';
 import './globals.css';
-import { QueryProvider } from './_shared/providers/query-provider';
-import { ToasterProvider } from './_shared/providers/toaster';
+import { QueryProvider } from '../providers/query-provider';
+import { ToasterProvider } from '../providers/toaster';
 
 const poppins = Poppins({
   subsets: ['latin'],

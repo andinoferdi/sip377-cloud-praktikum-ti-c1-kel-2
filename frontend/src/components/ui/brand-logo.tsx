@@ -1,3 +1,4 @@
+// brand-logo.tsx
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 
@@ -19,9 +20,9 @@ const iconSizeMap: Record<BrandLogoSize, number> = {
 };
 
 const textSizeMap: Record<BrandLogoSize, string> = {
-  sm: "text-2xl",
-  md: "text-3xl",
-  lg: "text-4xl",
+  sm: "text-base",
+  md: "text-lg",
+  lg: "text-xl",
 };
 
 export default function BrandLogo({
@@ -35,10 +36,10 @@ export default function BrandLogo({
   const iconSize = iconSizeMap[size];
 
   return (
-    <span className={cn("inline-flex items-center gap-2", className)}>
+    <span className={cn("inline-flex items-center gap-2.5", className)}>
       <Image
         src="/images/Logo.png"
-        alt="CloudTrack Campus Logo"
+        alt="CloudTrack Campus"
         width={iconSize}
         height={iconSize}
         priority={priority}
@@ -47,7 +48,8 @@ export default function BrandLogo({
       {showText && (
         <span
           className={cn(
-            "font-bold leading-none tracking-tight text-primary-600 dark:text-primary-300",
+            "font-semibold leading-none tracking-tight",
+            "text-[var(--token-gray-900)] dark:text-[var(--token-white-90)]",
             textSizeMap[size],
             textClassName
           )}

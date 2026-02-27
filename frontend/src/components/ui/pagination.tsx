@@ -1,137 +1,124 @@
-'use client';
+"use client";
 
-import { cn } from '@/lib/utils';
+import { cn } from "@/lib/utils";
 
-type PropsType = {
+type PaginationProps = {
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
+  showEdges?: boolean;
+  siblingCount?: number;
 };
 
-const MAX_PAGES_SHOWN = 6;
+function getPageRange(current: number, total: number, siblings: number): (number | "...")[] {
+  const delta = siblings + 2;
+  const range: (number | "...")[] = [];
+
+  const rangeStart = Math.max(2, current - siblings);
+  const rangeEnd = Math.min(total - 1, current + siblings);
+
+  range.push(1);
+
+  if (rangeStart > 2) range.push("...");
+
+  for (let i = rangeStart; i <= rangeEnd; i++) {
+    range.push(i);
+  }
+
+  if (rangeEnd < total - 1) range.push("...");
+
+  if (total > 1) range.push(total);
+
+  return range;
+}
 
 export function Pagination({
   currentPage,
   totalPages,
   onPageChange,
-}: PropsType) {
+  siblingCount = 1,
+}: PaginationProps) {
+  if (totalPages <= 1) return null;
+
+  const pages = getPageRange(currentPage, totalPages, siblingCount);
+
+  const buttonBase = cn(
+    "inline-flex items-center justify-center h-8 min-w-8 px-2 rounded-lg text-sm font-medium",
+    "transition-colors duration-150 outline-none select-none",
+    "focus-visible:ring-2 focus-visible:ring-brand-500/30 focus-visible:ring-offset-1",
+    "disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none"
+  );
+
   return (
-    <nav
-      role="navigation"
-      aria-label="Pagination"
-      className="text-[var(--color-gray-700)] font-medium"
-    >
-      <ul className="flex items-center justify-center flex-wrap gap-2 dark:text-[var(--color-gray-400)]">
+    <nav role="navigation" aria-label="Pagination">
+      <ul className="flex items-center gap-1">
         <li>
           <button
             disabled={currentPage === 1}
             aria-label="Previous page"
             onClick={() => onPageChange(currentPage - 1)}
-            className="px-3.5 py-2 rounded-lg shadow-xs border border-[var(--color-gray-300)] hover:bg-[var(--token-gray-200-50)] dark:bg-[var(--color-gray-800)] dark:hover:bg-[var(--color-gray-800)]/50 dark:border-[var(--color-gray-700)] disabled:opacity-50 disabled:pointer-events-none"
+            className={cn(
+              buttonBase,
+              "gap-1 px-3 text-[var(--token-gray-600)] dark:text-[var(--token-gray-400)]",
+              "hover:bg-[var(--token-gray-100)] dark:hover:bg-[var(--token-white-8)]"
+            )}
           >
-            Previous
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+              <path d="M9 11L5 7l4-4" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span>Prev</span>
           </button>
         </li>
 
-        {Array.from({ length: totalPages }, (_, index) => {
-          const isActive = currentPage === index + 1;
-
-          if (totalPages > MAX_PAGES_SHOWN) {
-            if (currentPage > 3) {
-              if (index + 1 < currentPage) {
-                return null;
-              }
-
-              if (index + 1 === currentPage + 3) {
-                return (
-                  <li key={index}>
-                    <PaginationEllipsis />
-                  </li>
-                );
-              }
-
-              if (index + 1 < currentPage + 3 || index + 1 > totalPages - 2) {
-                return (
-                  <li key={index}>
-                    <PaginationButton
-                      page={index + 1}
-                      isActive={isActive}
-                      onPageChange={onPageChange}
-                    />
-                  </li>
-                );
-              }
-            }
-
-            if (index === 3) {
-              return (
-                <li key={index}>
-                  <PaginationEllipsis />
-                </li>
-              );
-            }
-
-            if (index > 2 && index < totalPages - 2) {
-              return null;
-            }
-          }
-
-          return (
-            <li key={index}>
-              <PaginationButton
-                page={index + 1}
-                isActive={isActive}
-                onPageChange={onPageChange}
-              />
+        {pages.map((page, i) =>
+          page === "..." ? (
+            <li key={`ellipsis-${i}`} aria-hidden="true">
+              <span
+                className={cn(
+                  buttonBase,
+                  "text-[var(--token-gray-400)] cursor-default"
+                )}
+              >
+                &hellip;
+              </span>
             </li>
-          );
-        })}
+          ) : (
+            <li key={page}>
+              <button
+                aria-label={`Page ${page}`}
+                aria-current={currentPage === page ? "page" : undefined}
+                onClick={() => onPageChange(page)}
+                className={cn(
+                  buttonBase,
+                  currentPage === page
+                    ? "bg-[var(--token-gray-900)] text-[var(--token-white)] dark:bg-[var(--token-white)] dark:text-[var(--token-gray-900)]"
+                    : "text-[var(--token-gray-700)] hover:bg-[var(--token-gray-100)] dark:text-[var(--token-gray-400)] dark:hover:bg-[var(--token-white-8)]"
+                )}
+              >
+                {page}
+              </button>
+            </li>
+          )
+        )}
 
         <li>
           <button
             disabled={currentPage === totalPages}
             aria-label="Next page"
             onClick={() => onPageChange(currentPage + 1)}
-            className="px-3.5 py-2 rounded-lg shadow-xs border border-[var(--color-gray-300)] hover:bg-[var(--token-gray-200-50)] dark:bg-[var(--color-gray-800)] dark:hover:bg-[var(--color-gray-800)]/50 dark:border-[var(--color-gray-700)] disabled:opacity-50 disabled:pointer-events-none"
+            className={cn(
+              buttonBase,
+              "gap-1 px-3 text-[var(--token-gray-600)] dark:text-[var(--token-gray-400)]",
+              "hover:bg-[var(--token-gray-100)] dark:hover:bg-[var(--token-white-8)]"
+            )}
           >
-            Next
+            <span>Next</span>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+              <path d="M5 11l4-4-4-4" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
           </button>
         </li>
       </ul>
     </nav>
-  );
-}
-
-function PaginationButton({
-  page,
-  isActive,
-  onPageChange,
-}: {
-  page: number;
-  isActive: boolean;
-  onPageChange: (page: number) => void;
-}) {
-  return (
-    <button
-      aria-label={`Go to page ${page}`}
-      aria-current={isActive ? 'page' : undefined}
-      className={cn(
-        'size-10 rounded-lg shrink-0',
-        isActive
-          ? 'bg-primary-500 text-[var(--token-white)]'
-          : 'hover:bg-[var(--token-gray-200-50)] dark:hover:bg-[var(--token-gray-800-80)]'
-      )}
-      onClick={() => onPageChange(page)}
-    >
-      {page}
-    </button>
-  );
-}
-
-function PaginationEllipsis() {
-  return (
-    <button className="size-10 rounded-lg shrink-0 hover:bg-[var(--token-gray-200-50)] dark:hover:bg-[var(--token-gray-800-80)] cursor-default">
-      ...
-    </button>
   );
 }

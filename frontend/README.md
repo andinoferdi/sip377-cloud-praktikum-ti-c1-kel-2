@@ -12,13 +12,14 @@ Frontend ini memakai Next.js App Router dan berfungsi sebagai client untuk meman
 Gunakan file `.env` di folder `frontend/`.
 
 ```env
-NEXT_PUBLIC_GAS_BASE_URL="https://script.google.com/macros/s/<deployment-id>/exec"
+NEXT_PUBLIC_GAS_BASE_URL="https://script.google.com/macros/s/AKfycbzHGH188OZrr8HKf7rlp-wrJIu2KJBq4mEUVsIqPQ3_f4DyV4kL93MDNumD14ynVt9Khw/exec"
 ```
 
 Catatan:
 
 1. `NEXT_PUBLIC_GAS_BASE_URL` harus mengarah ke URL deployment Web App GAS yang berakhiran `/exec`.
 2. Jika variabel ini kosong, halaman Modul 1 tetap berjalan dalam mode mock lokal.
+3. Request `POST` ke GAS dikirim sebagai `Content-Type: text/plain;charset=UTF-8` untuk menghindari preflight CORS browser pada Web App GAS.
 
 ## Menjalankan Aplikasi
 

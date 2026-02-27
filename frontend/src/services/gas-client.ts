@@ -63,6 +63,9 @@ export async function requestGas<T>(
     return fetcher<T>(url, {
       method,
       body: JSON.stringify(options.json),
+      headers: {
+        "Content-Type": "text/plain;charset=UTF-8",
+      },
       redirect: "follow",
       signal: options.signal,
     });
