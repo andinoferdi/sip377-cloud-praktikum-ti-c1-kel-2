@@ -66,8 +66,8 @@ function DialogContent({
         className={cn(
           "fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2",
           "w-full rounded-2xl border",
-          "bg-[var(--token-white)] dark:bg-[var(--color-surface-dark-elevated)]",
-          "border-[var(--token-gray-200)] dark:border-[var(--color-border-dark-soft)]",
+          "bg-(--token-white) dark:bg-(--color-surface-dark-elevated)",
+          "border-(--token-gray-200) dark:border-(--color-border-dark-soft)",
           "shadow-xl shadow-black/10 dark:shadow-black/40",
           "p-6 outline-none",
           "data-[state=open]:animate-in data-[state=closed]:animate-out",
@@ -87,9 +87,9 @@ function DialogContent({
             className={cn(
               "absolute right-4 top-4",
               "inline-flex h-7 w-7 items-center justify-center rounded-lg",
-              "text-[var(--token-gray-400)] hover:text-[var(--token-gray-700)]",
-              "hover:bg-[var(--token-gray-100)] dark:hover:bg-[var(--token-white-8)]",
-              "dark:text-[var(--token-gray-500)] dark:hover:text-[var(--token-gray-300)]",
+              "text-(--token-gray-400) hover:text-(--token-gray-700)",
+              "hover:bg-(--token-gray-100) dark:hover:bg-(--token-white-8)",
+              "dark:text-(--token-gray-500) dark:hover:text-(--token-gray-300)",
               "transition-all duration-150",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/30",
               "disabled:pointer-events-none"
@@ -125,7 +125,7 @@ function DialogFooter({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="dialog-footer"
       className={cn(
-        "flex items-center justify-end gap-2.5 mt-6 pt-5 border-t border-[var(--token-gray-100)] dark:border-[var(--color-border-dark-soft)]",
+        "flex items-center justify-end gap-2.5 mt-6 pt-5 border-t border-(--token-gray-100) dark:border-(--color-border-dark-soft)",
         className
       )}
       {...props}
@@ -141,7 +141,7 @@ function DialogTitle({
     <DialogPrimitive.Title
       data-slot="dialog-title"
       className={cn(
-        "text-base font-semibold text-[var(--token-gray-900)] dark:text-[var(--token-white-90)] leading-snug",
+        "text-base font-semibold text-(--token-gray-900) dark:text-(--token-white-90) leading-snug",
         className
       )}
       {...props}
@@ -157,7 +157,7 @@ function DialogDescription({
     <DialogPrimitive.Description
       data-slot="dialog-description"
       className={cn(
-        "text-sm text-[var(--token-gray-500)] dark:text-[var(--token-gray-400)] leading-relaxed",
+        "text-sm text-(--token-gray-500) dark:text-(--token-gray-400) leading-relaxed",
         className
       )}
       {...props}

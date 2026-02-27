@@ -59,8 +59,8 @@ export function Pagination({
             onClick={() => onPageChange(currentPage - 1)}
             className={cn(
               buttonBase,
-              "gap-1 px-3 text-[var(--token-gray-600)] dark:text-[var(--token-gray-400)]",
-              "hover:bg-[var(--token-gray-100)] dark:hover:bg-[var(--token-white-8)]"
+              "gap-1 px-3 text-(--token-gray-600) dark:text-(--token-gray-400)",
+              "hover:bg-(--token-gray-100) dark:hover:bg-(--token-white-8)"
             )}
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
@@ -76,7 +76,7 @@ export function Pagination({
               <span
                 className={cn(
                   buttonBase,
-                  "text-[var(--token-gray-400)] cursor-default"
+                  "text-(--token-gray-400) cursor-default"
                 )}
               >
                 &hellip;
@@ -91,8 +91,8 @@ export function Pagination({
                 className={cn(
                   buttonBase,
                   currentPage === page
-                    ? "bg-[var(--token-gray-900)] text-[var(--token-white)] dark:bg-[var(--token-white)] dark:text-[var(--token-gray-900)]"
-                    : "text-[var(--token-gray-700)] hover:bg-[var(--token-gray-100)] dark:text-[var(--token-gray-400)] dark:hover:bg-[var(--token-white-8)]"
+                    ? "bg-(--token-gray-900) text-(--token-white) dark:bg-(--token-white) dark:text-(--token-gray-900)"
+                    : "text-(--token-gray-700) hover:bg-(--token-gray-100) dark:text-(--token-gray-400) dark:hover:bg-(--token-white-8)"
                 )}
               >
                 {page}
@@ -108,8 +108,8 @@ export function Pagination({
             onClick={() => onPageChange(currentPage + 1)}
             className={cn(
               buttonBase,
-              "gap-1 px-3 text-[var(--token-gray-600)] dark:text-[var(--token-gray-400)]",
-              "hover:bg-[var(--token-gray-100)] dark:hover:bg-[var(--token-white-8)]"
+              "gap-1 px-3 text-(--token-gray-600) dark:text-(--token-gray-400)",
+              "hover:bg-(--token-gray-100) dark:hover:bg-(--token-white-8)"
             )}
           >
             <span>Next</span>

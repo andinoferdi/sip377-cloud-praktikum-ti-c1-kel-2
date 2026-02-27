@@ -28,7 +28,7 @@ export function PlusIcon() {
       viewBox="0 0 24 25"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className="text-xl text-[var(--token-gray-400)]"
+      className="text-xl text-(--token-gray-400)"
     >
       <g clipPath="url(#clip0_9283_3101)">
         <path
@@ -58,7 +58,7 @@ export function MinusIcon() {
       viewBox="0 0 24 25"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className="text-xl text-[var(--token-gray-400)]"
+      className="text-xl text-(--token-gray-400)"
     >
       <g clipPath="url(#clip0_9283_3094)">
         <path d="M5 11.9194V13.9194H19V11.9194H5Z" fill="currentColor" />
@@ -631,7 +631,7 @@ export function CheckIconSm() {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      className="h-4 w-4 text-[var(--token-white)]"
+      className="h-4 w-4 text-(--token-white)"
       fill="none"
       viewBox="0 0 24 24"
       stroke="currentColor"

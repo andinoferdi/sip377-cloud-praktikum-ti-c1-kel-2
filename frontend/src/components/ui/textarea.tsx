@@ -14,12 +14,12 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
         ref={ref}
         className={cn(
           "w-full rounded-xl border px-3.5 py-2.5 text-sm resize-none outline-none",
-          "text-[var(--token-gray-800)] dark:text-[var(--token-white-90)]",
-          "placeholder:text-[var(--token-gray-400)] dark:placeholder:text-[var(--token-white-30)]",
-          "border-[var(--token-gray-300)] dark:border-[var(--color-border-dark-strong)]",
-          "bg-[var(--token-white)] dark:bg-transparent",
+          "text-(--token-gray-800) dark:text-(--token-white-90)",
+          "placeholder:text-(--token-gray-400) dark:placeholder:text-(--token-white-30)",
+          "border-(--token-gray-300) dark:border-(--color-border-dark-strong)",
+          "bg-(--token-white) dark:bg-transparent",
           "transition-all duration-150",
-          "hover:border-[var(--token-gray-400)] dark:hover:border-[var(--color-border-dark-strong)]",
+          "hover:border-(--token-gray-400) dark:hover:border-(--color-border-dark-strong)",
           "focus:border-brand-400 focus:ring-3 focus:ring-brand-500/15",
           "dark:focus:border-brand-500 dark:focus:ring-brand-500/15",
           error &&
@@ -103,8 +103,8 @@ export function AutoGrowingTextArea({
     <textarea
       className={cn(
         "w-full bg-transparent outline-none resize-none text-sm",
-        "text-[var(--token-gray-800)] dark:text-[var(--token-white-90)]",
-        "placeholder:text-[var(--token-gray-400)]",
+        "text-(--token-gray-800) dark:text-(--token-white-90)",
+        "placeholder:text-(--token-gray-400)",
         className
       )}
       {...sharedProps}

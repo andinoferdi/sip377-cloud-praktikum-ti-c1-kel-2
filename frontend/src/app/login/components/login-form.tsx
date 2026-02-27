@@ -174,7 +174,7 @@ export default function LoginForm() {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="bg-primary-500 hover:bg-primary-600 transition py-3 px-6 w-full font-medium text-[var(--token-white)] text-sm rounded-full disabled:opacity-75"
+          className="gradient-btn w-full rounded-full py-3 px-6 text-sm font-semibold text-white shadow-lg shadow-primary-500/20 transition-transform hover:scale-[1.01] active:scale-[0.99] disabled:opacity-75 disabled:hover:scale-100"
         >
           {isSubmitting ? "Memproses..." : "Masuk"}
         </button>

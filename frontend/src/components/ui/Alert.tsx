@@ -124,16 +124,16 @@ const Alert: React.FC<AlertProps> = ({
       </div>
 
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-[var(--token-gray-900)] dark:text-[var(--token-white-90)] leading-snug">
+        <p className="text-sm font-semibold text-(--token-gray-900) dark:text-(--token-white-90) leading-snug">
           {title}
         </p>
-        <p className="mt-0.5 text-sm text-[var(--token-gray-600)] dark:text-[var(--token-gray-400)] leading-relaxed">
+        <p className="mt-0.5 text-sm text-(--token-gray-600) dark:text-(--token-gray-400) leading-relaxed">
           {message}
         </p>
         {showLink && (
           <Link
             href={linkHref}
-            className="mt-2 inline-block text-xs font-medium text-[var(--token-gray-600)] dark:text-[var(--token-gray-400)] underline underline-offset-2 hover:text-[var(--token-gray-900)] dark:hover:text-[var(--token-white-90)] transition-colors"
+            className="mt-2 inline-block text-xs font-medium text-(--token-gray-600) dark:text-(--token-gray-400) underline underline-offset-2 hover:text-(--token-gray-900) dark:hover:text-(--token-white-90) transition-colors"
           >
             {linkText}
           </Link>
@@ -145,7 +145,7 @@ const Alert: React.FC<AlertProps> = ({
           onClick={onDismiss}
           type="button"
           aria-label="Dismiss"
-          className="shrink-0 mt-0.5 flex h-5 w-5 items-center justify-center rounded text-[var(--token-gray-400)] hover:text-[var(--token-gray-700)] dark:hover:text-[var(--token-gray-300)] transition-colors"
+          className="shrink-0 mt-0.5 flex h-5 w-5 items-center justify-center rounded text-(--token-gray-400) hover:text-(--token-gray-700) dark:hover:text-(--token-gray-300) transition-colors"
         >
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
             <path

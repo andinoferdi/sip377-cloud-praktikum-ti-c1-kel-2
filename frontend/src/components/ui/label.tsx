@@ -13,7 +13,7 @@ const Label = React.forwardRef<HTMLLabelElement, LabelProps>(
         ref={ref}
         className={cn(
           "inline-flex items-center gap-1 text-sm font-medium",
-          "text-[var(--token-gray-700)] dark:text-[var(--token-gray-300)]",
+          "text-(--token-gray-700) dark:text-(--token-gray-300)",
           className
         )}
         {...props}
@@ -28,7 +28,7 @@ const Label = React.forwardRef<HTMLLabelElement, LabelProps>(
           </span>
         )}
         {optional && !required && (
-          <span className="text-[var(--token-gray-400)] text-xs font-normal">
+          <span className="text-(--token-gray-400) text-xs font-normal">
             (optional)
           </span>
         )}

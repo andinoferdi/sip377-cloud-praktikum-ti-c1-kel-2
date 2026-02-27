@@ -50,13 +50,14 @@ export default function AppSidebar({ role }: AppSidebarProps) {
   const pathname = usePathname();
 
   const menuItems = role === "dosen" ? DOSEN_ITEMS : MAHASISWA_ITEMS;
+  const showLabels = isExpanded || isHovered || isMobileOpen;
 
   const isActive = (path: string) =>
     pathname === path || pathname.startsWith(`${path}/`);
 
   return (
     <aside
-      className={`surface-elevated fixed left-0 top-0 z-50 mt-16 flex h-screen flex-col border-r border-soft px-5 text-(--token-gray-900) transition-all duration-300 ease-in-out lg:mt-0
+      className={`fixed left-0 top-0 z-50 mt-16 flex h-screen flex-col border-r border-soft bg-(--token-white) px-4 text-(--token-gray-900) transition-all duration-300 ease-in-out dark:bg-(--color-surface-dark-elevated) lg:mt-0
         ${
           isExpanded || isMobileOpen
             ? "w-[290px]"
@@ -69,13 +70,14 @@ export default function AppSidebar({ role }: AppSidebarProps) {
       onMouseEnter={() => !isExpanded && setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
+      {/* Logo */}
       <div
-        className={`flex py-8 ${
-          !isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
+        className={`flex py-7 ${
+          !showLabels ? "lg:justify-center" : "justify-start"
         }`}
       >
         <Link href={role === "dosen" ? "/dashboard/dosen/buat-qr" : "/dashboard/mahasiswa/scan"}>
-          {isExpanded || isHovered || isMobileOpen ? (
+          {showLabels ? (
             <BrandLogo size="md" />
           ) : (
             <BrandLogo size="sm" showText={false} />
@@ -83,47 +85,52 @@ export default function AppSidebar({ role }: AppSidebarProps) {
         </Link>
       </div>
 
+      {/* Navigation */}
       <div className="no-scrollbar flex flex-col overflow-y-auto duration-300 ease-linear">
         <nav className="mb-6">
-          <div className="flex flex-col gap-4">
-            <div>
-              <h2
-                className={`mb-4 flex text-xs uppercase leading-[20px] text-(--token-gray-400) ${
-                  !isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
-                }`}
-              >
-                {isExpanded || isHovered || isMobileOpen
-                  ? role === "dosen"
-                    ? "Menu Dosen"
-                    : "Menu Mahasiswa"
-                  : "..."}
-              </h2>
-              <ul className="flex flex-col gap-4">
-                {menuItems.map((item) => (
-                  <li key={item.path}>
-                    <Link
-                      href={item.path}
-                      className={`menu-item group ${
-                        isActive(item.path) ? "menu-item-active" : "menu-item-inactive"
+          <div className="flex flex-col gap-2">
+            {/* Section label */}
+            <h2
+              className={`mb-2 flex text-[10px] font-semibold uppercase tracking-widest text-(--token-gray-400) dark:text-(--token-gray-500) ${
+                !showLabels ? "lg:justify-center" : "justify-start px-3"
+              }`}
+            >
+              {showLabels
+                ? role === "dosen"
+                  ? "Menu Dosen"
+                  : "Menu Mahasiswa"
+                : "•••"}
+            </h2>
+
+            <ul className="flex flex-col gap-1">
+              {menuItems.map((item) => (
+                <li key={item.path}>
+                  <Link
+                    href={item.path}
+                    className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 ${
+                      !showLabels ? "lg:justify-center" : ""
+                    } ${
+                      isActive(item.path)
+                        ? "bg-primary-50 text-primary-700 shadow-sm shadow-primary-500/8 dark:bg-primary-500/10 dark:text-primary-300"
+                        : "text-(--token-gray-600) hover:bg-(--token-gray-100) hover:text-(--token-gray-900) dark:text-(--token-gray-400) dark:hover:bg-(--token-white-5) dark:hover:text-(--token-white)"
+                    }`}
+                  >
+                    <span
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors ${
+                        isActive(item.path)
+                          ? "bg-primary-100 text-primary-600 dark:bg-primary-500/20 dark:text-primary-300"
+                          : "bg-(--token-gray-100) text-(--token-gray-500) group-hover:bg-(--token-gray-200) dark:bg-(--token-white-5) dark:text-(--token-gray-400)"
                       }`}
                     >
-                      <span
-                        className={`${
-                          isActive(item.path)
-                            ? "menu-item-icon-active"
-                            : "menu-item-icon-inactive"
-                        }`}
-                      >
-                        {item.icon}
-                      </span>
-                      {(isExpanded || isHovered || isMobileOpen) && (
-                        <span className="menu-item-text">{item.name}</span>
-                      )}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
+                      {item.icon}
+                    </span>
+                    {showLabels && (
+                      <span>{item.name}</span>
+                    )}
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </div>
         </nav>
       </div>

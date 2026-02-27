@@ -35,8 +35,8 @@ const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
     );
     const isControlled = checked !== undefined;
     const isChecked = isControlled ? checked : internalChecked;
-
-    const inputId = id ?? React.useId();
+    const generatedId = React.useId();
+    const inputId = id ?? generatedId;
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       if (!isControlled) setInternalChecked(e.target.checked);
@@ -62,8 +62,8 @@ const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
             aria-hidden="true"
             className={cn(
               "h-4 w-4 rounded flex items-center justify-center transition-all duration-150",
-              "border border-[var(--token-gray-300)] bg-[var(--token-white)]",
-              "dark:border-[var(--color-border-dark-strong)] dark:bg-transparent",
+              "border border-(--token-gray-300) bg-(--token-white)",
+              "dark:border-(--color-border-dark-strong) dark:bg-transparent",
               "peer-focus-visible:ring-2 peer-focus-visible:ring-brand-500/30 peer-focus-visible:ring-offset-1",
               isChecked
                 ? "bg-brand-500 border-brand-500 dark:bg-brand-500 dark:border-brand-500"
@@ -97,7 +97,7 @@ const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
               <label
                 htmlFor={inputId}
                 className={cn(
-                  "text-sm font-medium text-[var(--token-gray-700)] dark:text-[var(--token-gray-300)] leading-none cursor-pointer",
+                  "text-sm font-medium text-(--token-gray-700) dark:text-(--token-gray-300) leading-none cursor-pointer",
                   disabled && "cursor-not-allowed",
                   labelClassName
                 )}
@@ -106,7 +106,7 @@ const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
               </label>
             )}
             {description && (
-              <p className="text-xs text-[var(--token-gray-500)] dark:text-[var(--token-gray-400)]">
+              <p className="text-xs text-(--token-gray-500) dark:text-(--token-gray-400)">
                 {description}
               </p>
             )}

@@ -52,7 +52,7 @@ const Avatar: React.FC<AvatarProps> = ({
           aria-label={status}
           className={cn(
             "absolute bottom-0 right-0 rounded-full",
-            "border-[var(--token-white)] dark:border-[var(--token-gray-900)]",
+            "border-(--token-white) dark:border-(--token-gray-900)",
             sizes.status,
             statusColorMap[status]
           )}

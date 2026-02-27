@@ -68,12 +68,12 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
         {header && (
           <div
             className={cn(
-              "border-b border-[var(--token-gray-100)] dark:border-[var(--color-border-dark-soft)]",
+              "border-b border-(--token-gray-100) dark:border-(--color-border-dark-soft)",
               sizes.section
             )}
           >
             {typeof header === "string" ? (
-              <h3 className="text-sm font-semibold text-[var(--token-gray-900)] dark:text-[var(--token-white-90)]">
+              <h3 className="text-sm font-semibold text-(--token-gray-900) dark:text-(--token-white-90)">
                 {header}
               </h3>
             ) : (
@@ -87,7 +87,7 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
         {footer && (
           <div
             className={cn(
-              "border-t border-[var(--token-gray-100)] dark:border-[var(--color-border-dark-soft)]",
+              "border-t border-(--token-gray-100) dark:border-(--color-border-dark-soft)",
               sizes.section
             )}
           >
@@ -112,7 +112,7 @@ export const CardTitle = forwardRef<HTMLHeadingElement, React.HTMLAttributes<HTM
   ({ className, ...props }, ref) => (
     <h3
       ref={ref}
-      className={cn("text-base font-semibold leading-tight text-[var(--token-gray-900)] dark:text-[var(--token-white-90)]", className)}
+      className={cn("text-base font-semibold leading-tight text-(--token-gray-900) dark:text-(--token-white-90)", className)}
       {...props}
     />
   )
@@ -123,7 +123,7 @@ export const CardDescription = forwardRef<HTMLParagraphElement, React.HTMLAttrib
   ({ className, ...props }, ref) => (
     <p
       ref={ref}
-      className={cn("text-sm text-[var(--token-gray-500)] dark:text-[var(--token-gray-400)]", className)}
+      className={cn("text-sm text-(--token-gray-500) dark:text-(--token-gray-400)", className)}
       {...props}
     />
   )

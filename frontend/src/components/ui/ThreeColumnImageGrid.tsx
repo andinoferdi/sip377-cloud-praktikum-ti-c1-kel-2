@@ -12,7 +12,7 @@ export default function ThreeColumnImageGrid() {
       {images.map((img) => (
         <div
           key={img.src}
-          className="overflow-hidden rounded-xl border border-[var(--token-gray-200)] dark:border-[var(--color-border-dark-soft)]"
+          className="overflow-hidden rounded-xl border border-(--token-gray-200) dark:border-(--color-border-dark-soft)"
         >
           <Image
             src={img.src}

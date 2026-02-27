@@ -1,14 +1,10 @@
 export const navItems = [
   {
-    href: "/#alur",
-    label: "Alur",
+    href: "/#modul",
+    label: "Modul",
   },
   {
     href: "/#kontrak",
-    label: "Kontrak",
-  },
-  {
-    href: "/login",
-    label: "Login",
+    label: "Kontrak API",
   },
 ] as const;

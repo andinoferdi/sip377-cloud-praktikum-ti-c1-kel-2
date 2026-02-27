@@ -10,7 +10,7 @@ const ThemeToggle = () => {
   return (
     <button
       onClick={toggleThemeWithTransition}
-      className="inline-flex items-center justify-center size-11 rounded-full bg-[var(--color-gray-100)] dark:bg-[var(--token-white-5)] text-[var(--color-gray-500)] dark:text-[var(--token-white-60)] hover:text-[var(--token-gray-800)] dark:hover:text-[var(--token-white-90)] hover:bg-[var(--token-gray-100)] dark:hover:bg-[var(--token-white-10)]"
+      className="inline-flex size-11 items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-(--token-gray-100) hover:text-(--token-gray-800) dark:bg-(--token-white-5) dark:text-(--token-white-60) dark:hover:bg-(--token-white-10) dark:hover:text-(--token-white-90)"
     >
       <svg
         className="size-5 dark:inline hidden"

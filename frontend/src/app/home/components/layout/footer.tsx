@@ -2,46 +2,85 @@ import BrandLogo from "@/components/ui/brand-logo";
 import { getCurrentYear } from "@/lib/utils";
 import Link from "next/link";
 
+const FOOTER_LINKS = [
+  { href: "/#modul", label: "Modul" },
+  { href: "/#kontrak", label: "Kontrak API" },
+  { href: "/login", label: "Login" },
+  { href: "/dashboard", label: "Dashboard" },
+] as const;
+
+const TECH_STACK = [
+  "Next.js 16",
+  "Google Apps Script",
+  "Google Sheets",
+  "TanStack Query",
+] as const;
+
 export default function Footer() {
   return (
-    <footer className="border-t border-soft bg-[var(--color-marketing-light-canvas)] dark:bg-[var(--color-marketing-dark-canvas)]">
-      <div className="wrapper py-8 md:py-10">
-        <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+    <footer className="border-t border-soft bg-(--color-marketing-light-canvas) dark:bg-(--color-marketing-dark-canvas)">
+      <div className="wrapper py-10 md:py-14">
+        {/* Top section */}
+        <div className="grid gap-8 md:grid-cols-[1.5fr_1fr_1fr]">
+          {/* Brand column */}
           <div>
             <Link href="/" className="inline-flex items-center">
               <BrandLogo size="md" />
             </Link>
-            <p className="mt-2 max-w-xl text-sm text-(--token-gray-600) dark:text-(--token-gray-300)">
-              Front-end demo Modul 1 presensi QR dinamis dengan login dosen dan
-              mahasiswa, terhubung ke backend GAS.
+            <p className="mt-3 max-w-sm text-sm leading-relaxed text-(--token-gray-500) dark:text-(--token-gray-400)">
+              Platform cloud computing untuk presensi QR dinamis, telemetri
+              accelerometer, dan pelacakan GPS kampus. Dibangun dalam
+              Praktik Komputasi Awan SIP377.
             </p>
           </div>
 
-          <nav className="flex flex-wrap items-center gap-3 text-sm font-medium">
-            <Link
-              href="/#alur"
-              className="rounded-full border border-soft px-3 py-1.5 text-(--token-gray-700) hover:text-primary-600 dark:text-(--token-gray-300) dark:hover:text-primary-300"
-            >
-              Alur
-            </Link>
-            <Link
-              href="/login"
-              className="rounded-full border border-soft px-3 py-1.5 text-(--token-gray-700) hover:text-primary-600 dark:text-(--token-gray-300) dark:hover:text-primary-300"
-            >
-              Login
-            </Link>
-            <Link
-              href="/dashboard"
-              className="rounded-full border border-soft px-3 py-1.5 text-(--token-gray-700) hover:text-primary-600 dark:text-(--token-gray-300) dark:hover:text-primary-300"
-            >
-              Dashboard
-            </Link>
-          </nav>
+          {/* Navigation column */}
+          <div>
+            <h4 className="text-xs font-semibold uppercase tracking-widest text-(--token-gray-400) dark:text-(--token-gray-500)">
+              Navigasi
+            </h4>
+            <ul className="mt-3 space-y-2.5">
+              {FOOTER_LINKS.map((link) => (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    className="text-sm font-medium text-(--token-gray-600) transition-colors hover:text-primary-600 dark:text-(--token-gray-300) dark:hover:text-primary-300"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Tech stack column */}
+          <div>
+            <h4 className="text-xs font-semibold uppercase tracking-widest text-(--token-gray-400) dark:text-(--token-gray-500)">
+              Tech Stack
+            </h4>
+            <ul className="mt-3 space-y-2.5">
+              {TECH_STACK.map((tech) => (
+                <li
+                  key={tech}
+                  className="text-sm text-(--token-gray-600) dark:text-(--token-gray-300)"
+                >
+                  {tech}
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
 
-        <p className="mt-6 border-t border-soft pt-4 text-xs text-(--token-gray-500) dark:text-(--token-gray-400)">
-          &copy; {getCurrentYear()} CloudTrack Campus - Demo UI Presensi QR Dinamis.
-        </p>
+        {/* Bottom bar */}
+        <div className="mt-8 flex flex-col gap-3 border-t border-soft pt-6 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs text-(--token-gray-500) dark:text-(--token-gray-400)">
+            &copy; {getCurrentYear()} CloudTrack Campus &mdash; Praktik
+            Komputasi Awan SIP377
+          </p>
+          <p className="text-xs text-(--token-gray-400) dark:text-(--token-gray-500)">
+            TI-C1 Kelompok 2
+          </p>
+        </div>
       </div>
     </footer>
   );

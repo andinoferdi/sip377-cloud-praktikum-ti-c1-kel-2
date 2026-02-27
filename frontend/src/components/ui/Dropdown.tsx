@@ -54,9 +54,9 @@ export const Dropdown: React.FC<DropdownProps> = ({
       role="menu"
       aria-orientation="vertical"
       className={cn(
-        "absolute z-50 mt-1.5 min-w-[11rem]",
-        "rounded-xl border border-[var(--token-gray-200)] dark:border-[var(--color-border-dark-soft)]",
-        "bg-[var(--token-white)] dark:bg-[var(--color-surface-dark-elevated)]",
+        "absolute z-50 mt-1.5 min-w-44",
+        "rounded-xl border border-(--token-gray-200) dark:border-(--color-border-dark-soft)",
+        "bg-(--token-white) dark:bg-(--color-surface-dark-elevated)",
         "shadow-lg shadow-black/8 dark:shadow-black/30",
         "py-1 outline-none",
         "animate-in fade-in-0 zoom-in-95 duration-100",
@@ -114,7 +114,7 @@ export const DropdownItem: React.FC<DropdownItemProps> = ({
   const content = (
     <>
       {icon && (
-        <span className="shrink-0 text-[var(--token-gray-400)]" aria-hidden="true">
+        <span className="shrink-0 text-(--token-gray-400)" aria-hidden="true">
           {icon}
         </span>
       )}

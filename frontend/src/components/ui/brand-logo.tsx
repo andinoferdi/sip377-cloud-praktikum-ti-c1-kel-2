@@ -49,7 +49,7 @@ export default function BrandLogo({
         <span
           className={cn(
             "font-semibold leading-none tracking-tight",
-            "text-[var(--token-gray-900)] dark:text-[var(--token-white-90)]",
+            "text-(--token-gray-900) dark:text-(--token-white-90)",
             textSizeMap[size],
             textClassName
           )}

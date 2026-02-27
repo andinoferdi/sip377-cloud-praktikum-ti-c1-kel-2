@@ -54,8 +54,8 @@ const Button: React.FC<ButtonProps> = ({
       disabled={isDisabled}
       className={cn(
         "inline-flex items-center justify-center font-medium rounded-lg transition-all duration-150 select-none",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--token-gray-900)]/20 focus-visible:ring-offset-2",
-        "dark:focus-visible:ring-[var(--token-white)]/20",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--token-gray-900)/20 focus-visible:ring-offset-2",
+        "dark:focus-visible:ring-(--token-white)/20",
         "disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none",
         sizeStyles[size],
         variantStyles[variant],

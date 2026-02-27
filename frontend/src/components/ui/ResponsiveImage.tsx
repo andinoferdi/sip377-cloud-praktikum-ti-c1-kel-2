@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 
 export default function ResponsiveImage() {
   return (
-    <div className="overflow-hidden rounded-xl border border-[var(--token-gray-200)] dark:border-[var(--color-border-dark-soft)]">
+    <div className="overflow-hidden rounded-xl border border-(--token-gray-200) dark:border-(--color-border-dark-soft)">
       <Image
         src="/images/grid-image/image-01.png"
         alt="Cover"

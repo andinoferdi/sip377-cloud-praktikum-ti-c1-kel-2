@@ -32,19 +32,24 @@ function DashboardContent({ children }: { children: ReactNode }) {
 
   if (!session) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center text-sm text-(--token-gray-600) dark:text-(--token-gray-300)">
-        Memuat sesi pengguna...
+      <div className="flex min-h-dvh items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary-500 border-t-transparent" />
+          <p className="text-sm text-(--token-gray-500) dark:text-(--token-gray-400)">
+            Memuat sesi pengguna…
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="dashboard-theme-scope surface-base min-h-screen xl:flex">
+    <div className="dashboard-theme-scope surface-base min-h-dvh xl:flex">
       <AppSidebar role={session.role} />
       <Backdrop />
       <div className={`flex-1 transition-all duration-300 ease-in-out ${mainContentMargin}`}>
         <AppHeader session={session} />
-        <div className="mx-auto max-w-(--breakpoint-2xl) p-4 md:p-6">{children}</div>
+        <main className="mx-auto max-w-(--breakpoint-2xl) p-4 md:p-6">{children}</main>
       </div>
     </div>
   );
