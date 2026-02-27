@@ -22,6 +22,14 @@ export function serializeAttendanceQrPayload(payload: AttendanceQrPayload) {
   return JSON.stringify(payload);
 }
 
+export function isExpiredTimestamp(expiresAt: string) {
+  const expiresAtMs = Date.parse(expiresAt);
+  if (!Number.isFinite(expiresAtMs)) {
+    return true;
+  }
+  return Date.now() >= expiresAtMs;
+}
+
 export function parseAttendanceQrPayload(rawValue: string): AttendanceQrPayload | null {
   try {
     const parsedValue = JSON.parse(rawValue) as Partial<AttendanceQrPayload>;

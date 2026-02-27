@@ -2,26 +2,27 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { Card } from "@/components/ui/card";
-import { getAuthSession } from "@/lib/auth/session";
 import StyledQr from "@/components/ui/styled-qr";
+import { getAuthSession } from "@/lib/auth/session";
 import { attendanceGasService } from "@/services/attendance-gas-service";
+import {
+  buildAttendanceSessionId,
+  isExpiredTimestamp,
+  serializeAttendanceQrPayload,
+} from "@/utils/home/attendance-qr";
 import type { AttendanceQrPayload } from "@/utils/home/attendance-types";
 import {
   readLecturerQrSessionState,
   saveLecturerQrSessionState,
 } from "@/utils/home/lecturer-qr-session";
-import {
-  buildAttendanceSessionId,
-  serializeAttendanceQrPayload,
-} from "@/utils/home/attendance-qr";
-import { QrCode, RefreshCw, Clock } from "lucide-react";
+import { Clock, QrCode, RefreshCw } from "lucide-react";
 
-const QR_ROTATION_MS = 90_000;
 const QR_TOTAL_SECONDS = 90;
+const QR_RETRY_MS = 5_000;
 
 const createQrSchema = z.object({
   course_id: z.string().trim().min(1, "course_id wajib diisi"),
@@ -46,7 +47,6 @@ const FORM_FIELDS = [
   { name: "started_at" as const, label: "Waktu Mulai", placeholder: "ISO 8601 timestamp" },
 ] as const;
 
-/* ── Info item for QR details ─────────────────────────────────────────── */
 function QrInfoItem({
   label,
   value,
@@ -74,7 +74,6 @@ function QrInfoItem({
   );
 }
 
-/* ── Status badge ─────────────────────────────────────────────────────── */
 function StatusBadge({ active }: { active: boolean }) {
   return (
     <span
@@ -95,10 +94,7 @@ function StatusBadge({ active }: { active: boolean }) {
 }
 
 export default function DosenCreateQrPage() {
-  const sessionIdentifier = useMemo(
-    () => getAuthSession()?.identifier ?? null,
-    [],
-  );
+  const sessionIdentifier = useMemo(() => getAuthSession()?.identifier ?? null, []);
   const persistedQrState = useMemo(
     () => readLecturerQrSessionState(sessionIdentifier),
     [sessionIdentifier],
@@ -113,9 +109,12 @@ export default function DosenCreateQrPage() {
     persistedQrState?.active_payload ?? null,
   );
   const [nextRotationAt, setNextRotationAt] = useState<string | null>(
-    persistedQrState?.next_rotation_at ?? null,
+    persistedQrState?.active_payload?.expires_at ?? persistedQrState?.next_rotation_at ?? null,
   );
   const [countdown, setCountdown] = useState<number | null>(null);
+  const [rotationError, setRotationError] = useState<string | null>(null);
+
+  const rotationTimerRef = useRef<number | null>(null);
 
   const generateMutation = useMutation({
     mutationFn: async (values: CreateQrForm) => {
@@ -147,11 +146,10 @@ export default function DosenCreateQrPage() {
       return payload;
     },
     onSuccess: (payload) => {
-      const nextRotationTimestamp = new Date(
-        Date.now() + QR_ROTATION_MS,
-      ).toISOString();
+      const nextRotationTimestamp = payload.expires_at;
       setActivePayload(payload);
       setNextRotationAt(nextRotationTimestamp);
+      setRotationError(null);
       saveLecturerQrSessionState({
         ownerIdentifier: sessionIdentifier,
         activePayload: payload,
@@ -161,33 +159,73 @@ export default function DosenCreateQrPage() {
     },
   });
 
-  /* Auto-rotate QR every 90 s */
-  useEffect(() => {
-    if (!activePayload) return;
+  function clearRotationTimer() {
+    if (rotationTimerRef.current !== null) {
+      window.clearTimeout(rotationTimerRef.current);
+      rotationTimerRef.current = null;
+    }
+  }
 
-    const timerId = window.setInterval(() => {
-      const values = form.getValues();
-      void generateMutation.mutateAsync(values);
-    }, QR_ROTATION_MS);
+  useEffect(() => {
+    if (!activePayload) {
+      clearRotationTimer();
+      return;
+    }
+
+    let cancelled = false;
+
+    const scheduleRetry = (delayMs: number) => {
+      clearRotationTimer();
+      rotationTimerRef.current = window.setTimeout(async () => {
+        if (cancelled) {
+          return;
+        }
+
+        if (generateMutation.isPending) {
+          scheduleRetry(500);
+          return;
+        }
+
+        try {
+          await generateMutation.mutateAsync(form.getValues());
+        } catch (error) {
+          if (cancelled) {
+            return;
+          }
+          setRotationError(
+            error instanceof Error
+              ? `Rotasi QR gagal sementara: ${error.message}. Coba lagi otomatis...`
+              : "Rotasi QR gagal sementara. Coba lagi otomatis...",
+          );
+          scheduleRetry(QR_RETRY_MS);
+        }
+      }, delayMs);
+    };
+
+    const expiresAtMs = Date.parse(activePayload.expires_at);
+    const msUntilExpire = Number.isFinite(expiresAtMs)
+      ? Math.max(0, expiresAtMs - Date.now())
+      : 0;
+
+    scheduleRetry(msUntilExpire);
 
     return () => {
-      window.clearInterval(timerId);
+      cancelled = true;
+      clearRotationTimer();
     };
   }, [activePayload, form, generateMutation]);
 
-  /* Countdown ticker */
   useEffect(() => {
     if (!nextRotationAt) {
       setCountdown(null);
       return;
     }
+
     const tick = () => {
-      const remaining = Math.max(
-        0,
-        Math.round((Date.parse(nextRotationAt) - Date.now()) / 1000),
-      );
+      const remaining = Math.max(0, Math.round((Date.parse(nextRotationAt) - Date.now()) / 1000));
       setCountdown(remaining);
     };
+
     tick();
     const id = window.setInterval(tick, 1000);
     return () => window.clearInterval(id);
@@ -210,24 +248,24 @@ export default function DosenCreateQrPage() {
     startedAt: watchedStartedAt ?? "",
   });
 
+  const isActiveQr = !!activePayload && !isExpiredTimestamp(activePayload.expires_at);
+
   return (
     <div>
-      {/* Page header */}
       <div className="mb-5">
         <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-primary-600 dark:text-primary-400">
           <QrCode size={14} />
-          Dosen — Modul Presensi
+          Dosen - Modul Presensi
         </div>
         <h1 className="mt-1 text-xl font-bold text-(--token-gray-900) dark:text-(--token-white) sm:text-2xl">
           Buat QR Presensi
         </h1>
         <p className="mt-1 text-sm text-(--token-gray-500) dark:text-(--token-gray-400)">
-          QR dinamis berganti otomatis setiap 90 detik. Satu token berlaku untuk banyak mahasiswa.
+          QR dinamis berganti otomatis berdasarkan waktu expired token. Satu token berlaku untuk banyak mahasiswa.
         </p>
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[1fr_1.2fr]">
-        {/* ── Left: form ───────────────────────────────────────────── */}
         <Card variant="default" size="md" className="rounded-2xl">
           <form
             className="space-y-4"
@@ -244,9 +282,7 @@ export default function DosenCreateQrPage() {
                   className="h-11 w-full rounded-xl border border-(--token-gray-300) bg-(--token-white) px-3 text-sm text-(--token-gray-900) outline-none transition-colors placeholder:text-(--token-gray-400) focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-(--color-marketing-dark-border) dark:bg-(--color-surface-dark-subtle) dark:text-(--token-white-90) dark:placeholder:text-(--token-gray-500)"
                 />
                 {form.formState.errors[field.name]?.message && (
-                  <p className="mt-1 text-xs text-red-600">
-                    {form.formState.errors[field.name]!.message}
-                  </p>
+                  <p className="mt-1 text-xs text-red-600">{form.formState.errors[field.name]!.message}</p>
                 )}
               </div>
             ))}
@@ -265,7 +301,7 @@ export default function DosenCreateQrPage() {
                 {generateMutation.isPending ? (
                   <>
                     <RefreshCw size={14} className="animate-spin" />
-                    Memproses…
+                    Memproses...
                   </>
                 ) : (
                   "Generate QR"
@@ -295,9 +331,7 @@ export default function DosenCreateQrPage() {
           </form>
         </Card>
 
-        {/* ── Right: QR display ────────────────────────────────────── */}
         <Card variant="default" size="md" className="rounded-2xl">
-          {/* Header */}
           <div className="flex items-start justify-between gap-3">
             <div>
               <h2 className="text-base font-semibold text-(--token-gray-900) dark:text-(--token-white)">
@@ -306,45 +340,30 @@ export default function DosenCreateQrPage() {
                   One-to-Many
                 </span>
               </h2>
+              {rotationError && (
+                <p className="mt-1 text-xs text-red-600 dark:text-red-400">{rotationError}</p>
+              )}
             </div>
-            {activePayload && (
-              <StatusBadge active={countdown !== null && countdown > 0} />
-            )}
+            {activePayload && <StatusBadge active={isActiveQr} />}
           </div>
 
           {activePayload ? (
             <div className="mt-5">
               <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-start">
-                {/* QR */}
                 <div className="shrink-0">
                   <StyledQr
                     value={encodedQrValue}
                     size={190}
                     secondsLeft={countdown ?? undefined}
                     totalSeconds={QR_TOTAL_SECONDS}
-                    isExpired={countdown !== null && countdown <= 0}
+                    isExpired={!isActiveQr}
                   />
                 </div>
 
-                {/* Info grid */}
                 <div className="w-full min-w-0 flex-1 space-y-2">
-                  <QrInfoItem
-                    label="course_id"
-                    value={activePayload.course_id}
-                    mono
-                  />
-                  <QrInfoItem
-                    label="session_id"
-                    value={activePayload.session_id}
-                    mono
-                    truncate
-                  />
-                  <QrInfoItem
-                    label="qr_token"
-                    value={activePayload.qr_token}
-                    mono
-                    truncate
-                  />
+                  <QrInfoItem label="course_id" value={activePayload.course_id} mono />
+                  <QrInfoItem label="session_id" value={activePayload.session_id} mono truncate />
+                  <QrInfoItem label="qr_token" value={activePayload.qr_token} mono truncate />
 
                   <div className="grid grid-cols-2 gap-2">
                     <QrInfoItem
@@ -358,7 +377,7 @@ export default function DosenCreateQrPage() {
                     />
                     <div
                       className={`flex flex-col justify-center rounded-xl px-3 py-2.5 ${
-                        countdown !== null && countdown > 0
+                        isActiveQr
                           ? "bg-emerald-50 ring-1 ring-emerald-200 dark:bg-emerald-500/8 dark:ring-emerald-500/20"
                           : "bg-red-50 ring-1 ring-red-200 dark:bg-red-500/8 dark:ring-red-500/20"
                       }`}
@@ -368,14 +387,12 @@ export default function DosenCreateQrPage() {
                       </p>
                       <p
                         className={`text-sm font-bold tabular-nums ${
-                          countdown !== null && countdown > 0
+                          isActiveQr
                             ? "text-emerald-700 dark:text-emerald-400"
                             : "text-red-700 dark:text-red-400"
                         }`}
                       >
-                        {countdown !== null && countdown > 0
-                          ? `${countdown}s`
-                          : "Expired"}
+                        {countdown !== null && countdown > 0 ? `${countdown}s` : "Expired"}
                       </p>
                     </div>
                   </div>

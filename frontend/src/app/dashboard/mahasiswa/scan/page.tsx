@@ -12,7 +12,7 @@ import { useAuthSession } from "@/lib/auth/use-auth-session";
 import { attendanceGasService } from "@/services/attendance-gas-service";
 import { getOrCreateAttendanceDeviceId } from "@/utils/home/attendance-device-id";
 import { appendAttendanceHistory } from "@/utils/home/attendance-history";
-import { parseAttendanceQrPayload } from "@/utils/home/attendance-qr";
+import { isExpiredTimestamp, parseAttendanceQrPayload } from "@/utils/home/attendance-qr";
 import { ScanLine, Camera, CameraOff, CheckCircle2, AlertCircle } from "lucide-react";
 
 const checkinSchema = z.object({
@@ -26,11 +26,17 @@ type CheckinForm = z.infer<typeof checkinSchema>;
 const INPUT_CLASS =
   "h-11 w-full rounded-xl border border-(--token-gray-300) bg-(--token-white) px-3 text-sm text-(--token-gray-900) outline-none transition-colors placeholder:text-(--token-gray-400) focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-(--color-marketing-dark-border) dark:bg-(--color-surface-dark-subtle) dark:text-(--token-white-90) dark:placeholder:text-(--token-gray-500)";
 
+const SCANNER_ERROR_FLASH_MS = 1200;
+const STOP_AFTER_SUCCESS_MS = 900;
+
 export default function MahasiswaScanPage() {
   const session = useAuthSession();
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const controlsRef = useRef<IScannerControls | null>(null);
   const readerRef = useRef<BrowserQRCodeReader | null>(null);
+  const errorFlashTimeoutRef = useRef<number | null>(null);
+  const stopAfterSuccessTimeoutRef = useRef<number | null>(null);
+  const isSubmittingFromScanRef = useRef(false);
 
   const [scannerStatus, setScannerStatus] = useState<
     "idle" | "requesting" | "active" | "error"
@@ -80,11 +86,101 @@ export default function MahasiswaScanPage() {
     },
   });
 
+  function clearScannerTimers() {
+    if (errorFlashTimeoutRef.current !== null) {
+      window.clearTimeout(errorFlashTimeoutRef.current);
+      errorFlashTimeoutRef.current = null;
+    }
+    if (stopAfterSuccessTimeoutRef.current !== null) {
+      window.clearTimeout(stopAfterSuccessTimeoutRef.current);
+      stopAfterSuccessTimeoutRef.current = null;
+    }
+  }
+
   function stopScanner() {
     controlsRef.current?.stop();
     controlsRef.current = null;
     readerRef.current = null;
+    clearScannerTimers();
     setScannerStatus("idle");
+  }
+
+  function flashScannerError(message: string) {
+    setScannerError(message);
+    setScannerStatus("error");
+
+    if (errorFlashTimeoutRef.current !== null) {
+      window.clearTimeout(errorFlashTimeoutRef.current);
+    }
+
+    errorFlashTimeoutRef.current = window.setTimeout(() => {
+      setScannerStatus((prev) => (prev === "idle" ? "idle" : "active"));
+      errorFlashTimeoutRef.current = null;
+    }, SCANNER_ERROR_FLASH_MS);
+  }
+
+  async function pickPreferredVideoInputId() {
+    try {
+      const devices = await BrowserQRCodeReader.listVideoInputDevices();
+      if (!devices.length) {
+        return undefined;
+      }
+
+      const rearCamera = devices.find((device) =>
+        /back|rear|environment|traseira|belakang/i.test(device.label),
+      );
+
+      return rearCamera?.deviceId ?? devices[0].deviceId;
+    } catch {
+      return undefined;
+    }
+  }
+
+  async function handleDecodedQrText(text: string) {
+    if (isSubmittingFromScanRef.current) {
+      return;
+    }
+
+    const parsedPayload = parseAttendanceQrPayload(text);
+    if (!parsedPayload) {
+      flashScannerError("Format QR tidak valid. Gunakan QR dari dashboard dosen.");
+      return;
+    }
+
+    if (isExpiredTimestamp(parsedPayload.expires_at)) {
+      flashScannerError("QR sudah expired. Minta dosen generate QR terbaru lalu scan ulang.");
+      return;
+    }
+
+    setRawScanResult(text);
+    form.setValue("course_id", parsedPayload.course_id, { shouldValidate: true });
+    form.setValue("session_id", parsedPayload.session_id, { shouldValidate: true });
+    form.setValue("qr_token", parsedPayload.qr_token, { shouldValidate: true });
+
+    isSubmittingFromScanRef.current = true;
+
+    try {
+      await checkinMutation.mutateAsync({
+        course_id: parsedPayload.course_id,
+        session_id: parsedPayload.session_id,
+        qr_token: parsedPayload.qr_token,
+      });
+
+      setScannerError(null);
+
+      if (stopAfterSuccessTimeoutRef.current !== null) {
+        window.clearTimeout(stopAfterSuccessTimeoutRef.current);
+      }
+      stopAfterSuccessTimeoutRef.current = window.setTimeout(() => {
+        stopScanner();
+      }, STOP_AFTER_SUCCESS_MS);
+    } catch (error) {
+      flashScannerError(
+        error instanceof Error ? error.message : "Check-in gagal. Silakan scan ulang.",
+      );
+    } finally {
+      isSubmittingFromScanRef.current = false;
+    }
   }
 
   async function startScanner() {
@@ -100,7 +196,7 @@ export default function MahasiswaScanPage() {
     if (!isMediaDevicesAvailable) {
       setScannerStatus("error");
       setScannerError(
-        "Kamera tidak tersedia di browser ini. Jika akses dari HP, gunakan HTTPS (bukan http://IP)."
+        "Kamera tidak tersedia di browser ini. Jika akses dari HP, gunakan HTTPS (bukan http://IP).",
       );
       return;
     }
@@ -108,7 +204,7 @@ export default function MahasiswaScanPage() {
     if (!window.isSecureContext) {
       setScannerStatus("error");
       setScannerError(
-        "Akses kamera butuh secure context. Buka aplikasi lewat HTTPS agar kamera bisa digunakan."
+        "Akses kamera butuh secure context. Buka aplikasi lewat HTTPS agar kamera bisa digunakan.",
       );
       return;
     }
@@ -120,9 +216,10 @@ export default function MahasiswaScanPage() {
     try {
       const qrReader = new BrowserQRCodeReader();
       readerRef.current = qrReader;
+      const preferredDeviceId = await pickPreferredVideoInputId();
 
       const controls = await qrReader.decodeFromVideoDevice(
-        undefined,
+        preferredDeviceId,
         videoRef.current,
         (result) => {
           if (!result) {
@@ -130,18 +227,7 @@ export default function MahasiswaScanPage() {
           }
 
           const text = result.getText();
-          setRawScanResult(text);
-          const parsedPayload = parseAttendanceQrPayload(text);
-
-          if (!parsedPayload) {
-            setScannerError("Format QR tidak valid. Gunakan QR dari dashboard dosen.");
-            return;
-          }
-
-          form.setValue("course_id", parsedPayload.course_id, { shouldValidate: true });
-          form.setValue("session_id", parsedPayload.session_id, { shouldValidate: true });
-          form.setValue("qr_token", parsedPayload.qr_token, { shouldValidate: true });
-          stopScanner();
+          void handleDecodedQrText(text);
         },
       );
 
@@ -155,16 +241,20 @@ export default function MahasiswaScanPage() {
 
   useEffect(() => {
     return () => {
-      stopScanner();
+      controlsRef.current?.stop();
+      controlsRef.current = null;
+      readerRef.current = null;
+      clearScannerTimers();
+      isSubmittingFromScanRef.current = false;
     };
   }, []);
 
   const scannerInfo = useMemo(() => {
     if (scannerStatus === "requesting") {
-      return { text: "Meminta izin kamera…", color: "text-amber-600 dark:text-amber-400" };
+      return { text: "Meminta izin kamera...", color: "text-amber-600 dark:text-amber-400" };
     }
     if (scannerStatus === "active") {
-      return { text: "Scanner aktif — arahkan kamera ke QR presensi", color: "text-emerald-600 dark:text-emerald-400" };
+      return { text: "Scanner aktif - arahkan kamera ke QR presensi", color: "text-emerald-600 dark:text-emerald-400" };
     }
     if (scannerStatus === "error") {
       return { text: scannerError ?? "Scanner gagal diinisialisasi.", color: "text-red-600 dark:text-red-400" };
@@ -172,13 +262,30 @@ export default function MahasiswaScanPage() {
     return { text: "Scanner belum aktif", color: "text-(--token-gray-500) dark:text-(--token-gray-400)" };
   }, [scannerError, scannerStatus]);
 
+  const showLiveScannerOverlay = scannerStatus === "active" || scannerStatus === "requesting";
+
   return (
     <div>
-      {/* Page header */}
+      <style jsx>{`
+        @keyframes scan-line {
+          0% {
+            transform: translateY(-120px);
+            opacity: 0.2;
+          }
+          50% {
+            opacity: 0.85;
+          }
+          100% {
+            transform: translateY(120px);
+            opacity: 0.2;
+          }
+        }
+      `}</style>
+
       <div className="mb-5">
         <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-primary-600 dark:text-primary-400">
           <ScanLine size={14} />
-          Mahasiswa — Modul Presensi
+          Mahasiswa - Modul Presensi
         </div>
         <h1 className="mt-1 text-xl font-bold text-(--token-gray-900) dark:text-(--token-white) sm:text-2xl">
           Scan QR Presensi
@@ -189,7 +296,6 @@ export default function MahasiswaScanPage() {
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[1.2fr_1fr]">
-        {/* Scanner */}
         <Card variant="default" size="md" className="rounded-2xl">
           <h2 className="text-base font-semibold text-(--token-gray-900) dark:text-(--token-white)">
             Kamera Scanner
@@ -198,6 +304,26 @@ export default function MahasiswaScanPage() {
           <div className="mt-4 space-y-3">
             <div className="relative overflow-hidden rounded-xl border border-soft bg-black">
               <video ref={videoRef} className="h-[280px] w-full object-cover sm:h-[320px]" muted playsInline />
+
+              {showLiveScannerOverlay && (
+                <div className="pointer-events-none absolute inset-0">
+                  <div className="absolute inset-0 bg-black/18" />
+                  <div className="absolute left-1/2 top-1/2 h-[170px] w-[170px] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-cyan-300/70 shadow-[0_0_0_9999px_rgba(0,0,0,0.22),0_0_24px_rgba(103,232,249,0.35)]">
+                    <span className="absolute -left-0.5 -top-0.5 h-5 w-5 rounded-tl-lg border-l-2 border-t-2 border-cyan-300" />
+                    <span className="absolute -right-0.5 -top-0.5 h-5 w-5 rounded-tr-lg border-r-2 border-t-2 border-cyan-300" />
+                    <span className="absolute -bottom-0.5 -left-0.5 h-5 w-5 rounded-bl-lg border-b-2 border-l-2 border-cyan-300" />
+                    <span className="absolute -bottom-0.5 -right-0.5 h-5 w-5 rounded-br-lg border-b-2 border-r-2 border-cyan-300" />
+
+                    {scannerStatus === "active" && (
+                      <span
+                        className="absolute left-2 right-2 top-1/2 h-[2px] rounded-full bg-cyan-300/90 shadow-[0_0_12px_rgba(103,232,249,0.9)]"
+                        style={{ animation: "scan-line 1.8s ease-in-out infinite alternate" }}
+                      />
+                    )}
+                  </div>
+                </div>
+              )}
+
               {scannerStatus === "idle" && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80">
                   <Camera size={32} className="mb-2 text-white/40" />
@@ -206,9 +332,7 @@ export default function MahasiswaScanPage() {
               )}
             </div>
 
-            <p className={`text-xs font-medium ${scannerInfo.color}`}>
-              {scannerInfo.text}
-            </p>
+            <p className={`text-xs font-medium ${scannerInfo.color}`}>{scannerInfo.text}</p>
 
             <div className="flex flex-wrap gap-2">
               <button
@@ -242,7 +366,6 @@ export default function MahasiswaScanPage() {
           </div>
         </Card>
 
-        {/* Check-in form */}
         <Card variant="default" size="md" className="rounded-2xl">
           <h2 className="text-base font-semibold text-(--token-gray-900) dark:text-(--token-white)">
             Form Check-in
@@ -288,7 +411,7 @@ export default function MahasiswaScanPage() {
               disabled={checkinMutation.isPending}
               className="gradient-btn inline-flex w-full items-center justify-center gap-1.5 rounded-full px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-primary-500/15 transition-transform hover:scale-[1.01] active:scale-[0.99] disabled:opacity-60 disabled:hover:scale-100"
             >
-              {checkinMutation.isPending ? "Memproses…" : "Check-in Sekarang"}
+              {checkinMutation.isPending ? "Memproses..." : "Check-in Sekarang"}
             </button>
 
             {checkinMutation.isError && (
