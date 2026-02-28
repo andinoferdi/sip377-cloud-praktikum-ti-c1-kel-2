@@ -8,6 +8,7 @@ import { z } from "zod";
 import DatePicker from "@/components/ui/date-picker";
 import StyledQr from "@/components/ui/styled-qr";
 import { getAuthSession } from "@/lib/auth/session";
+import { getErrorMessage } from "@/lib/errors";
 import { attendanceGasService } from "@/services/attendance-gas-service";
 import {
   buildAttendanceSessionId,
@@ -268,9 +269,7 @@ export default function DosenCreateQrPage() {
         } catch (error) {
           if (cancelled) return;
           setRotationError(
-            error instanceof Error
-              ? `Rotasi QR gagal sementara: ${error.message}. Coba lagi otomatis...`
-              : "Rotasi QR gagal sementara. Coba lagi otomatis...",
+            `Rotasi QR gagal sementara: ${getErrorMessage(error)}. Coba lagi otomatis...`,
           );
           scheduleRetry(QR_RETRY_MS);
         }
@@ -466,9 +465,7 @@ export default function DosenCreateQrPage() {
 
             {generateMutation.isError && (
               <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-400">
-                {generateMutation.error instanceof Error
-                  ? generateMutation.error.message
-                  : "Gagal membuat QR."}
+                {getErrorMessage(generateMutation.error)}
               </div>
             )}
           </form>

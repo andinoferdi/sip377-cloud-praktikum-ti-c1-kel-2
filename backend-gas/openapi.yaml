@@ -14,6 +14,7 @@ info:
     Presence error codes:
     - `token_invalid`
     - `token_expired`
+    - `token_already_used`
     - `already_checked_in`
     Presence matching notes:
     - `course_id` and `session_id` are normalized to lowercase before matching.
@@ -25,7 +26,7 @@ servers:
     description: Google Apps Script Web App
     variables:
       deploymentId:
-        default: AKfycbzHGH188OZrr8HKf7rlp-wrJIu2KJBq4mEUVsIqPQ3_f4DyV4kL93MDNumD14ynVt9Khw
+        default: AKfycbx5GhbXrJqsg984ix4eZddEGZXc_WkFr_MmPB23CKcJYMM1vZ1bnm5k2w8GqIbxfF65
         description: Web App deployment ID
 
 security: []
@@ -218,7 +219,7 @@ paths:
                   summary: checkin error
                   value:
                     ok: false
-                    error: "already_checked_in"
+                    error: "token_already_used"
                 accelBatch:
                   summary: path=telemetry/accel
                   value:

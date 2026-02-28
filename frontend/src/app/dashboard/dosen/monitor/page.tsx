@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Card } from "@/components/ui/card";
+import { getErrorMessage } from "@/lib/errors";
 import { attendanceGasService } from "@/services/attendance-gas-service";
 import { Search, Users, BarChart3, RefreshCw } from "lucide-react";
 
@@ -166,9 +167,7 @@ export default function DosenMonitorPage() {
         {/* Error */}
         {listQuery.isError && (
           <div className="m-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-400">
-            {listQuery.error instanceof Error
-              ? listQuery.error.message
-              : "Gagal mengambil data."}
+            {getErrorMessage(listQuery.error)}
           </div>
         )}
 

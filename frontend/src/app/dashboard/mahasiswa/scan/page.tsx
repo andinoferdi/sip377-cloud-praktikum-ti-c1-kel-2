@@ -7,6 +7,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { getErrorMessage } from "@/lib/errors";
 import { useAuthSession } from "@/lib/auth/use-auth-session";
 import { attendanceGasService } from "@/services/attendance-gas-service";
 import { getOrCreateAttendanceDeviceId } from "@/utils/home/attendance-device-id";
@@ -190,9 +191,7 @@ export default function MahasiswaScanPage() {
         stopScanner();
       }, STOP_AFTER_SUCCESS_MS);
     } catch (error) {
-      flashScannerError(
-        error instanceof Error ? error.message : "Check-in gagal. Silakan scan ulang.",
-      );
+      flashScannerError(getErrorMessage(error));
     } finally {
       isSubmittingFromScanRef.current = false;
     }
@@ -448,9 +447,7 @@ export default function MahasiswaScanPage() {
               {checkinMutation.isError && (
                 <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-400">
                   <AlertCircle size={15} className="mt-0.5 shrink-0" />
-                  {checkinMutation.error instanceof Error
-                    ? checkinMutation.error.message
-                    : "Check-in gagal."}
+                  {getErrorMessage(checkinMutation.error)}
                 </div>
               )}
 

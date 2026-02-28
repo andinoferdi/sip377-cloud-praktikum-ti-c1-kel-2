@@ -219,6 +219,7 @@ function checkin(body) {
   var tokenFound = false;
   var tokenRowCourseId = '';
   var tokenRowSessionId = '';
+  var tokenRowIndex = -1;
   var checkTime = body.ts ? new Date(body.ts) : new Date();
 
   for (var i = tokensData.length - 1; i >= 1; i--) {
@@ -226,10 +227,15 @@ function checkin(body) {
     var rowCourse = normalizeCourseId(tokensData[i][1]);
     var rowSession = normalizeSessionId(tokensData[i][2]);
     var rowExpiresAt = new Date(tokensData[i][4]);
+    var rowUsed = tokensData[i][5] === true || String(tokensData[i][5]).toLowerCase() === 'true';
 
     if (rowToken === normalizedToken &&
         rowCourse === normalizedCourseId &&
         rowSession === normalizedSessionId) {
+      if (rowUsed) {
+        throw new Error('token_already_used');
+      }
+
       if (checkTime > rowExpiresAt) {
         throw new Error('token_expired');
       }
@@ -237,6 +243,7 @@ function checkin(body) {
       tokenFound = true;
       tokenRowCourseId = rowCourse;
       tokenRowSessionId = rowSession;
+      tokenRowIndex = i + 1;
       break;
     }
   }
@@ -268,6 +275,10 @@ function checkin(body) {
     checkTime.toISOString(),
     nowISO(),
   ]);
+
+  if (tokenRowIndex > 0) {
+    tokensSheet.getRange(tokenRowIndex, 6).setValue(true);
+  }
 
   return {
     presence_id: presenceId,
