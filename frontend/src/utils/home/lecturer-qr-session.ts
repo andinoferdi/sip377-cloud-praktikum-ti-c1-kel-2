@@ -33,7 +33,8 @@ function isValidQrPayload(payload: unknown): payload is AttendanceQrPayload {
     typeof candidate.course_id === "string" &&
     typeof candidate.session_id === "string" &&
     typeof candidate.qr_token === "string" &&
-    typeof candidate.expires_at === "string"
+    typeof candidate.expires_at === "string" &&
+    (candidate.meeting_key === undefined || typeof candidate.meeting_key === "string")
   );
 }
 

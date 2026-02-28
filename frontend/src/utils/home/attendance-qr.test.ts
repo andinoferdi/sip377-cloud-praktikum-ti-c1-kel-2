@@ -24,6 +24,7 @@ describe("attendance-qr-utils", () => {
       session_id: "cloud-101-senin-02-202602271015",
       qr_token: "TKN-123ABC",
       expires_at: "2026-02-27T10:16:30.000Z",
+      meeting_key: "MTG-ABC12345",
     });
 
     expect(rawValue.startsWith("CTC1|")).toBe(true);
@@ -36,6 +37,7 @@ describe("attendance-qr-utils", () => {
       session_id: "cloud-101-senin-02-202602271015",
       qr_token: "TKN-123ABC",
       expires_at: "2026-02-27T10:16:30.000Z",
+      meeting_key: "MTG-ABC12345",
     });
   });
 
@@ -46,6 +48,7 @@ describe("attendance-qr-utils", () => {
       session_id: "cloud-101-senin-02-202602271015",
       qr_token: "TKN-123ABC",
       expires_at: "2026-02-27T10:16:30.000Z",
+      meeting_key: "MTG-ABC12345",
     });
 
     const parsed = parseAttendanceQrPayload(rawValue);
@@ -56,11 +59,26 @@ describe("attendance-qr-utils", () => {
       session_id: "cloud-101-senin-02-202602271015",
       qr_token: "TKN-123ABC",
       expires_at: "2026-02-27T10:16:30.000Z",
+      meeting_key: "MTG-ABC12345",
     });
   });
 
   it("returns null for invalid compact payload", () => {
     const parsed = parseAttendanceQrPayload("CTC1|cloud-101|session-01|TKN-123ABC|invalid");
     expect(parsed).toBeNull();
+  });
+
+  it("parses compact payload without meeting key (backward compatibility)", () => {
+    const parsed = parseAttendanceQrPayload(
+      "CTC1|cloud-101|session-01|TKN-123ABC|2026-02-27T10%3A16%3A30.000Z",
+    );
+    expect(parsed).toEqual({
+      v: 1,
+      course_id: "cloud-101",
+      session_id: "session-01",
+      qr_token: "TKN-123ABC",
+      expires_at: "2026-02-27T10:16:30.000Z",
+      meeting_key: undefined,
+    });
   });
 });

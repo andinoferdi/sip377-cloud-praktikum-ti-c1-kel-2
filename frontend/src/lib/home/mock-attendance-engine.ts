@@ -12,7 +12,7 @@ type ActiveToken = {
   course_id: string;
   session_id: string;
   expires_at: string;
-  used: boolean;
+  meeting_key: string;
 };
 
 type PresenceRecord = {
@@ -46,6 +46,10 @@ function toPresenceKey(
 
 function generateTokenCode() {
   return `TKN-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+}
+
+function generateMeetingKey() {
+  return `MTG-${Math.random().toString(36).slice(2, 10).toUpperCase()}`;
 }
 
 function formatPresenceId(sequence: number) {
@@ -84,11 +88,12 @@ export function createAttendanceSimulationEngine(): AttendanceSimulationEngine {
     const expiresAt = new Date(now.getTime() + TOKEN_TTL_MS).toISOString();
     const token = generateTokenCode();
 
+    const meetingKey = request.meeting_key ?? generateMeetingKey();
     activeTokens.set(token, {
       course_id: request.course_id,
       session_id: request.session_id,
       expires_at: expiresAt,
-      used: false,
+      meeting_key: meetingKey,
     });
 
     return {
@@ -96,6 +101,7 @@ export function createAttendanceSimulationEngine(): AttendanceSimulationEngine {
       data: {
         qr_token: token,
         expires_at: expiresAt,
+        meeting_key: meetingKey,
       },
     };
   };
@@ -134,20 +140,17 @@ export function createAttendanceSimulationEngine(): AttendanceSimulationEngine {
       return { ok: false, error: "token_expired" };
     }
 
-    if (token.used) {
-      return { ok: false, error: "token_already_used" };
-    }
-    token.used = true;
-
     const key = toPresenceKey(
       request.user_id,
       request.course_id,
       request.session_id,
     );
     const existingRecord = presenceRecords.get(key);
-    const presenceId = existingRecord
-      ? existingRecord.presence_id
-      : formatPresenceId(sequence++);
+    if (existingRecord) {
+      return { ok: false, error: "already_checked_in" };
+    }
+
+    const presenceId = formatPresenceId(sequence++);
 
     presenceRecords.set(key, {
       presence_id: presenceId,

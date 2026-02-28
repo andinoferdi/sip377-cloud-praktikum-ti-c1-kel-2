@@ -26,7 +26,7 @@ servers:
     description: Google Apps Script Web App
     variables:
       deploymentId:
-        default: AKfycbzVGdxaC7TOkDit7STUHxgdBNn6lgdy7X8_HJWhcgcWAhMG8yd1-ygAU6RcpXQPcJnAVw
+        default: AKfycbzwGB2egCMblZrIQUQJketAhlABHr5jde6JoBAwdY6RhiuLlcs3Wzm1C71cQykB-awqEw
         description: Web App deployment ID
 
 security: []
@@ -45,6 +45,7 @@ paths:
             enum:
               - presence/status
               - presence/list
+              - presence/sessions/active
               - telemetry/accel/latest
               - telemetry/gps/latest
               - telemetry/gps/history
@@ -56,11 +57,16 @@ paths:
           schema:
             type: string
           description: Required when path=presence/status
+        - name: owner_identifier
+          in: query
+          schema:
+            type: string
+          description: Required when path=presence/sessions/active
         - name: course_id
           in: query
           schema:
             type: string
-          description: Required when path=presence/status or path=presence/list. Matching is case-insensitive.
+          description: Required when path=presence/status or path=presence/list. Optional filter when path=presence/sessions/active. Matching is case-insensitive.
         - name: session_id
           in: query
           schema:
@@ -77,7 +83,7 @@ paths:
             type: integer
             minimum: 1
             default: 200
-          description: Optional max items for path=presence/list or path=telemetry/gps/history
+          description: Optional max items for path=presence/list, path=presence/sessions/active, or path=telemetry/gps/history
         - name: from
           in: query
           schema:
@@ -132,6 +138,21 @@ paths:
                           device_id: "dev-001"
                           ts: "2026-02-18T10:01:10Z"
                           recorded_at: "2026-02-18T10:01:10Z"
+                activeSessions:
+                  summary: path=presence/sessions/active
+                  value:
+                    ok: true
+                    data:
+                      owner_identifier: "198701012020011001"
+                      total: 1
+                      items:
+                        - course_id: "cloud-101"
+                          session_id: "cloud-101-senin-02-202602281626"
+                          meeting_key: "MTG-A1B2C3D4"
+                          owner_identifier: "198701012020011001"
+                          status: "active"
+                          started_at: "2026-02-28T09:26:00.000Z"
+                          updated_at: "2026-02-28T09:28:00.000Z"
                 accelLatest:
                   summary: path=telemetry/accel/latest
                   value:
@@ -210,6 +231,7 @@ paths:
                     data:
                       qr_token: "TKN-8F2A19"
                       expires_at: "2026-02-18T10:02:00Z"
+                      meeting_key: "MTG-A1B2C3D4"
                 checkinSuccess:
                   summary: path=presence/checkin
                   value:
@@ -229,6 +251,7 @@ paths:
                     data:
                       course_id: "cloud-101"
                       session_id: "cloud-101-senin-02-202602281626"
+                      meeting_key: "MTG-A1B2C3D4"
                       status: "stopped"
                       stopped_at: "2026-02-28T09:30:00.000Z"
                 accelBatch:
@@ -265,6 +288,14 @@ components:
           type: string
           example: sesi-02
           description: Stored and matched in lowercase form.
+        owner_identifier:
+          type: string
+          example: "198701012020011001"
+          description: Optional owner identifier of the lecturer who starts the meeting.
+        meeting_key:
+          type: string
+          example: MTG-A1B2C3D4
+          description: Optional stable meeting identity. If omitted, backend generates one.
         ts:
           type: string
           format: date-time
@@ -307,6 +338,14 @@ components:
           type: string
           example: cloud-101-senin-02-202602281626
           description: Session ID to mark as closed.
+        owner_identifier:
+          type: string
+          example: "198701012020011001"
+          description: Optional owner identifier for consistent stop across meeting state.
+        meeting_key:
+          type: string
+          example: MTG-A1B2C3D4
+          description: Optional meeting key. If provided, stop is applied to this meeting identity.
         ts:
           type: string
           format: date-time

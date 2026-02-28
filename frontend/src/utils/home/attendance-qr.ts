@@ -45,6 +45,8 @@ function parseLegacyAttendanceQrPayload(rawValue: string): AttendanceQrPayload |
       session_id: parsedValue.session_id,
       qr_token: parsedValue.qr_token,
       expires_at: parsedValue.expires_at,
+      meeting_key:
+        typeof parsedValue.meeting_key === "string" ? parsedValue.meeting_key : undefined,
     };
   } catch {
     return null;
@@ -57,20 +59,29 @@ function parseCompactAttendanceQrPayload(rawValue: string): AttendanceQrPayload 
   }
 
   const segments = rawValue.split(QR_COMPACT_SEPARATOR);
-  if (segments.length !== 5) {
+  if (segments.length !== 5 && segments.length !== 6) {
     return null;
   }
 
-  const [, encodedCourseId, encodedSessionId, qrToken, encodedExpiresAt] = segments;
+  const [
+    ,
+    encodedCourseId,
+    encodedSessionId,
+    qrToken,
+    encodedExpiresAt,
+    encodedMeetingKey,
+  ] = segments;
 
   let courseId = "";
   let sessionId = "";
   let expiresAt = "";
+  let meetingKey: string | undefined;
 
   try {
     courseId = decodeURIComponent(encodedCourseId);
     sessionId = decodeURIComponent(encodedSessionId);
     expiresAt = decodeURIComponent(encodedExpiresAt);
+    meetingKey = encodedMeetingKey ? decodeURIComponent(encodedMeetingKey) : undefined;
   } catch {
     return null;
   }
@@ -85,17 +96,24 @@ function parseCompactAttendanceQrPayload(rawValue: string): AttendanceQrPayload 
     session_id: sessionId,
     qr_token: qrToken,
     expires_at: expiresAt,
+    meeting_key: meetingKey,
   };
 }
 
 export function serializeAttendanceQrPayload(payload: AttendanceQrPayload) {
-  return [
+  const encoded = [
     QR_COMPACT_PREFIX,
     encodeURIComponent(payload.course_id),
     encodeURIComponent(payload.session_id),
     payload.qr_token,
     encodeURIComponent(payload.expires_at),
-  ].join(QR_COMPACT_SEPARATOR);
+  ];
+
+  if (payload.meeting_key) {
+    encoded.push(encodeURIComponent(payload.meeting_key));
+  }
+
+  return encoded.join(QR_COMPACT_SEPARATOR);
 }
 
 export function isExpiredTimestamp(expiresAt: string) {

@@ -1,5 +1,7 @@
 import { requestGas } from "@/services/gas-client";
 import type {
+  ActiveSessionsData,
+  ActiveSessionsRequest,
   ApiResponse,
   AttendanceListData,
   AttendanceListRequest,
@@ -19,6 +21,7 @@ const ATTENDANCE_API_PATHS = {
   checkIn: "/presence/checkin",
   status: "/presence/status",
   list: "/presence/list",
+  activeSessions: "/presence/sessions/active",
 } as const;
 
 export const attendanceGasService = {
@@ -55,5 +58,15 @@ export const attendanceGasService = {
       method: "GET",
       query: params,
     });
+  },
+
+  listActiveSessions(params: ActiveSessionsRequest) {
+    return requestGas<ApiResponse<ActiveSessionsData>>(
+      ATTENDANCE_API_PATHS.activeSessions,
+      {
+        method: "GET",
+        query: params,
+      },
+    );
   },
 };

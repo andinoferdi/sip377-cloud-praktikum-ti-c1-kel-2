@@ -48,6 +48,11 @@ const createQrSchema = z.object({
 });
 
 type CreateQrForm = z.infer<typeof createQrSchema>;
+type GenerateQrParams = {
+  values: CreateQrForm;
+  fixedSessionId?: string;
+  meetingKey?: string;
+};
 
 function normalizeCourseId(value: string) {
   return value.trim().toLowerCase();
@@ -161,7 +166,9 @@ export default function DosenCreateQrPage() {
     resolver: zodResolver(createQrSchema),
     defaultValues: {
       ...(persistedQrState?.form_values ?? DEFAULT_VALUES),
-      started_at: normalizeStartedAtForInput(DEFAULT_VALUES.started_at),
+      started_at: normalizeStartedAtForInput(
+        persistedQrState?.form_values?.started_at ?? DEFAULT_VALUES.started_at,
+      ),
     },
   });
 
@@ -182,19 +189,23 @@ export default function DosenCreateQrPage() {
   const rotationTimerRef = useRef<number | null>(null);
 
   const generateMutation = useMutation({
-    mutationFn: async (values: CreateQrForm) => {
-      const normalizedValues = normalizeCreateQrForm(values);
-      const sessionId = buildAttendanceSessionId({
-        courseId: normalizedValues.course_id,
-        day: normalizedValues.day,
-        sessionNo: normalizedValues.session_no,
-        startedAt: normalizedValues.started_at,
-      });
+    mutationFn: async (params: GenerateQrParams) => {
+      const normalizedValues = normalizeCreateQrForm(params.values);
+      const sessionId =
+        params.fixedSessionId ??
+        buildAttendanceSessionId({
+          courseId: normalizedValues.course_id,
+          day: normalizedValues.day,
+          sessionNo: normalizedValues.session_no,
+          startedAt: normalizedValues.started_at,
+        });
 
       const response = await attendanceGasService.generateToken({
         course_id: normalizedValues.course_id,
         session_id: sessionId,
         ts: new Date().toISOString(),
+        owner_identifier: sessionIdentifier ?? undefined,
+        meeting_key: params.meetingKey,
       });
 
       if (!response.ok) throw new Error(response.error);
@@ -205,6 +216,7 @@ export default function DosenCreateQrPage() {
         session_id: sessionId,
         qr_token: response.data.qr_token,
         expires_at: response.data.expires_at,
+        meeting_key: response.data.meeting_key,
       };
 
       return payload;
@@ -226,11 +238,17 @@ export default function DosenCreateQrPage() {
   });
 
   const stopSessionMutation = useMutation({
-    mutationFn: async (payload: { course_id: string; session_id: string }) => {
+    mutationFn: async (payload: {
+      course_id: string;
+      session_id: string;
+      meeting_key?: string;
+    }) => {
       const response = await attendanceGasService.stopSession({
         course_id: payload.course_id,
         session_id: payload.session_id,
         ts: new Date().toISOString(),
+        owner_identifier: sessionIdentifier ?? undefined,
+        meeting_key: payload.meeting_key,
       });
       if (!response.ok) {
         throw new Error(response.error);
@@ -277,6 +295,7 @@ export default function DosenCreateQrPage() {
       {
         course_id: activePayload.course_id,
         session_id: activePayload.session_id,
+        meeting_key: activePayload.meeting_key,
       },
       {
         onSuccess: () => {
@@ -306,7 +325,11 @@ export default function DosenCreateQrPage() {
           return;
         }
         try {
-          await generateMutation.mutateAsync(form.getValues());
+          await generateMutation.mutateAsync({
+            values: form.getValues(),
+            fixedSessionId: activePayload.session_id,
+            meetingKey: activePayload.meeting_key,
+          });
         } catch (error) {
           if (cancelled) return;
           setRotationError(
@@ -410,7 +433,7 @@ export default function DosenCreateQrPage() {
               form.setValue("day", normalizedValues.day, { shouldValidate: true });
               form.setValue("session_no", normalizedValues.session_no, { shouldValidate: true });
               setIsStopped(false);
-              generateMutation.mutate(normalizedValues);
+              generateMutation.mutate({ values: normalizedValues });
             })}
           >
             {FORM_FIELDS.map((field) => (
@@ -569,6 +592,12 @@ export default function DosenCreateQrPage() {
                   <QrInfoItem
                     label="session_id"
                     value={activePayload.session_id}
+                    mono
+                    truncate
+                  />
+                  <QrInfoItem
+                    label="meeting_key"
+                    value={activePayload.meeting_key ?? "-"}
                     mono
                     truncate
                   />

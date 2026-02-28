@@ -16,28 +16,35 @@ export type AttendanceQrPayload = {
   session_id: string;
   qr_token: string;
   expires_at: string;
+  meeting_key?: string;
 };
 
 export type AttendanceQrRequest = {
   course_id: string;
   session_id: string;
   ts: string;
+  owner_identifier?: string;
+  meeting_key?: string;
 };
 
 export type AttendanceQrData = {
   qr_token: string;
   expires_at: string;
+  meeting_key: string;
 };
 
 export type StopSessionRequest = {
   course_id: string;
   session_id: string;
   ts: string;
+  owner_identifier?: string;
+  meeting_key?: string;
 };
 
 export type StopSessionData = {
   course_id: string;
   session_id: string;
+  meeting_key?: string | null;
   status: "stopped";
   stopped_at: string;
 };
@@ -89,4 +96,26 @@ export type AttendanceListData = {
   session_id: string;
   total: number;
   items: AttendanceListItem[];
+};
+
+export type ActiveSessionsRequest = {
+  owner_identifier: string;
+  limit?: number;
+  course_id?: string;
+};
+
+export type ActiveSessionItem = {
+  course_id: string;
+  session_id: string;
+  meeting_key: string | null;
+  owner_identifier: string;
+  status: "active";
+  started_at: string | null;
+  updated_at: string | null;
+};
+
+export type ActiveSessionsData = {
+  owner_identifier: string;
+  total: number;
+  items: ActiveSessionItem[];
 };

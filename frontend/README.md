@@ -12,7 +12,7 @@ Frontend ini memakai Next.js App Router dan berfungsi sebagai client untuk meman
 Gunakan file `.env` di folder `frontend/`.
 
 ```env
-NEXT_PUBLIC_GAS_BASE_URL="https://script.google.com/macros/s/AKfycbzVGdxaC7TOkDit7STUHxgdBNn6lgdy7X8_HJWhcgcWAhMG8yd1-ygAU6RcpXQPcJnAVw/exec"
+NEXT_PUBLIC_GAS_BASE_URL="https://script.google.com/macros/s/AKfycbzwGB2egCMblZrIQUQJketAhlABHr5jde6JoBAwdY6RhiuLlcs3Wzm1C71cQykB-awqEw/exec"
 ```
 
 Catatan:
