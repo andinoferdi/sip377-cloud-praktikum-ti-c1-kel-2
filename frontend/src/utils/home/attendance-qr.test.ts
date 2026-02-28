@@ -11,7 +11,7 @@ describe("attendance-qr-utils", () => {
       courseId: "cloud-101",
       day: "senin",
       sessionNo: "02",
-      startedAt: "2026-02-27T10:15:00.000Z",
+      startedAt: "2026-02-27T10:15:00",
     });
 
     expect(sessionId).toBe("cloud-101-senin-02-202602271015");

@@ -166,10 +166,24 @@ function requireField(source, fieldName) {
   }
 }
 
+function normalizeCourseId(value) {
+  return String(value).trim().toLowerCase();
+}
+
+function normalizeSessionId(value) {
+  return String(value).trim().toLowerCase();
+}
+
+function normalizeToken(value) {
+  return String(value).trim().toUpperCase();
+}
+
 function generateQRToken(body) {
   requireField(body, 'course_id');
   requireField(body, 'session_id');
 
+  var normalizedCourseId = normalizeCourseId(body.course_id);
+  var normalizedSessionId = normalizeSessionId(body.session_id);
   var sheet = getOrCreateSheet(SHEET.TOKENS);
   var now = body.ts ? new Date(body.ts) : new Date();
   var expiresAt = new Date(now.getTime() + QR_TOKEN_TTL_MS);
@@ -177,8 +191,8 @@ function generateQRToken(body) {
 
   sheet.appendRow([
     qrToken,
-    String(body.course_id),
-    String(body.session_id),
+    normalizedCourseId,
+    normalizedSessionId,
     now.toISOString(),
     expiresAt.toISOString(),
     false,
@@ -197,25 +211,32 @@ function checkin(body) {
   requireField(body, 'session_id');
   requireField(body, 'qr_token');
 
+  var normalizedCourseId = normalizeCourseId(body.course_id);
+  var normalizedSessionId = normalizeSessionId(body.session_id);
+  var normalizedToken = normalizeToken(body.qr_token);
   var tokensSheet = getOrCreateSheet(SHEET.TOKENS);
   var tokensData = tokensSheet.getDataRange().getValues();
   var tokenFound = false;
+  var tokenRowCourseId = '';
+  var tokenRowSessionId = '';
   var checkTime = body.ts ? new Date(body.ts) : new Date();
 
   for (var i = tokensData.length - 1; i >= 1; i--) {
-    var rowToken = String(tokensData[i][0]);
-    var rowCourse = String(tokensData[i][1]);
-    var rowSession = String(tokensData[i][2]);
+    var rowToken = normalizeToken(tokensData[i][0]);
+    var rowCourse = normalizeCourseId(tokensData[i][1]);
+    var rowSession = normalizeSessionId(tokensData[i][2]);
     var rowExpiresAt = new Date(tokensData[i][4]);
 
-    if (rowToken === String(body.qr_token) &&
-        rowCourse === String(body.course_id) &&
-        rowSession === String(body.session_id)) {
+    if (rowToken === normalizedToken &&
+        rowCourse === normalizedCourseId &&
+        rowSession === normalizedSessionId) {
       if (checkTime > rowExpiresAt) {
         throw new Error('token_expired');
       }
 
       tokenFound = true;
+      tokenRowCourseId = rowCourse;
+      tokenRowSessionId = rowSession;
       break;
     }
   }
@@ -228,9 +249,9 @@ function checkin(body) {
   var presenceData = presenceSheet.getDataRange().getValues();
 
   for (var j = presenceData.length - 1; j >= 1; j--) {
-    if (String(presenceData[j][1]) === String(body.user_id) &&
-        String(presenceData[j][3]) === String(body.course_id) &&
-        String(presenceData[j][4]) === String(body.session_id)) {
+    if (String(presenceData[j][1]).trim() === String(body.user_id).trim() &&
+        normalizeCourseId(presenceData[j][3]) === tokenRowCourseId &&
+        normalizeSessionId(presenceData[j][4]) === tokenRowSessionId) {
       throw new Error('already_checked_in');
     }
   }
@@ -239,11 +260,11 @@ function checkin(body) {
 
   presenceSheet.appendRow([
     presenceId,
-    String(body.user_id),
-    String(body.device_id),
-    String(body.course_id),
-    String(body.session_id),
-    String(body.qr_token),
+    String(body.user_id).trim(),
+    String(body.device_id).trim(),
+    tokenRowCourseId,
+    tokenRowSessionId,
+    normalizedToken,
     checkTime.toISOString(),
     nowISO(),
   ]);
@@ -258,6 +279,8 @@ function getPresenceList(courseId, sessionId, limit) {
   if (!courseId) throw new Error('missing_field: course_id');
   if (!sessionId) throw new Error('missing_field: session_id');
 
+  var normalizedCourseId = normalizeCourseId(courseId);
+  var normalizedSessionId = normalizeSessionId(sessionId);
   var sheet = getOrCreateSheet(SHEET.PRESENCE);
   var data = sheet.getDataRange().getValues();
 
@@ -270,7 +293,7 @@ function getPresenceList(courseId, sessionId, limit) {
   var items = [];
 
   for (var i = data.length - 1; i >= 1; i--) {
-    if (String(data[i][3]) !== String(courseId) || String(data[i][4]) !== String(sessionId)) {
+    if (normalizeCourseId(data[i][3]) !== normalizedCourseId || normalizeSessionId(data[i][4]) !== normalizedSessionId) {
       continue;
     }
 
@@ -289,8 +312,8 @@ function getPresenceList(courseId, sessionId, limit) {
   }
 
   return {
-    course_id: String(courseId),
-    session_id: String(sessionId),
+    course_id: normalizedCourseId,
+    session_id: normalizedSessionId,
     total: total,
     items: items,
   };
@@ -301,17 +324,20 @@ function getPresenceStatus(userId, courseId, sessionId) {
   if (!courseId) throw new Error('missing_field: course_id');
   if (!sessionId) throw new Error('missing_field: session_id');
 
+  var normalizedUserId = String(userId).trim();
+  var normalizedCourseId = normalizeCourseId(courseId);
+  var normalizedSessionId = normalizeSessionId(sessionId);
   var sheet = getOrCreateSheet(SHEET.PRESENCE);
   var data = sheet.getDataRange().getValues();
 
   for (var i = data.length - 1; i >= 1; i--) {
-    if (String(data[i][1]) === String(userId) &&
-        String(data[i][3]) === String(courseId) &&
-        String(data[i][4]) === String(sessionId)) {
+    if (String(data[i][1]).trim() === normalizedUserId &&
+        normalizeCourseId(data[i][3]) === normalizedCourseId &&
+        normalizeSessionId(data[i][4]) === normalizedSessionId) {
       return {
-        user_id: String(userId),
-        course_id: String(courseId),
-        session_id: String(sessionId),
+        user_id: normalizedUserId,
+        course_id: normalizedCourseId,
+        session_id: normalizedSessionId,
         status: 'checked_in',
         last_ts: data[i][6],
       };
@@ -319,9 +345,9 @@ function getPresenceStatus(userId, courseId, sessionId) {
   }
 
   return {
-    user_id: String(userId),
-    course_id: String(courseId),
-    session_id: String(sessionId),
+    user_id: normalizedUserId,
+    course_id: normalizedCourseId,
+    session_id: normalizedSessionId,
     status: 'not_checked_in',
     last_ts: null,
   };

@@ -12,7 +12,7 @@ import { attendanceGasService } from "@/services/attendance-gas-service";
 import { getOrCreateAttendanceDeviceId } from "@/utils/home/attendance-device-id";
 import { appendAttendanceHistory } from "@/utils/home/attendance-history";
 import { isExpiredTimestamp, parseAttendanceQrPayload } from "@/utils/home/attendance-qr";
-import { ScanLine, Camera, CameraOff, CheckCircle2, AlertCircle } from "lucide-react";
+import { Camera, CameraOff, CheckCircle2, AlertCircle } from "lucide-react";
 
 const checkinSchema = z.object({
   course_id: z.string().trim().min(1, "course_id wajib diisi"),
@@ -37,6 +37,26 @@ const FIELD_LABELS: Record<keyof CheckinForm, string> = {
   qr_token: "QR Token",
 };
 
+function normalizeCourseId(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function normalizeSessionId(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function normalizeQrToken(value: string) {
+  return value.trim().toUpperCase();
+}
+
+function normalizeCheckinForm(values: CheckinForm): CheckinForm {
+  return {
+    course_id: normalizeCourseId(values.course_id),
+    session_id: normalizeSessionId(values.session_id),
+    qr_token: normalizeQrToken(values.qr_token),
+  };
+}
+
 export default function MahasiswaScanPage() {
   const session = useAuthSession();
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -60,13 +80,14 @@ export default function MahasiswaScanPage() {
   const checkinMutation = useMutation({
     mutationFn: async (values: CheckinForm) => {
       if (!session) throw new Error("Sesi mahasiswa tidak ditemukan.");
+      const normalizedValues = normalizeCheckinForm(values);
 
       const response = await attendanceGasService.checkIn({
         user_id: session.identifier,
         device_id: getOrCreateAttendanceDeviceId(),
-        course_id: values.course_id,
-        session_id: values.session_id,
-        qr_token: values.qr_token,
+        course_id: normalizedValues.course_id,
+        session_id: normalizedValues.session_id,
+        qr_token: normalizedValues.qr_token,
         ts: new Date().toISOString(),
       });
 
@@ -74,9 +95,9 @@ export default function MahasiswaScanPage() {
 
       appendAttendanceHistory({
         user_id: session.identifier,
-        course_id: values.course_id,
-        session_id: values.session_id,
-        qr_token: values.qr_token,
+        course_id: normalizedValues.course_id,
+        session_id: normalizedValues.session_id,
+        qr_token: normalizedValues.qr_token,
         ts: new Date().toISOString(),
         result: response.data.status,
         presence_id: response.data.presence_id,
@@ -144,19 +165,21 @@ export default function MahasiswaScanPage() {
       return;
     }
 
+    const normalizedPayload = normalizeCheckinForm({
+      course_id: parsedPayload.course_id,
+      session_id: parsedPayload.session_id,
+      qr_token: parsedPayload.qr_token,
+    });
+
     setRawScanResult(text);
-    form.setValue("course_id", parsedPayload.course_id, { shouldValidate: true });
-    form.setValue("session_id", parsedPayload.session_id, { shouldValidate: true });
-    form.setValue("qr_token", parsedPayload.qr_token, { shouldValidate: true });
+    form.setValue("course_id", normalizedPayload.course_id, { shouldValidate: true });
+    form.setValue("session_id", normalizedPayload.session_id, { shouldValidate: true });
+    form.setValue("qr_token", normalizedPayload.qr_token, { shouldValidate: true });
 
     isSubmittingFromScanRef.current = true;
 
     try {
-      await checkinMutation.mutateAsync({
-        course_id: parsedPayload.course_id,
-        session_id: parsedPayload.session_id,
-        qr_token: parsedPayload.qr_token,
-      });
+      await checkinMutation.mutateAsync(normalizedPayload);
 
       setScannerError(null);
 
@@ -241,7 +264,7 @@ export default function MahasiswaScanPage() {
     if (scannerStatus === "requesting")
       return { text: "Meminta izin kamera...", color: "text-amber-500 dark:text-amber-400" };
     if (scannerStatus === "active")
-      return { text: "Scanner aktif — arahkan ke QR presensi", color: "text-emerald-600 dark:text-emerald-400" };
+      return { text: "Scanner aktif - arahkan ke QR presensi", color: "text-emerald-600 dark:text-emerald-400" };
     if (scannerStatus === "error")
       return { text: scannerError ?? "Scanner gagal diinisialisasi.", color: "text-red-500 dark:text-red-400" };
     return { text: "Scanner belum aktif", color: "text-(--token-gray-400) dark:text-(--token-gray-500)" };
@@ -260,10 +283,10 @@ export default function MahasiswaScanPage() {
         }
       `}</style>
 
-      {/* Page header */}
+        {/* Page header */}
       <div>
         <p className="text-[10px] font-semibold uppercase tracking-widest text-primary-600 dark:text-primary-400">
-          Mahasiswa — Modul Presensi
+          Mahasiswa - Modul Presensi
         </p>
         <h1 className="mt-1 text-xl font-bold text-(--token-gray-900) dark:text-(--token-white) sm:text-2xl">
           Scan QR Presensi
@@ -382,7 +405,13 @@ export default function MahasiswaScanPage() {
 
             <form
               className="space-y-4"
-              onSubmit={form.handleSubmit((values) => checkinMutation.mutate(values))}
+              onSubmit={form.handleSubmit((values) => {
+                const normalizedValues = normalizeCheckinForm(values);
+                form.setValue("course_id", normalizedValues.course_id, { shouldValidate: true });
+                form.setValue("session_id", normalizedValues.session_id, { shouldValidate: true });
+                form.setValue("qr_token", normalizedValues.qr_token, { shouldValidate: true });
+                checkinMutation.mutate(normalizedValues);
+              })}
             >
               {(["course_id", "session_id", "qr_token"] as const).map((field) => (
                 <div key={field}>
@@ -391,6 +420,9 @@ export default function MahasiswaScanPage() {
                     {...form.register(field)}
                     placeholder={field === "qr_token" ? "Paste token jika tidak pakai kamera" : undefined}
                     className={INPUT_CLASS}
+                    autoCapitalize="off"
+                    autoCorrect="off"
+                    spellCheck={false}
                   />
                   {form.formState.errors[field]?.message && (
                     <p className="mt-1 text-xs text-red-500">
@@ -399,6 +431,11 @@ export default function MahasiswaScanPage() {
                   )}
                 </div>
               ))}
+
+              <p className="text-xs text-(--token-gray-500) dark:text-(--token-gray-400)">
+                Input otomatis dinormalisasi. course_id dan session_id menjadi lowercase,
+                qr_token menjadi uppercase.
+              </p>
 
               <button
                 type="submit"

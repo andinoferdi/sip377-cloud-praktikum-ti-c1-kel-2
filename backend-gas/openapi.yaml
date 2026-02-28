@@ -15,6 +15,9 @@ info:
     - `token_invalid`
     - `token_expired`
     - `already_checked_in`
+    Presence matching notes:
+    - `course_id` and `session_id` are normalized to lowercase before matching.
+    - `qr_token` is normalized to uppercase before matching.
     This deployment is API-only and does not serve HTML dashboard.
 
 servers:
@@ -56,12 +59,12 @@ paths:
           in: query
           schema:
             type: string
-          description: Required when path=presence/status or path=presence/list
+          description: Required when path=presence/status or path=presence/list. Matching is case-insensitive.
         - name: session_id
           in: query
           schema:
             type: string
-          description: Required when path=presence/status or path=presence/list
+          description: Required when path=presence/status or path=presence/list. Matching is case-insensitive.
         - name: device_id
           in: query
           schema:
@@ -245,9 +248,11 @@ components:
         course_id:
           type: string
           example: cloud-101
+          description: Stored and matched in lowercase form.
         session_id:
           type: string
           example: sesi-02
+          description: Stored and matched in lowercase form.
         ts:
           type: string
           format: date-time
@@ -265,12 +270,15 @@ components:
         course_id:
           type: string
           example: cloud-101
+          description: Matching is case-insensitive (normalized to lowercase).
         session_id:
           type: string
           example: sesi-02
+          description: Matching is case-insensitive (normalized to lowercase).
         qr_token:
           type: string
           example: TKN-8F2A19
+          description: Matching is case-insensitive (normalized to uppercase).
         ts:
           type: string
           format: date-time

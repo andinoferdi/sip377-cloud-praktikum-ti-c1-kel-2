@@ -48,6 +48,27 @@ const createQrSchema = z.object({
 
 type CreateQrForm = z.infer<typeof createQrSchema>;
 
+function normalizeCourseId(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function normalizeDay(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function normalizeSessionNo(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function normalizeCreateQrForm(values: CreateQrForm): CreateQrForm {
+  return {
+    course_id: normalizeCourseId(values.course_id),
+    day: normalizeDay(values.day),
+    session_no: normalizeSessionNo(values.session_no),
+    started_at: values.started_at.trim(),
+  };
+}
+
 const DEFAULT_VALUES: CreateQrForm = {
   course_id: "cloud-101",
   day: "senin",
@@ -161,15 +182,16 @@ export default function DosenCreateQrPage() {
 
   const generateMutation = useMutation({
     mutationFn: async (values: CreateQrForm) => {
+      const normalizedValues = normalizeCreateQrForm(values);
       const sessionId = buildAttendanceSessionId({
-        courseId: values.course_id,
-        day: values.day,
-        sessionNo: values.session_no,
-        startedAt: values.started_at,
+        courseId: normalizedValues.course_id,
+        day: normalizedValues.day,
+        sessionNo: normalizedValues.session_no,
+        startedAt: normalizedValues.started_at,
       });
 
       const response = await attendanceGasService.generateToken({
-        course_id: values.course_id,
+        course_id: normalizedValues.course_id,
         session_id: sessionId,
         ts: new Date().toISOString(),
       });
@@ -178,7 +200,7 @@ export default function DosenCreateQrPage() {
 
       const payload: AttendanceQrPayload = {
         v: 1,
-        course_id: values.course_id,
+        course_id: normalizedValues.course_id,
         session_id: sessionId,
         qr_token: response.data.qr_token,
         expires_at: response.data.expires_at,
@@ -197,7 +219,7 @@ export default function DosenCreateQrPage() {
         activePayload: payload,
         nextRotationAt: nextRotationTimestamp,
         isStopped: false,
-        formValues: form.getValues(),
+        formValues: normalizeCreateQrForm(form.getValues()),
       });
     },
   });
@@ -221,7 +243,7 @@ export default function DosenCreateQrPage() {
       activePayload: null,
       nextRotationAt: null,
       isStopped: true,
-      formValues: form.getValues(),
+      formValues: normalizeCreateQrForm(form.getValues()),
     });
   }
 
@@ -303,9 +325,9 @@ export default function DosenCreateQrPage() {
   );
 
   const sessionPreview = buildAttendanceSessionId({
-    courseId: watchedCourseId ?? "",
-    day: watchedDay ?? "",
-    sessionNo: watchedSessionNo ?? "",
+    courseId: normalizeCourseId(watchedCourseId ?? ""),
+    day: normalizeDay(watchedDay ?? ""),
+    sessionNo: normalizeSessionNo(watchedSessionNo ?? ""),
     startedAt: watchedStartedAt ?? "",
   });
 
@@ -317,7 +339,7 @@ export default function DosenCreateQrPage() {
       {/* Page header */}
       <div>
         <p className="text-[10px] font-semibold uppercase tracking-widest text-primary-600 dark:text-primary-400">
-          Dosen — Modul Presensi
+          Dosen - Modul Presensi
         </p>
         <h1 className="mt-1 text-xl font-bold text-(--token-gray-900) dark:text-(--token-white) sm:text-2xl">
           Buat QR Presensi
@@ -343,8 +365,12 @@ export default function DosenCreateQrPage() {
           <form
             className="space-y-4 p-5"
             onSubmit={form.handleSubmit((values) => {
+              const normalizedValues = normalizeCreateQrForm(values);
+              form.setValue("course_id", normalizedValues.course_id, { shouldValidate: true });
+              form.setValue("day", normalizedValues.day, { shouldValidate: true });
+              form.setValue("session_no", normalizedValues.session_no, { shouldValidate: true });
               setIsStopped(false);
-              generateMutation.mutate(values);
+              generateMutation.mutate(normalizedValues);
             })}
           >
             {FORM_FIELDS.map((field) => (
@@ -375,6 +401,9 @@ export default function DosenCreateQrPage() {
                     type="text"
                     placeholder={field.placeholder}
                     className={INPUT_CLASS}
+                    autoCapitalize="off"
+                    autoCorrect="off"
+                    spellCheck={false}
                   />
                 )}
                 {form.formState.errors[field.name]?.message && (
