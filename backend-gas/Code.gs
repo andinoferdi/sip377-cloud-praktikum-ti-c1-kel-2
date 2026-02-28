@@ -1,0 +1,614 @@
+// ============================================================
+// GAS Backend API v1 - Presensi QR Dinamis, Telemetry, GPS
+// Routing: e.parameter.path | Runtime: V8 | TZ: Asia/Jakarta
+// API-only mode: no HTML dashboard
+// ============================================================
+
+const SPREADSHEET_ID = '1TOjlTWE--TV-VZARworVPejpOYLURK5twpvrRcZ_gFA';
+
+const SHEET = {
+  TOKENS: 'tokens',
+  PRESENCE: 'presence',
+  ACCEL: 'accel',
+  GPS: 'gps',
+  SESSION_STATE: 'session_state',
+};
+
+const HEADERS = {
+  [SHEET.TOKENS]: ['qr_token', 'course_id', 'session_id', 'created_at', 'expires_at', 'used'],
+  [SHEET.PRESENCE]: ['presence_id', 'user_id', 'device_id', 'course_id', 'session_id', 'qr_token', 'ts', 'recorded_at'],
+  [SHEET.ACCEL]: ['device_id', 'x', 'y', 'z', 'sample_ts', 'batch_ts', 'recorded_at'],
+  [SHEET.GPS]: ['device_id', 'lat', 'lng', 'accuracy_m', 'altitude_m', 'ts', 'recorded_at'],
+  [SHEET.SESSION_STATE]: ['course_id', 'session_id', 'is_stopped', 'started_at', 'stopped_at', 'updated_at'],
+};
+
+const QR_TOKEN_TTL_MS = 120 * 1000;
+
+function doGet(e) {
+  try {
+    const path = (e && e.parameter && e.parameter.path) ? e.parameter.path : '';
+    const params = e && e.parameter ? e.parameter : {};
+
+    switch (path) {
+      case 'presence/status':
+        return sendSuccess(getPresenceStatus(params.user_id, params.course_id, params.session_id));
+
+      case 'presence/list':
+        return sendSuccess(getPresenceList(params.course_id, params.session_id, params.limit));
+
+      case 'telemetry/accel/latest':
+        return sendSuccess(getAccelLatest(params.device_id));
+
+      case 'telemetry/gps/latest':
+        return sendSuccess(getGpsLatest(params.device_id));
+
+      case 'telemetry/gps/history':
+        return sendSuccess(getGpsHistory(params.device_id, params.limit, params.from, params.to));
+
+      case 'ui':
+      default:
+        return sendSuccess(getApiInfo());
+    }
+  } catch (err) {
+    return sendError(err && err.message ? err.message : String(err));
+  }
+}
+
+function doPost(e) {
+  try {
+    const path = (e && e.parameter && e.parameter.path) ? e.parameter.path : '';
+    const body = parseJsonBody(e);
+
+    switch (path) {
+      case 'presence/qr/generate':
+        return sendSuccess(generateQRToken(body));
+
+      case 'presence/checkin':
+        return sendSuccess(checkin(body));
+
+      case 'presence/qr/stop':
+        return sendSuccess(stopQrSession(body));
+
+      case 'telemetry/accel':
+        return sendSuccess(batchAccel(body));
+
+      case 'telemetry/gps':
+        return sendSuccess(logGPS(body));
+
+      default:
+        return sendError('unknown_endpoint: POST ?path=' + path);
+    }
+  } catch (err) {
+    return sendError(err && err.message ? err.message : String(err));
+  }
+}
+
+function parseJsonBody(e) {
+  if (!e || !e.postData || !e.postData.contents) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(e.postData.contents);
+  } catch (_err) {
+    throw new Error('invalid_json_body');
+  }
+}
+
+function getApiInfo() {
+  return {
+    status: 'ok',
+    mode: 'api_only',
+    message: 'GAS Backend API v1 is running.',
+    notes: ['No HTML dashboard is served by this deployment.'],
+    endpoints: {
+      GET: [
+        '?path=presence/status',
+        '?path=presence/list',
+        '?path=telemetry/accel/latest',
+        '?path=telemetry/gps/latest',
+        '?path=telemetry/gps/history',
+        '?path=ui',
+      ],
+      POST: [
+        '?path=presence/qr/generate',
+        '?path=presence/checkin',
+        '?path=presence/qr/stop',
+        '?path=telemetry/accel',
+        '?path=telemetry/gps',
+      ],
+    },
+  };
+}
+
+function sendSuccess(data) {
+  return ContentService
+    .createTextOutput(JSON.stringify({ ok: true, data: data }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function sendError(message) {
+  return ContentService
+    .createTextOutput(JSON.stringify({ ok: false, error: message || 'internal_error' }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function getSpreadsheet() {
+  return SpreadsheetApp.openById(SPREADSHEET_ID);
+}
+
+function getOrCreateSheet(name) {
+  var ss = getSpreadsheet();
+  var sheet = ss.getSheetByName(name);
+
+  if (!sheet) {
+    sheet = ss.insertSheet(name);
+    var headers = HEADERS[name];
+
+    if (headers && headers.length > 0) {
+      sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+      sheet.getRange(1, 1, 1, headers.length)
+        .setFontWeight('bold')
+        .setBackground('#4a86e8')
+        .setFontColor('#ffffff');
+      sheet.setFrozenRows(1);
+    }
+  }
+
+  return sheet;
+}
+
+function nowISO() {
+  return new Date().toISOString();
+}
+
+function shortId(prefix, length) {
+  return prefix + Utilities.getUuid().replace(/-/g, '').substring(0, length).toUpperCase();
+}
+
+function requireField(source, fieldName) {
+  if (!source || source[fieldName] === undefined || source[fieldName] === null || source[fieldName] === '') {
+    throw new Error('missing_field: ' + fieldName);
+  }
+}
+
+function normalizeCourseId(value) {
+  return String(value).trim().toLowerCase();
+}
+
+function normalizeSessionId(value) {
+  return String(value).trim().toLowerCase();
+}
+
+function normalizeToken(value) {
+  return String(value).trim().toUpperCase();
+}
+
+function getSessionState(courseId, sessionId) {
+  var normalizedCourseId = normalizeCourseId(courseId);
+  var normalizedSessionId = normalizeSessionId(sessionId);
+  var sheet = getOrCreateSheet(SHEET.SESSION_STATE);
+  var data = sheet.getDataRange().getValues();
+
+  for (var i = data.length - 1; i >= 1; i--) {
+    if (normalizeCourseId(data[i][0]) === normalizedCourseId &&
+        normalizeSessionId(data[i][1]) === normalizedSessionId) {
+      return {
+        row: i + 1,
+        course_id: normalizedCourseId,
+        session_id: normalizedSessionId,
+        is_stopped: data[i][2] === true || String(data[i][2]).toLowerCase() === 'true',
+        started_at: data[i][3] ? String(data[i][3]) : null,
+        stopped_at: data[i][4] ? String(data[i][4]) : null,
+        updated_at: data[i][5] ? String(data[i][5]) : null,
+      };
+    }
+  }
+
+  return null;
+}
+
+function upsertSessionState(courseId, sessionId, isStopped, eventTimeISO) {
+  var normalizedCourseId = normalizeCourseId(courseId);
+  var normalizedSessionId = normalizeSessionId(sessionId);
+  var sheet = getOrCreateSheet(SHEET.SESSION_STATE);
+  var existingState = getSessionState(normalizedCourseId, normalizedSessionId);
+  var now = eventTimeISO || nowISO();
+
+  if (!existingState) {
+    sheet.appendRow([
+      normalizedCourseId,
+      normalizedSessionId,
+      isStopped,
+      now,
+      isStopped ? now : '',
+      now,
+    ]);
+    return {
+      course_id: normalizedCourseId,
+      session_id: normalizedSessionId,
+      is_stopped: isStopped,
+      started_at: now,
+      stopped_at: isStopped ? now : null,
+      updated_at: now,
+    };
+  }
+
+  var startedAt = existingState.started_at || now;
+  var stoppedAt = isStopped ? now : '';
+
+  sheet.getRange(existingState.row, 3, 1, 4).setValues([[
+    isStopped,
+    startedAt,
+    stoppedAt,
+    now,
+  ]]);
+
+  return {
+    course_id: normalizedCourseId,
+    session_id: normalizedSessionId,
+    is_stopped: isStopped,
+    started_at: startedAt,
+    stopped_at: isStopped ? now : null,
+    updated_at: now,
+  };
+}
+
+function generateQRToken(body) {
+  requireField(body, 'course_id');
+  requireField(body, 'session_id');
+
+  var normalizedCourseId = normalizeCourseId(body.course_id);
+  var normalizedSessionId = normalizeSessionId(body.session_id);
+  var sheet = getOrCreateSheet(SHEET.TOKENS);
+  var now = body.ts ? new Date(body.ts) : new Date();
+  var expiresAt = new Date(now.getTime() + QR_TOKEN_TTL_MS);
+  var qrToken = shortId('TKN-', 6);
+
+  sheet.appendRow([
+    qrToken,
+    normalizedCourseId,
+    normalizedSessionId,
+    now.toISOString(),
+    expiresAt.toISOString(),
+    false,
+  ]);
+
+  upsertSessionState(normalizedCourseId, normalizedSessionId, false, nowISO());
+
+  return {
+    qr_token: qrToken,
+    expires_at: expiresAt.toISOString(),
+  };
+}
+
+function stopQrSession(body) {
+  requireField(body, 'course_id');
+  requireField(body, 'session_id');
+
+  var normalizedCourseId = normalizeCourseId(body.course_id);
+  var normalizedSessionId = normalizeSessionId(body.session_id);
+  var stopTime = body.ts ? new Date(body.ts) : new Date();
+  var stopTimeISO = isNaN(stopTime.getTime()) ? nowISO() : stopTime.toISOString();
+
+  upsertSessionState(normalizedCourseId, normalizedSessionId, true, stopTimeISO);
+
+  return {
+    course_id: normalizedCourseId,
+    session_id: normalizedSessionId,
+    status: 'stopped',
+    stopped_at: stopTimeISO,
+  };
+}
+
+function checkin(body) {
+  requireField(body, 'user_id');
+  requireField(body, 'device_id');
+  requireField(body, 'course_id');
+  requireField(body, 'session_id');
+  requireField(body, 'qr_token');
+
+  var normalizedCourseId = normalizeCourseId(body.course_id);
+  var normalizedSessionId = normalizeSessionId(body.session_id);
+  var normalizedToken = normalizeToken(body.qr_token);
+  var tokensSheet = getOrCreateSheet(SHEET.TOKENS);
+  var tokensData = tokensSheet.getDataRange().getValues();
+  var tokenFound = false;
+  var tokenRowCourseId = '';
+  var tokenRowSessionId = '';
+  var tokenRowExpiresAt = null;
+  var checkTime = body.ts ? new Date(body.ts) : new Date();
+
+  for (var i = tokensData.length - 1; i >= 1; i--) {
+    var rowToken = normalizeToken(tokensData[i][0]);
+    var rowCourse = normalizeCourseId(tokensData[i][1]);
+    var rowSession = normalizeSessionId(tokensData[i][2]);
+    var rowExpiresAt = new Date(tokensData[i][4]);
+
+    if (rowToken === normalizedToken &&
+        rowCourse === normalizedCourseId &&
+        rowSession === normalizedSessionId) {
+      tokenFound = true;
+      tokenRowCourseId = rowCourse;
+      tokenRowSessionId = rowSession;
+      tokenRowExpiresAt = rowExpiresAt;
+      break;
+    }
+  }
+
+  if (!tokenFound) {
+    throw new Error('token_invalid');
+  }
+
+  var sessionState = getSessionState(tokenRowCourseId, tokenRowSessionId);
+  if (sessionState) {
+    if (sessionState.is_stopped) {
+      throw new Error('session_closed');
+    }
+  } else if (tokenRowExpiresAt && checkTime > tokenRowExpiresAt) {
+    throw new Error('token_expired');
+  }
+
+  var presenceSheet = getOrCreateSheet(SHEET.PRESENCE);
+  var presenceData = presenceSheet.getDataRange().getValues();
+
+  for (var j = presenceData.length - 1; j >= 1; j--) {
+    if (String(presenceData[j][1]).trim() === String(body.user_id).trim() &&
+        normalizeCourseId(presenceData[j][3]) === tokenRowCourseId &&
+        normalizeSessionId(presenceData[j][4]) === tokenRowSessionId) {
+      throw new Error('already_checked_in');
+    }
+  }
+
+  var presenceId = shortId('PR-', 4);
+
+  presenceSheet.appendRow([
+    presenceId,
+    String(body.user_id).trim(),
+    String(body.device_id).trim(),
+    tokenRowCourseId,
+    tokenRowSessionId,
+    normalizedToken,
+    checkTime.toISOString(),
+    nowISO(),
+  ]);
+
+  return {
+    presence_id: presenceId,
+    status: 'checked_in',
+  };
+}
+
+function getPresenceList(courseId, sessionId, limit) {
+  if (!courseId) throw new Error('missing_field: course_id');
+  if (!sessionId) throw new Error('missing_field: session_id');
+
+  var normalizedCourseId = normalizeCourseId(courseId);
+  var normalizedSessionId = normalizeSessionId(sessionId);
+  var sheet = getOrCreateSheet(SHEET.PRESENCE);
+  var data = sheet.getDataRange().getValues();
+
+  var maxItems = limit ? parseInt(limit, 10) : 200;
+  if (isNaN(maxItems) || maxItems <= 0) {
+    maxItems = 200;
+  }
+
+  var total = 0;
+  var items = [];
+
+  for (var i = data.length - 1; i >= 1; i--) {
+    if (normalizeCourseId(data[i][3]) !== normalizedCourseId || normalizeSessionId(data[i][4]) !== normalizedSessionId) {
+      continue;
+    }
+
+    total += 1;
+    if (items.length >= maxItems) {
+      continue;
+    }
+
+    items.push({
+      presence_id: data[i][0],
+      user_id: data[i][1],
+      device_id: data[i][2],
+      ts: data[i][6],
+      recorded_at: data[i][7],
+    });
+  }
+
+  return {
+    course_id: normalizedCourseId,
+    session_id: normalizedSessionId,
+    total: total,
+    items: items,
+  };
+}
+
+function getPresenceStatus(userId, courseId, sessionId) {
+  if (!userId) throw new Error('missing_field: user_id');
+  if (!courseId) throw new Error('missing_field: course_id');
+  if (!sessionId) throw new Error('missing_field: session_id');
+
+  var normalizedUserId = String(userId).trim();
+  var normalizedCourseId = normalizeCourseId(courseId);
+  var normalizedSessionId = normalizeSessionId(sessionId);
+  var sheet = getOrCreateSheet(SHEET.PRESENCE);
+  var data = sheet.getDataRange().getValues();
+
+  for (var i = data.length - 1; i >= 1; i--) {
+    if (String(data[i][1]).trim() === normalizedUserId &&
+        normalizeCourseId(data[i][3]) === normalizedCourseId &&
+        normalizeSessionId(data[i][4]) === normalizedSessionId) {
+      return {
+        user_id: normalizedUserId,
+        course_id: normalizedCourseId,
+        session_id: normalizedSessionId,
+        status: 'checked_in',
+        last_ts: data[i][6],
+      };
+    }
+  }
+
+  return {
+    user_id: normalizedUserId,
+    course_id: normalizedCourseId,
+    session_id: normalizedSessionId,
+    status: 'not_checked_in',
+    last_ts: null,
+  };
+}
+
+function batchAccel(body) {
+  requireField(body, 'device_id');
+  if (!Array.isArray(body.samples) || body.samples.length === 0) {
+    throw new Error('missing_field: samples');
+  }
+
+  var sheet = getOrCreateSheet(SHEET.ACCEL);
+  var batchTs = body.ts || nowISO();
+  var recordedAt = nowISO();
+
+  var rows = body.samples.map(function (sample) {
+    return [
+      String(body.device_id),
+      sample && sample.x !== undefined ? sample.x : 0,
+      sample && sample.y !== undefined ? sample.y : 0,
+      sample && sample.z !== undefined ? sample.z : 0,
+      sample && sample.t ? sample.t : nowISO(),
+      batchTs,
+      recordedAt,
+    ];
+  });
+
+  var lastRow = sheet.getLastRow();
+  sheet.getRange(lastRow + 1, 1, rows.length, rows[0].length).setValues(rows);
+
+  return {
+    accepted: rows.length,
+  };
+}
+
+function getAccelLatest(deviceId) {
+  if (!deviceId) {
+    throw new Error('missing_field: device_id');
+  }
+
+  var sheet = getOrCreateSheet(SHEET.ACCEL);
+  var data = sheet.getDataRange().getValues();
+
+  for (var i = data.length - 1; i >= 1; i--) {
+    if (String(data[i][0]) === String(deviceId)) {
+      return {
+        t: data[i][4],
+        x: data[i][1],
+        y: data[i][2],
+        z: data[i][3],
+      };
+    }
+  }
+
+  return {};
+}
+
+function logGPS(body) {
+  requireField(body, 'device_id');
+  if (body.lat === undefined || body.lat === null) {
+    throw new Error('missing_field: lat');
+  }
+  if (body.lng === undefined || body.lng === null) {
+    throw new Error('missing_field: lng');
+  }
+
+  var sheet = getOrCreateSheet(SHEET.GPS);
+
+  sheet.appendRow([
+    String(body.device_id),
+    body.lat,
+    body.lng,
+    body.accuracy_m !== undefined && body.accuracy_m !== null ? body.accuracy_m : '',
+    body.altitude_m !== undefined && body.altitude_m !== null ? body.altitude_m : '',
+    body.ts || nowISO(),
+    nowISO(),
+  ]);
+
+  return {
+    accepted: true,
+  };
+}
+
+function getGpsLatest(deviceId) {
+  if (!deviceId) {
+    throw new Error('missing_field: device_id');
+  }
+
+  var sheet = getOrCreateSheet(SHEET.GPS);
+  var data = sheet.getDataRange().getValues();
+
+  for (var i = data.length - 1; i >= 1; i--) {
+    if (String(data[i][0]) === String(deviceId)) {
+      return {
+        ts: data[i][5],
+        lat: data[i][1],
+        lng: data[i][2],
+        accuracy_m: data[i][3] === '' ? null : data[i][3],
+      };
+    }
+  }
+
+  return {
+    ts: null,
+    lat: null,
+    lng: null,
+    accuracy_m: null,
+  };
+}
+
+function getGpsHistory(deviceId, limit, from, to) {
+  if (!deviceId) {
+    throw new Error('missing_field: device_id');
+  }
+
+  var sheet = getOrCreateSheet(SHEET.GPS);
+  var data = sheet.getDataRange().getValues();
+
+  var maxItems = limit ? parseInt(limit, 10) : 200;
+  if (isNaN(maxItems) || maxItems <= 0) {
+    maxItems = 200;
+  }
+
+  var now = new Date();
+  var startTime = from ? new Date(from) : new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  var endTime = to ? new Date(to) : now;
+
+  var points = [];
+
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][0]) !== String(deviceId)) {
+      continue;
+    }
+
+    var rowTime = new Date(data[i][5]);
+    if (rowTime >= startTime && rowTime <= endTime) {
+      var point = {
+        ts: data[i][5],
+        lat: data[i][1],
+        lng: data[i][2],
+      };
+      if (data[i][3] !== '' && data[i][3] !== null && data[i][3] !== undefined) {
+        point.accuracy_m = data[i][3];
+      }
+      points.push(point);
+    }
+  }
+
+  points.sort(function (a, b) {
+    return new Date(a.ts) - new Date(b.ts);
+  });
+
+  var startIndex = Math.max(points.length - maxItems, 0);
+  var limited = points.slice(startIndex);
+
+  return {
+    device_id: String(deviceId),
+    items: limited,
+  };
+}

@@ -1,0 +1,366 @@
+openapi: 3.0.3
+info:
+  title: GAS Backend API v1 - Presensi QR Dinamis, Telemetry, GPS
+  version: 1.0.0
+  license:
+    name: Academic Use Only
+    url: https://creativecommons.org/licenses/by-nc/4.0/
+  description: |
+    Backend API built on Google Apps Script (GAS), deployed as a Web App.
+    Routing uses query parameter `?path=`.
+    Response envelope:
+    - Success: `{ "ok": true, "data": ... }`
+    - Error: `{ "ok": false, "error": "..." }`
+    Presence error codes:
+    - `token_invalid`
+    - `token_expired`
+    - `already_checked_in`
+    - `session_closed`
+    Presence matching notes:
+    - `course_id` and `session_id` are normalized to lowercase before matching.
+    - `qr_token` is normalized to uppercase before matching.
+    This deployment is API-only and does not serve HTML dashboard.
+
+servers:
+  - url: https://script.google.com/macros/s/{deploymentId}/exec
+    description: Google Apps Script Web App
+    variables:
+      deploymentId:
+        default: AKfycbzVGdxaC7TOkDit7STUHxgdBNn6lgdy7X8_HJWhcgcWAhMG8yd1-ygAU6RcpXQPcJnAVw
+        description: Web App deployment ID
+
+security: []
+
+paths:
+  /exec:
+    get:
+      summary: Multi-purpose GET endpoint (routed by `path` query)
+      operationId: doGet
+      parameters:
+        - name: path
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - presence/status
+              - presence/list
+              - telemetry/accel/latest
+              - telemetry/gps/latest
+              - telemetry/gps/history
+              - ui
+          description: |
+            Virtual route selector. Empty/default and `ui` both return API metadata JSON.
+        - name: user_id
+          in: query
+          schema:
+            type: string
+          description: Required when path=presence/status
+        - name: course_id
+          in: query
+          schema:
+            type: string
+          description: Required when path=presence/status or path=presence/list. Matching is case-insensitive.
+        - name: session_id
+          in: query
+          schema:
+            type: string
+          description: Required when path=presence/status or path=presence/list. Matching is case-insensitive.
+        - name: device_id
+          in: query
+          schema:
+            type: string
+          description: Required for telemetry latest/history endpoints
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 200
+          description: Optional max items for path=presence/list or path=telemetry/gps/history
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Optional ISO-8601 start time for path=telemetry/gps/history
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Optional ISO-8601 end time for path=telemetry/gps/history
+      responses:
+        '200':
+          description: JSON envelope response
+          content:
+            application/json:
+              examples:
+                apiInfo:
+                  summary: Default / path=ui metadata
+                  value:
+                    ok: true
+                    data:
+                      status: ok
+                      mode: api_only
+                presenceStatus:
+                  summary: path=presence/status
+                  value:
+                    ok: true
+                    data:
+                      user_id: "2023xxxx"
+                      course_id: "cloud-101"
+                      session_id: "sesi-02"
+                      status: "checked_in"
+                      last_ts: "2026-02-18T10:01:10Z"
+                presenceList:
+                  summary: path=presence/list
+                  value:
+                    ok: true
+                    data:
+                      course_id: "cloud-101"
+                      session_id: "sesi-02"
+                      total: 2
+                      items:
+                        - presence_id: "PR-0002"
+                          user_id: "20230002"
+                          device_id: "dev-002"
+                          ts: "2026-02-18T10:01:20Z"
+                          recorded_at: "2026-02-18T10:01:20Z"
+                        - presence_id: "PR-0001"
+                          user_id: "20230001"
+                          device_id: "dev-001"
+                          ts: "2026-02-18T10:01:10Z"
+                          recorded_at: "2026-02-18T10:01:10Z"
+                accelLatest:
+                  summary: path=telemetry/accel/latest
+                  value:
+                    ok: true
+                    data:
+                      t: "2026-02-18T10:15:29.300Z"
+                      x: 0.15
+                      y: 0.02
+                      z: 9.68
+                gpsLatest:
+                  summary: path=telemetry/gps/latest
+                  value:
+                    ok: true
+                    data:
+                      ts: "2026-02-18T10:15:30Z"
+                      lat: -7.2575
+                      lng: 112.7521
+                      accuracy_m: 12.5
+                gpsHistory:
+                  summary: path=telemetry/gps/history
+                  value:
+                    ok: true
+                    data:
+                      device_id: "dev-001"
+                      items:
+                        - ts: "2026-02-18T10:15:00Z"
+                          lat: -7.2570
+                          lng: 112.7515
+                        - ts: "2026-02-18T10:15:10Z"
+                          lat: -7.2572
+                          lng: 112.7518
+        '400':
+          description: Error envelope
+          content:
+            application/json:
+              example:
+                ok: false
+                error: "missing_field: device_id"
+
+    post:
+      summary: Multi-purpose POST endpoint (routed by `path` query)
+      operationId: doPost
+      parameters:
+        - name: path
+          in: query
+          required: true
+          schema:
+            type: string
+            enum:
+              - presence/qr/generate
+              - presence/checkin
+              - presence/qr/stop
+              - telemetry/accel
+              - telemetry/gps
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/GenerateQRRequest'
+                - $ref: '#/components/schemas/CheckinRequest'
+                - $ref: '#/components/schemas/StopSessionRequest'
+                - $ref: '#/components/schemas/BatchAccelRequest'
+                - $ref: '#/components/schemas/LogGPSRequest'
+      responses:
+        '200':
+          description: JSON envelope response
+          content:
+            application/json:
+              examples:
+                generateQR:
+                  summary: path=presence/qr/generate
+                  value:
+                    ok: true
+                    data:
+                      qr_token: "TKN-8F2A19"
+                      expires_at: "2026-02-18T10:02:00Z"
+                checkinSuccess:
+                  summary: path=presence/checkin
+                  value:
+                    ok: true
+                    data:
+                      presence_id: "PR-0001"
+                      status: "checked_in"
+                checkinError:
+                  summary: checkin error
+                  value:
+                    ok: false
+                    error: "already_checked_in"
+                stopSession:
+                  summary: path=presence/qr/stop
+                  value:
+                    ok: true
+                    data:
+                      course_id: "cloud-101"
+                      session_id: "cloud-101-senin-02-202602281626"
+                      status: "stopped"
+                      stopped_at: "2026-02-28T09:30:00.000Z"
+                accelBatch:
+                  summary: path=telemetry/accel
+                  value:
+                    ok: true
+                    data:
+                      accepted: 2
+                gpsLog:
+                  summary: path=telemetry/gps
+                  value:
+                    ok: true
+                    data:
+                      accepted: true
+        '400':
+          description: Error envelope
+          content:
+            application/json:
+              example:
+                ok: false
+                error: "token_invalid"
+
+components:
+  schemas:
+    GenerateQRRequest:
+      type: object
+      required: [course_id, session_id]
+      properties:
+        course_id:
+          type: string
+          example: cloud-101
+          description: Stored and matched in lowercase form.
+        session_id:
+          type: string
+          example: sesi-02
+          description: Stored and matched in lowercase form.
+        ts:
+          type: string
+          format: date-time
+
+    CheckinRequest:
+      type: object
+      required: [user_id, device_id, course_id, session_id, qr_token]
+      properties:
+        user_id:
+          type: string
+          example: 2023xxxx
+        device_id:
+          type: string
+          example: dev-001
+        course_id:
+          type: string
+          example: cloud-101
+          description: Matching is case-insensitive (normalized to lowercase).
+        session_id:
+          type: string
+          example: sesi-02
+          description: Matching is case-insensitive (normalized to lowercase).
+        qr_token:
+          type: string
+          example: TKN-8F2A19
+          description: Matching is case-insensitive (normalized to uppercase).
+        ts:
+          type: string
+          format: date-time
+
+    StopSessionRequest:
+      type: object
+      required: [course_id, session_id]
+      properties:
+        course_id:
+          type: string
+          example: cloud-101
+          description: Session course ID to mark as closed.
+        session_id:
+          type: string
+          example: cloud-101-senin-02-202602281626
+          description: Session ID to mark as closed.
+        ts:
+          type: string
+          format: date-time
+
+    BatchAccelRequest:
+      type: object
+      required: [device_id, samples]
+      properties:
+        device_id:
+          type: string
+          example: dev-001
+        ts:
+          type: string
+          format: date-time
+        samples:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [t, x, y, z]
+            properties:
+              t:
+                type: string
+                format: date-time
+              x:
+                type: number
+              y:
+                type: number
+              z:
+                type: number
+
+    LogGPSRequest:
+      type: object
+      required: [device_id, lat, lng]
+      properties:
+        device_id:
+          type: string
+          example: dev-001
+        ts:
+          type: string
+          format: date-time
+        lat:
+          type: number
+          format: double
+          example: -7.2575
+        lng:
+          type: number
+          format: double
+          example: 112.7521
+        accuracy_m:
+          type: number
+          format: double
+          example: 12.5
+        altitude_m:
+          type: number
+          format: double
+          example: 450.0
