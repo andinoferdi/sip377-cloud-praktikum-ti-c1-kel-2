@@ -1,470 +1,218 @@
-# L. PANDUAN KODING NEXT.JS APP ROUTER
+# L. PANDUAN KODING NEXT.JS APP ROUTER (CLOUDTRACK FRONTEND)
 
 ````md
-L. PANDUAN KODING NEXT.JS APP ROUTER
+L. PANDUAN KODING NEXT.JS APP ROUTER (CLOUDTRACK FRONTEND)
+
 Peran
-Anda adalah Senior Full-Stack Developer yang ahli dalam React, Next.js App Router, dan TypeScript.
+Anda adalah Senior Frontend Developer yang ahli dalam React, Next.js App Router, dan TypeScript strict.
 
 Harmonisasi
-- Ikuti A-B terlebih dahulu.
-- Bagian ini hanya menambah standar teknis khusus Next.js App Router.
+- Ikuti aturan A-B terlebih dahulu.
+- Bagian ini menambahkan standar teknis khusus frontend CloudTrack saat ini.
 
 Batasan khusus
 - Fokus pada keputusan teknis yang bisa langsung diimplementasikan.
-- Prioritaskan konsistensi arsitektur, type safety, dan maintainability.
+- Prioritaskan konsistensi arsitektur yang sudah berjalan di repo.
+- Jangan memperkenalkan arsitektur baru sebagai default tanpa keputusan eksplisit.
 
 Format output
-- Ikuti format yang diminta pengguna, misalnya kode, langkah implementasi, atau review teknis.
-- Jika pengguna tidak menentukan format, berikan rekomendasi ringkas lalu contoh implementasi yang siap pakai.
+- Ikuti format yang diminta pengguna.
+- Jika pengguna tidak menentukan format, berikan rekomendasi ringkas dan contoh implementasi siap pakai.
 
 Override resmi terhadap A-B
-- Tidak ada override khusus.
+- Tidak ada override terhadap prinsip umum A-B.
+- Section L ini menjadi sumber kebenaran arsitektur frontend project saat ini.
 
-1. Stack
-Next.js App Router versi stabil terbaru, React versi stabil terbaru, TypeScript strict, TanStack Query, Zustand, React Hook Form, Zod, fetch bawaan Next.js, Tailwind CSS v4, Radix UI, Sonner, Lucide React, Auth.js untuk Next.js, Prisma, Vitest.
+1. Stack aktual (wajib sinkron)
+- Next.js App Router, React, TypeScript strict
+- TanStack Query, Zustand, React Hook Form, Zod
+- Tailwind CSS v4, Radix UI (yang dipakai), Sonner, Lucide React
+- qrcode.react, @zxing/browser
+- bcryptjs, @noble/hashes
 
-Catatan real time
-Default: SSE atau polling lewat Route Handlers, berjalan di Vercel atau Netlify.
+Out-of-scope default arsitektur saat ini
+- Auth.js sebagai standar utama
+- Prisma sebagai standar frontend
+- Next.js Route Handlers (`app/api/**/route.ts`) sebagai pola utama
 
-Referensi dokumentasi
-- Next.js App Router: https://nextjs.org/docs/app
-- React: https://react.dev/learn
-- TypeScript strict: https://www.typescriptlang.org/tsconfig/strict.html
-- TanStack Query: https://tanstack.com/query/v5/docs/react/overview
-- Zustand: https://zustand.docs.pmnd.rs/
-- React Hook Form: https://react-hook-form.com/docs
-- Zod: https://zod.dev/
-- Next.js fetch: https://nextjs.org/docs/app/api-reference/functions/fetch
-- Tailwind CSS untuk Next.js: https://tailwindcss.com/docs/guides/nextjs
-- Tailwind theme tokens: https://tailwindcss.com/docs/theme
-- Radix UI Primitives: https://www.radix-ui.com/primitives/docs/overview/introduction
-- Sonner: https://github.com/emilkowalski/sonner
-- Lucide React: https://lucide.dev/guide/packages/lucide-react
-- Auth.js Next.js reference: https://authjs.dev/reference/nextjs
-- Prisma: https://www.prisma.io/docs
-- Vitest, Next.js guide: https://nextjs.org/docs/app/guides/testing/vitest
-
-2. Struktur folder
+2. Struktur folder canonical (saat ini)
 
 ```text
-src/
-|-- app/                 // Routing (page, layout, loading, error) dan Route Handlers (route.ts)
-|   |-- api/             // Semua endpoint ada di sini: app/api/**/route.ts
-|   `-- _shared/         // Opsional. Private folder untuk shared UI di dalam app (providers, guards, dll.)
-|-- features/            // UI dan logic per fitur
-|   `-- <feature>/
-|       |-- components/  // Section besar untuk page, contoh: ProductTable, CheckoutPanel
-|       |-- hooks/       // Hooks spesifik fitur
-|       |-- services/    // Client API/fetcher spesifik fitur
-|       |-- schemas/     // Zod schema spesifik fitur
-|       `-- types.ts     // Types spesifik fitur
+frontend/src/
+|-- app/                    // Routing App Router (home, login, dashboard)
 |-- components/
-|   |-- ui/              // Primitives (Button, Input, Card)
-|   `-- layout/          // Header, Sidebar
-|-- hooks/               // Shared hooks lintas fitur (TanStack Query wrappers, utils hooks)
-|-- stores/              // Zustand stores
-|-- services/            // Shared API layer (HTTP client, base fetcher)
-|-- types/               // Shared TypeScript types (jangan isi semua type di sini)
+|   |-- ui/                 // UI primitives dan reusable UI blocks
+|   `-- layout/             // Shared layout components
+|-- hooks/                  // Shared hooks lintas modul
+|-- icons/                  // Icon components/assets
 |-- lib/
-|   |-- utils/           // Helper functions
-|   |-- validations/     // Shared Zod schemas
-|   `-- db/
-|       `-- prisma.ts    // Prisma client singleton
-
-prisma/
-`-- schema.prisma        // Prisma schema
+|   |-- auth/               // Session, path, password verifier, auth hooks
+|   |-- errors/             // ApiError + getErrorMessage
+|   |-- home/               // Logic helper home/simulator
+|   |-- http/               // HTTP helper khusus tambahan (jika ada)
+|   |-- utils/              // Utility umum
+|   `-- validations/        // Shared validations (jika dipakai)
+|-- providers/              // Query provider, sidebar provider, toaster provider
+|-- schemas/                // Schema Zod + seeder auth
+|-- services/               // fetcher, gas-client, attendance-gas-service
+|-- stores/                 // Zustand store(s)
+|-- types/                  // Shared types
+`-- utils/                  // Utility domain-level (contoh: utils/home/*)
 ```
 
-3. Routing dan konvensi file App Router
-Anda membuat route dengan membuat folder di `src/app/`, lalu menambahkan `page.tsx`.
+Catatan penting
+- Jangan gunakan `src/features/*` sebagai standar default karena arsitektur aktif tidak memakai pola itu.
+- Jangan membuat `src/app/api/*` sebagai default transport untuk modul ini.
 
-Tambahkan file konvensi App Router hanya saat dibutuhkan:
-- `page.tsx` untuk halaman
-- `layout.tsx` untuk shared layout
-- `loading.tsx` untuk UI loading per segment
-- `error.tsx` untuk error boundary per segment, wajib "use client"
-- `not-found.tsx` untuk not found pada segment
-- `route.ts` untuk Route Handlers
-- `template.tsx` dan `default.tsx` hanya jika memang dipakai
+3. Routing dan konvensi App Router
+Route canonical saat ini
+- `/` -> landing page (site shell + home content)
+- `/login` -> halaman login
+- `/dashboard`
+- `/dashboard/dosen/*`
+- `/dashboard/mahasiswa/*`
 
-Gunakan route groups `(group)` untuk organisasi tanpa mengubah URL.
-Gunakan private folders `_folder` untuk colocation file yang tidak ikut routing, misalnya `_components`, `_lib`, `_actions`.
+Konvensi file
+- Gunakan `page.tsx`, `layout.tsx`, `loading.tsx`, `error.tsx`, `not-found.tsx` seperlunya.
+- Route dashboard sudah final dengan pola flatten:
+  - `src/app/dashboard/dosen/...`
+  - `src/app/dashboard/mahasiswa/...`
+- `src/app/dashboard/layout.tsx` adalah entry layout dashboard (auth guard + shell).
 
-4. Aturan dasar
-Gunakan nama yang deskriptif. Gunakan early return.
+4. Aturan dasar coding
+- Gunakan nama yang deskriptif dan early return.
+- Hapus import yang tidak dipakai.
+- Gunakan alias `@/` untuk import lintas modul.
+- Relative import boleh untuk scope dekat (`./`, `../`) yang masih jelas.
+- Hindari relative import berlapis dalam (`../../..`) bila bisa pakai alias.
+- Hindari TODO tanpa referensi issue/ticket.
 
-Untuk event handler di komponen React, Anda boleh pakai `const` arrow function atau function biasa, yang penting konsisten.
+Komentar kode
+- Default tanpa komentar.
+- Komentar hanya untuk constraint non-obvious yang tidak terbaca dari kode.
 
-Untuk Route Handlers, pakai function export langsung, misalnya:
-`export async function GET(request: Request) {}`
-
-Sertakan import yang dipakai. Hapus import yang tidak dipakai.
-
-Jangan meninggalkan TODO tanpa referensi. Jika perlu TODO, sertakan link issue atau ticket ID.
-
-Tulis kode tanpa komentar. Tulis komentar hanya untuk constraint yang tidak terlihat dari kode.
-
-Gunakan alias `@/` untuk import lintas modul.
-- Boleh pakai relative import `./` untuk satu folder, dan `../` yang masih di dalam feature yang sama.
-- Jangan pakai relative import yang terlalu dalam, misalnya `../../..`.
-
-5. View layer dan komponen
-Gunakan React dengan TypeScript sebagai default:
-- `.tsx` untuk file yang berisi JSX
-- `.ts` untuk file non JSX
-- Hindari `.jsx` di `src/`
-
-Server Component adalah default.
-Tambahkan "use client" hanya jika butuh state, effects, event handlers, browser APIs, atau client-only hooks.
+5. Komponen dan view layer
+- Gunakan `.tsx` untuk file JSX, `.ts` untuk non-JSX.
+- Server Component adalah default.
+- Tambahkan `"use client"` hanya saat butuh state/effect/event/browser API/client hook.
 
 Kategori komponen
-1) Primitives: `src/components/ui/`, UI murni.
-2) Shared: `src/components/`, reusable lintas fitur.
-3) Route scoped: `src/app/**/_components/`, khusus satu route atau route group.
+- `src/components/ui/*`: primitives dan reusable UI elements.
+- `src/components/layout/*`: layout reusable.
+- `src/app/**`: komponen yang terikat route segment.
+
+Catatan penting UI
+- Jangan berasumsi selalu ada barrel `@/components/ui`.
+- Jika primitive global belum tersedia, komponen input kecil boleh inline di route file dengan tipe jelas.
 
 6. Lokasi hooks
-
-```text
-src/
-|-- hooks/                     // Shared hooks lintas fitur
-|-- features/<feature>/hooks/  // Hooks spesifik fitur
-`-- app/**/_hooks/             // Hooks khusus route segment
-```
+- `src/hooks/*`: shared hooks lintas modul.
+- `src/lib/auth/use-auth-session.ts`: hook auth client untuk session saat ini.
+- Route-specific hook boleh colocated di segment route bila scope benar-benar lokal.
 
 Aturan
-- Jika hook dipakai lebih dari 1 feature, taruh di `src/hooks/`.
-- Jika hanya 1 feature, taruh di `src/features/<feature>/hooks/`.
-- Jika hanya 1 route, taruh di `src/app/**/_hooks/`.
+- Jangan bungkus logic server-side sebagai React hook client.
+- Gunakan hook hanya untuk kebutuhan composability UI/client state.
 
-Server vs client
-- Jangan taruh fungsi server seperti `auth()` sebagai hook.
-- Taruh helper server Auth.js di `src/auth.ts` atau `src/lib/auth.ts`.
-- Buat hook client hanya jika memang dibutuhkan, misalnya wrapper `useSession()`.
+7. Data fetching dan API layer (standar GAS)
+Pola wajib 3 layer
+1) `services/fetcher.ts` untuk HTTP transport + error normalization.
+2) `services/gas-client.ts` untuk build URL GAS + method transport.
+3) `services/attendance-gas-service.ts` untuk kontrak endpoint domain.
 
-7. Data fetching
-Jika fetch di Client Components, gunakan TanStack Query. Jangan pakai `useEffect + useState` untuk server data.
+Aturan integrasi GAS
+- Base URL diambil dari `NEXT_PUBLIC_GAS_BASE_URL`.
+- Untuk POST direct ke GAS:
+  - gunakan `Content-Type: text/plain;charset=UTF-8`
+  - body tetap `JSON.stringify(payload)`
+- Tujuan: hindari preflight `OPTIONS` CORS pada GAS Web App.
+- Jangan menjadikan Next.js API proxy sebagai default flow modul ini.
 
-Jika fetch di Server Components atau Route Handlers, fetch langsung dengan async I/O, `fetch` atau Prisma.
-
-Gunakan queryKey yang stabil dan bisa diserialisasi. Jangan masukkan object yang tidak stabil.
-Gunakan cancellation dengan `signal`.
-
-```ts
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { transactionService } from "@/services/transaction-service";
-
-export type TransactionListParams = {
-  page?: number;
-  pageSize?: number;
-  q?: string;
-  status?: "all" | "pending" | "paid" | "void";
-};
-
-export const transactionsKeys = {
-  all: ["transactions"] as const,
-  list: (p: { page: number; pageSize: number; q: string; status: TransactionListParams["status"] }) =>
-    [...transactionsKeys.all, "list", p.page, p.pageSize, p.q, p.status] as const,
-};
-
-function normalizeParams(params?: TransactionListParams) {
-  return {
-    page: params?.page ?? 1,
-    pageSize: params?.pageSize ?? 20,
-    q: params?.q ?? "",
-    status: params?.status ?? "all",
-  };
-}
-
-export function useTransactions(params?: TransactionListParams) {
-  const p = normalizeParams(params);
-
-  return useQuery({
-    queryKey: transactionsKeys.list(p),
-    queryFn: ({ signal }) => transactionService.getAll(p, { signal }),
-  });
-}
-
-export function useCreateTransaction() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: transactionService.create,
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: transactionsKeys.all });
-    },
-  });
-}
-```
+Endpoint domain presensi saat ini
+- `/presence/qr/generate`
+- `/presence/checkin`
+- `/presence/status`
+- `/presence/list`
 
 8. Error handling
-Di service layer, lempar error yang konsisten. Jangan lempar string. Untuk HTTP error, gunakan `ApiError`.
+- Gunakan `ApiError` untuk error HTTP di service layer.
+- Jangan throw string.
+- Di UI, tampilkan pesan dengan `getErrorMessage(error)`.
 
-Di UI, gunakan `isError` dan `error` dari TanStack Query, lalu ambil pesan lewat `getErrorMessage`.
-
-```ts
-export class ApiError extends Error {
-  status: number;
-
-  constructor(message: string, status: number) {
-    super(message);
-    this.name = "ApiError";
-    this.status = status;
-  }
-}
-
-export function getErrorMessage(err: unknown): string {
-  if (err instanceof ApiError) return err.message;
-  if (err instanceof Error) return err.message;
-  return "Terjadi kesalahan. Coba lagi.";
-}
-```
-
-```tsx
-const { data, isLoading, isError, error } = useTransactions();
-
-if (isLoading) return <Skeleton />;
-if (isError) return <ErrorMessage message={getErrorMessage(error)} />;
-```
-
-```ts
-mutation.mutate(data, {
-  onSuccess: () => toast.success("Berhasil"),
-  onError: (err) => toast.error(getErrorMessage(err)),
-});
-```
-
-Jika Anda tidak handle error, biarkan ditangkap `error.tsx` pada route segment. `error.tsx` wajib Client Component.
+Prinsip
+- Error user-facing harus ringkas dan konsisten.
+- Error teknis detail tetap bisa dilihat dari response/log bila dibutuhkan.
 
 9. Form handling
-Gunakan React Hook Form untuk semua form.
-Gunakan Zod jika butuh validasi berbasis schema.
+- Semua form memakai React Hook Form.
+- Validasi memakai Zod (`schemas/*` atau lokasi relevan).
+- Gunakan resolver `zodResolver`.
+- Untuk nilai numerik dari input text, gunakan coercion yang eksplisit.
 
-Simpan schema lintas fitur di `lib/validations/`. Jika hanya 1 fitur, simpan di `features/<feature>/schemas/`.
+10. Client state dan Zustand
+- Zustand dipakai untuk UI state, bukan server cache.
+- Server data tetap di TanStack Query atau state lokal terkontrol.
+- Provider/state setup harus aman untuk App Router client behavior.
 
-Untuk input angka dari `<input />`, pakai `z.coerce.number()`.
+11. Auth system (client-only simple auth)
+Standar auth saat ini
+- Seeder akun: `src/schemas/seeder.ts`
+- Login schema: `src/schemas/login.schema.ts`
+- Verifikasi password: `src/lib/auth/password.ts`
+  - mendukung bcrypt hash
+  - mendukung PBKDF2 fallback bila diperlukan
+- Session storage: `src/lib/auth/session.ts` (`sessionStorage`)
+- Guard dashboard: `src/app/login/components/dashboard-auth-guard.tsx`
 
-```ts
-import * as z from "zod";
+Larangan default
+- Jangan migrasikan ke Auth.js, DB auth, atau server auth tanpa keputusan arsitektur baru.
 
-export const transactionSchema = z.object({
-  amount: z.coerce.number().min(1, "Minimal 1"),
-  category: z.string().min(1, "Wajib diisi"),
-});
+Batasan keamanan
+- Pola ini untuk demo/internal practical flow.
+- Bukan baseline security production-grade.
 
-export type TransactionFormData = z.infer<typeof transactionSchema>;
-```
-
-```tsx
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { transactionSchema, type TransactionFormData } from "@/lib/validations/transaction";
-
-const {
-  register,
-  handleSubmit,
-  formState: { errors },
-} = useForm<TransactionFormData>({
-  resolver: zodResolver(transactionSchema),
-});
-```
-
-10. Client state, Zustand
-Gunakan Zustand untuk UI state. Jangan simpan server data di Zustand.
-
-Untuk store yang dipakai di client, pasang lewat Provider. Jangan pakai global store yang bisa terbawa lintas request jika store itu menyentuh SSR.
-
-Referensi: https://zustand.docs.pmnd.rs/guides/nextjs
-
-11. Service layer
-Gunakan 1 fetch helper yang konsisten.
-Jangan set `Content-Type: application/json` untuk semua request. Set hanya saat Anda mengirim JSON.
-Saat error, body bisa bukan JSON, jadi sediakan fallback ke text.
-
-```ts
-import { ApiError } from "@/lib/errors";
-
-type FetcherOptions = RequestInit & { json?: unknown };
-
-export async function fetcher<T>(url: string, options: FetcherOptions = {}): Promise<T> {
-  const headers = new Headers(options.headers);
-  let body = options.body;
-
-  if (options.json !== undefined) {
-    body = JSON.stringify(options.json);
-    if (!headers.has("Content-Type")) headers.set("Content-Type", "application/json");
-  }
-
-  const res = await fetch(url, { ...options, headers, body });
-
-  const contentType = res.headers.get("content-type") ?? "";
-  const isJson = contentType.includes("application/json");
-
-  if (!res.ok) {
-    let message = "Request gagal";
-    try {
-      message = isJson
-        ? (((await res.json()) as { message?: string })?.message ?? message)
-        : (await res.text()) || message;
-    } catch {}
-
-    throw new ApiError(message, res.status);
-  }
-
-  if (res.status === 204) return undefined as T;
-  return (isJson ? await res.json() : await res.text()) as T;
-}
-```
-
-12. Styling
-Jangan hardcode warna di komponen. Gunakan design tokens lewat CSS variables.
-Nilai warna hanya ada di file token.
-
-```css
-:root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --primary: oklch(0.72 0.11 178);
-}
-
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --primary: oklch(0.62 0.15 178);
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-primary: var(--primary);
-}
-```
+12. Styling dan design tokens
+- Gunakan token/CSS variables yang sudah ada (`--token-*`, `--color-*`).
+- Hindari hardcode warna jika sudah ada token setara.
+- Konsistenkan class naming dengan pola halaman home/dashboard yang aktif.
 
 13. Metadata dan SEO
-Gunakan Metadata API di `layout.tsx` atau `page.tsx`. Set default di root layout, override seperlunya.
-
-Metadata hanya boleh diexport dari Server Component.
-Dalam 1 route segment, pilih salah satu: `metadata` atau `generateMetadata`.
-
-```ts
-import type { Metadata } from "next";
-
-export const metadata: Metadata = {
-  title: "Dashboard",
-  description: "Dashboard overview",
-};
-```
-
-```ts
-import type { Metadata } from "next";
-
-type Props = { params: { id: string } };
-
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  return { title: `Product ${params.id}` };
-}
-```
+- Gunakan Metadata API di `layout.tsx`/`page.tsx` server component.
+- Dalam satu segment, gunakan salah satu:
+  - `export const metadata`
+  - atau `generateMetadata`
 
 14. Konvensi TypeScript
-Gunakan `type` sebagai default untuk bentuk object dan props.
-Gunakan `interface` hanya jika Anda butuh declaration merging atau kontrak yang akan diperluas.
+- Gunakan `type` sebagai default untuk props/object unions.
+- Gunakan `interface` hanya saat benar-benar butuh declaration merging/extends kontrak.
+- Tetap strict: hindari `any`, gunakan narrowing/unknown dengan benar.
 
-```ts
-type User = { id: string; name: string };
+15. Testing dan quality gate
+Wajib sebelum finalisasi perubahan
+- `npm run typecheck`
+- `npm run lint`
+- `npm run test:unit` (jika area terkait punya test)
 
-type ButtonProps = {
-  variant?: "primary" | "secondary";
-  children: React.ReactNode;
-};
+Jika struktur route berubah
+- Jalankan `npx next typegen` untuk refresh route types saat `.next/types` stale.
 
-type TransactionType = "income" | "expense";
-type Status = "idle" | "loading" | "success" | "error";
-```
+16. Deployment dan env
+Frontend env utama saat ini
+- `NEXT_PUBLIC_GAS_BASE_URL`
 
-15. API routes, Route Handlers
-Gunakan Route Handlers, `route.ts`. Selalu return `Response`.
-Gunakan `Request` sebagai default. Pakai `NextRequest` hanya jika butuh `request.nextUrl`.
+Aturan env
+- Jangan hardcode URL sensitif di source code.
+- Commit hanya `.env.example`, bukan `.env` real.
 
-```ts
-import { NextResponse } from "next/server";
+17. Dependencies
+- Hindari pin `latest` mentah.
+- Gunakan versi yang kompatibel dengan lockfile repo.
+- Pisahkan `dependencies` dan `devDependencies` dengan benar.
 
-export async function GET(request: Request) {
-  try {
-    return NextResponse.json(data);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Internal Server Error";
-    return NextResponse.json({ message }, { status: 500 });
-  }
-}
-```
-
-16. Login system, Auth.js untuk Next.js
-Pakai Auth.js dengan pola `src/auth.ts`, lalu re-export handlers di route.
-
-```ts
-import NextAuth from "next-auth";
-import GitHub from "next-auth/providers/github";
-
-export const { handlers, auth, signIn, signOut } = NextAuth({
-  providers: [GitHub],
-});
-```
-
-```ts
-import { handlers } from "@/auth";
-
-export const { GET, POST } = handlers;
-```
-
-Env
-- `AUTH_SECRET` atau `NEXTAUTH_SECRET`
-- `AUTH_URL` atau `NEXTAUTH_URL`
-- `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`
-
-17. ORM, Prisma
-Schema ada di `prisma/schema.prisma`.
-
-Prisma Client singleton ada di `src/lib/db/prisma.ts`.
-Import Prisma hanya di server code. Jangan import Prisma di Client Components.
-
-```ts
-import "server-only";
-import { PrismaClient } from "@prisma/client";
-
-const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
-
-export const prisma = globalForPrisma.prisma ?? new PrismaClient();
-
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
-```
-
-18. Testing, Vitest
-Gunakan Vitest untuk unit test sesuai guide Next.js.
-Untuk async Server Components, gunakan E2E test, bukan unit test.
-
-19. Fitur real time
-Default: SSE atau polling lewat Route Handlers, tanpa custom server.
-
-20. Deployment
-Set env vars di platform deploy, jangan hardcode di repo. Commit hanya `.env.example`.
-
-Wajib
-- `DATABASE_URL`
-- `AUTH_SECRET` atau `NEXTAUTH_SECRET`
-- `AUTH_URL` atau `NEXTAUTH_URL`
-
-Opsional, OAuth
-- `AUTH_GITHUB_ID`
-- `AUTH_GITHUB_SECRET`
-
-21. Dependencies
-Jangan pakai "latest" di `package.json`. Pin versi major dan commit lockfile.
-
-Pisahkan
-- `dependencies` untuk runtime
-- `devDependencies` untuk tooling
-
-22. Sebelum coding
-Baca repo dulu dan ikuti pola yang sudah ada. Ubah pola buruk dengan perubahan minimal.
-Jalankan typecheck, lint, dan test yang relevan sebelum selesai.
-Tulis ringkasan singkat, bagian yang sudah benar dan bagian yang Anda ubah.
+18. Checklist sebelum coding
+1. Baca pola existing di repo, lalu ikuti pola itu dahulu.
+2. Pilih perubahan minimal dengan dampak terkendali.
+3. Pastikan aturan route, auth, dan service layer tetap konsisten.
+4. Jalankan quality gate yang relevan.
+5. Tulis ringkasan singkat: apa yang benar, apa yang diubah, dan alasannya.
 ````

@@ -11,8 +11,9 @@ export type LecturerQrFormValues = {
 
 type LecturerQrSessionState = {
   owner_identifier: string | null;
-  active_payload: AttendanceQrPayload;
-  next_rotation_at: string;
+  active_payload: AttendanceQrPayload | null;
+  next_rotation_at: string | null;
+  is_stopped: boolean;
   form_values: LecturerQrFormValues;
   updated_at: string;
 };
@@ -62,11 +63,16 @@ export function readLecturerQrSessionState(ownerIdentifier: string | null) {
 
   try {
     const parsed = JSON.parse(rawValue) as Partial<LecturerQrSessionState>;
+    const isStopped = parsed?.is_stopped === true;
+    const hasValidPayload = parsed.active_payload
+      ? isValidQrPayload(parsed.active_payload)
+      : parsed.active_payload === null;
     if (
       !parsed ||
-      typeof parsed.next_rotation_at !== "string" ||
+      (parsed.next_rotation_at !== null &&
+        typeof parsed.next_rotation_at !== "string") ||
       typeof parsed.updated_at !== "string" ||
-      !isValidQrPayload(parsed.active_payload) ||
+      !hasValidPayload ||
       !isValidFormValues(parsed.form_values)
     ) {
       return null;
@@ -82,8 +88,9 @@ export function readLecturerQrSessionState(ownerIdentifier: string | null) {
 
     return {
       owner_identifier: parsed.owner_identifier ?? null,
-      active_payload: parsed.active_payload,
-      next_rotation_at: parsed.next_rotation_at,
+      active_payload: parsed.active_payload ?? null,
+      next_rotation_at: parsed.next_rotation_at ?? null,
+      is_stopped: isStopped,
       form_values: parsed.form_values,
       updated_at: parsed.updated_at,
     } satisfies LecturerQrSessionState;
@@ -94,8 +101,9 @@ export function readLecturerQrSessionState(ownerIdentifier: string | null) {
 
 export function saveLecturerQrSessionState(params: {
   ownerIdentifier: string | null;
-  activePayload: AttendanceQrPayload;
-  nextRotationAt: string;
+  activePayload: AttendanceQrPayload | null;
+  nextRotationAt: string | null;
+  isStopped: boolean;
   formValues: LecturerQrFormValues;
 }) {
   if (!isBrowser()) {
@@ -106,6 +114,7 @@ export function saveLecturerQrSessionState(params: {
     owner_identifier: params.ownerIdentifier,
     active_payload: params.activePayload,
     next_rotation_at: params.nextRotationAt,
+    is_stopped: params.isStopped,
     form_values: params.formValues,
     updated_at: new Date().toISOString(),
   };

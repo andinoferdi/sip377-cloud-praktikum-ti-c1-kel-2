@@ -11,6 +11,10 @@ info:
     Response envelope:
     - Success: `{ "ok": true, "data": ... }`
     - Error: `{ "ok": false, "error": "..." }`
+    Presence error codes:
+    - `token_invalid`
+    - `token_expired`
+    - `already_checked_in`
     This deployment is API-only and does not serve HTML dashboard.
 
 servers:
@@ -18,7 +22,7 @@ servers:
     description: Google Apps Script Web App
     variables:
       deploymentId:
-        default: AKfycbwE3j_qpGXM6LcwL2-eUlb_1nihFP9APRWQzMrFytmlN-29mpLzVr0CHxEHKVEnh8jtJw
+        default: AKfycbzHGH188OZrr8HKf7rlp-wrJIu2KJBq4mEUVsIqPQ3_f4DyV4kL93MDNumD14ynVt9Khw
         description: Web App deployment ID
 
 security: []
@@ -36,6 +40,7 @@ paths:
             type: string
             enum:
               - presence/status
+              - presence/list
               - telemetry/accel/latest
               - telemetry/gps/latest
               - telemetry/gps/history
@@ -51,12 +56,12 @@ paths:
           in: query
           schema:
             type: string
-          description: Required when path=presence/status
+          description: Required when path=presence/status or path=presence/list
         - name: session_id
           in: query
           schema:
             type: string
-          description: Required when path=presence/status
+          description: Required when path=presence/status or path=presence/list
         - name: device_id
           in: query
           schema:
@@ -68,7 +73,7 @@ paths:
             type: integer
             minimum: 1
             default: 200
-          description: Optional max points for path=telemetry/gps/history
+          description: Optional max items for path=presence/list or path=telemetry/gps/history
         - name: from
           in: query
           schema:
@@ -104,6 +109,25 @@ paths:
                       session_id: "sesi-02"
                       status: "checked_in"
                       last_ts: "2026-02-18T10:01:10Z"
+                presenceList:
+                  summary: path=presence/list
+                  value:
+                    ok: true
+                    data:
+                      course_id: "cloud-101"
+                      session_id: "sesi-02"
+                      total: 2
+                      items:
+                        - presence_id: "PR-0002"
+                          user_id: "20230002"
+                          device_id: "dev-002"
+                          ts: "2026-02-18T10:01:20Z"
+                          recorded_at: "2026-02-18T10:01:20Z"
+                        - presence_id: "PR-0001"
+                          user_id: "20230001"
+                          device_id: "dev-001"
+                          ts: "2026-02-18T10:01:10Z"
+                          recorded_at: "2026-02-18T10:01:10Z"
                 accelLatest:
                   summary: path=telemetry/accel/latest
                   value:
@@ -191,7 +215,7 @@ paths:
                   summary: checkin error
                   value:
                     ok: false
-                    error: "token_expired"
+                    error: "already_checked_in"
                 accelBatch:
                   summary: path=telemetry/accel
                   value:

@@ -1,18 +1,24 @@
-const MODULES = [
+type ModuleAccent = "purple" | "blue" | "green";
+
+const MODULES: {
+  number: string;
+  title: string;
+  accent: ModuleAccent;
+  description: string;
+  endpoints: readonly string[];
+  features: readonly string[];
+}[] = [
   {
     number: "01",
     title: "Presensi QR Dinamis",
-    accent: "rgba(185,118,252,0.12)",
-    accentBorder: "rgba(185,118,252,0.25)",
-    accentText: "#a25be7",
-    darkAccentText: "#d3a8fe",
+    accent: "purple",
     description:
       "QR code yang berganti otomatis untuk mencegah titip absen. Dosen membuat token, mahasiswa scan dan check-in, status langsung terverifikasi.",
     endpoints: [
       "POST /presence/qr/generate",
       "POST /presence/checkin",
-      "GET /presence/status",
-      "GET /presence/list",
+      "GET  /presence/status",
+      "GET  /presence/list",
     ],
     features: [
       "Token TTL 2 menit, rotasi otomatis",
@@ -24,15 +30,12 @@ const MODULES = [
   {
     number: "02",
     title: "Accelerometer Telemetry",
-    accent: "rgba(11,165,236,0.12)",
-    accentBorder: "rgba(11,165,236,0.25)",
-    accentText: "#0086c9",
-    darkAccentText: "#7cd4fd",
+    accent: "blue",
     description:
       "Kirim data sensor accelerometer dari smartphone secara batch ke cloud. Ambil pembacaan terbaru kapan saja untuk monitoring aktivitas.",
     endpoints: [
       "POST /telemetry/accel",
-      "GET /telemetry/accel/latest",
+      "GET  /telemetry/accel/latest",
     ],
     features: [
       "Batch upload (samples[])",
@@ -44,16 +47,13 @@ const MODULES = [
   {
     number: "03",
     title: "GPS Tracking + Peta",
-    accent: "rgba(18,183,106,0.12)",
-    accentBorder: "rgba(18,183,106,0.25)",
-    accentText: "#039855",
-    darkAccentText: "#6ce9a6",
+    accent: "green",
     description:
       "Lacak lokasi GPS perangkat, tampilkan posisi terkini sebagai marker dan jejak perjalanan sebagai polyline di peta.",
     endpoints: [
       "POST /telemetry/gps",
-      "GET /telemetry/gps/latest",
-      "GET /telemetry/gps/history",
+      "GET  /telemetry/gps/latest",
+      "GET  /telemetry/gps/history",
     ],
     features: [
       "Log lat, lng, accuracy, altitude",
@@ -62,91 +62,142 @@ const MODULES = [
       "Polyline urut naik berdasarkan timestamp",
     ],
   },
-] as const;
+];
+
+const accentConfig: Record<
+  ModuleAccent,
+  {
+    number: string;
+    dot: string;
+    label: string;
+    endpointBg: string;
+  }
+> = {
+  purple: {
+    number:
+      "bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-950/40 dark:text-violet-300 dark:border-violet-800/50",
+    dot: "bg-violet-500 dark:bg-violet-400",
+    label:
+      "text-violet-600 dark:text-violet-400",
+    endpointBg:
+      "bg-violet-50/60 border-violet-100 text-violet-900 dark:bg-violet-950/30 dark:border-violet-800/40 dark:text-violet-200",
+  },
+  blue: {
+    number:
+      "bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800/50",
+    dot: "bg-sky-500 dark:bg-sky-400",
+    label:
+      "text-sky-600 dark:text-sky-400",
+    endpointBg:
+      "bg-sky-50/60 border-sky-100 text-sky-900 dark:bg-sky-950/30 dark:border-sky-800/40 dark:text-sky-200",
+  },
+  green: {
+    number:
+      "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/50",
+    dot: "bg-emerald-500 dark:bg-emerald-400",
+    label:
+      "text-emerald-600 dark:text-emerald-400",
+    endpointBg:
+      "bg-emerald-50/60 border-emerald-100 text-emerald-900 dark:bg-emerald-950/30 dark:border-emerald-800/40 dark:text-emerald-200",
+  },
+};
 
 export default function FlowSection() {
   return (
     <section id="modul" className="scroll-mt-28 py-10 md:py-14">
       <div className="wrapper">
-        <div className="mb-8">
-          <p className="text-xs font-semibold uppercase tracking-widest text-primary-600 dark:text-primary-400">
-            Platform Features
-          </p>
-          <h2 className="mt-2 text-2xl font-bold text-(--token-gray-900) dark:text-(--token-white) md:text-3xl">
-            Tiga Modul, Satu Platform
-          </h2>
-          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-(--token-gray-600) dark:text-(--token-gray-300) md:text-base">
+        {/* Section header */}
+        <div className="mb-10 flex items-end justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-widest text-primary-600 dark:text-primary-400">
+              Platform Features
+            </p>
+            <h2 className="mt-2 text-2xl font-bold text-(--token-gray-900) dark:text-(--token-white) md:text-3xl">
+              Tiga Modul, Satu Platform
+            </h2>
+          </div>
+          <p className="hidden max-w-sm text-sm leading-relaxed text-(--token-gray-500) dark:text-(--token-gray-400) lg:block">
             Setiap modul memiliki endpoint API terstandar yang bisa diuji silang
-            antar kelompok. Backend GAS menyimpan data ke Google Sheets dengan
-            kontrak response seragam.
+            antar kelompok.
           </p>
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-3">
-          {MODULES.map((mod) => (
-            <article
-              key={mod.number}
-              className="group surface-elevated rounded-2xl border border-soft p-6 transition-all duration-300 hover:shadow-lg hover:shadow-primary-500/5"
-            >
-              <div className="flex items-center gap-3">
-                <span
-                  className="flex h-10 w-10 items-center justify-center rounded-xl text-sm font-bold"
-                  style={{
-                    background: mod.accent,
-                    border: `1px solid ${mod.accentBorder}`,
-                    color: mod.accentText,
-                  }}
-                >
-                  {mod.number}
-                </span>
-                <h3 className="text-base font-semibold text-(--token-gray-900) dark:text-(--token-white)">
-                  {mod.title}
-                </h3>
-              </div>
-
-              <p className="mt-4 text-sm leading-relaxed text-(--token-gray-600) dark:text-(--token-gray-300)">
-                {mod.description}
-              </p>
-
-              <div className="mt-5">
-                <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-(--token-gray-400) dark:text-(--token-gray-500)">
-                  Endpoints
-                </p>
-                <div className="space-y-1.5">
-                  {mod.endpoints.map((ep) => (
-                    <p
-                      key={ep}
-                      className="rounded-lg px-2.5 py-1.5 font-mono text-xs text-(--token-gray-700) dark:text-(--token-gray-300)"
-                      style={{
-                        background: "rgba(148,163,184,0.07)",
-                        border: "1px solid rgba(148,163,184,0.12)",
-                      }}
-                    >
-                      {ep}
+        {/* Module cards */}
+        <div className="grid gap-px rounded-2xl border border-soft overflow-hidden bg-soft lg:grid-cols-3">
+          {MODULES.map((mod) => {
+            const acc = accentConfig[mod.accent];
+            return (
+              <article
+                key={mod.number}
+                className="surface-elevated flex flex-col gap-0 p-0"
+              >
+                {/* Card header */}
+                <div className="flex items-start gap-4 border-b border-soft p-6">
+                  <span
+                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border text-sm font-bold ${acc.number}`}
+                  >
+                    {mod.number}
+                  </span>
+                  <div>
+                    <h3 className="text-sm font-semibold text-(--token-gray-900) dark:text-(--token-white) leading-snug">
+                      {mod.title}
+                    </h3>
+                    <p className="mt-1.5 text-xs leading-relaxed text-(--token-gray-500) dark:text-(--token-gray-400)">
+                      {mod.description}
                     </p>
-                  ))}
+                  </div>
                 </div>
-              </div>
 
-              <div className="mt-5">
-                <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-(--token-gray-400) dark:text-(--token-gray-500)">
-                  Fitur Utama
-                </p>
-                <ul className="space-y-1.5 text-sm text-(--token-gray-600) dark:text-(--token-gray-300)">
-                  {mod.features.map((feat) => (
-                    <li key={feat} className="flex items-start gap-2">
-                      <span
-                        className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full"
-                        style={{ background: mod.accentText }}
-                      />
-                      {feat}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </article>
-          ))}
+                {/* Endpoints */}
+                <div className="border-b border-soft p-6">
+                  <p
+                    className={`mb-3 text-[10px] font-semibold uppercase tracking-widest ${acc.label}`}
+                  >
+                    Endpoints
+                  </p>
+                  <div className="space-y-1.5">
+                    {mod.endpoints.map((ep) => (
+                      <p
+                        key={ep}
+                        className={`rounded-md border px-2.5 py-1.5 font-mono text-[11px] leading-relaxed ${acc.endpointBg}`}
+                      >
+                        {ep}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Features */}
+                <div className="p-6">
+                  <p
+                    className={`mb-3 text-[10px] font-semibold uppercase tracking-widest ${acc.label}`}
+                  >
+                    Fitur Utama
+                  </p>
+                  <ul className="space-y-2">
+                    {mod.features.map((feat) => (
+                      <li
+                        key={feat}
+                        className="flex items-start gap-2.5 text-xs leading-relaxed text-(--token-gray-600) dark:text-(--token-gray-300)"
+                      >
+                        <span
+                          className={`mt-[5px] h-1.5 w-1.5 shrink-0 rounded-full ${acc.dot}`}
+                        />
+                        {feat}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </article>
+            );
+          })}
         </div>
+
+        {/* Bottom note */}
+        <p className="mt-4 text-center text-xs text-(--token-gray-400) dark:text-(--token-gray-500) lg:hidden">
+          Setiap modul memiliki endpoint API terstandar yang bisa diuji silang
+          antar kelompok.
+        </p>
       </div>
     </section>
   );

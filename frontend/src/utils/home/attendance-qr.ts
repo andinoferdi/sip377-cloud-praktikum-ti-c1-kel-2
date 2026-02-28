@@ -13,7 +13,7 @@ export function buildAttendanceSessionId(params: {
   const startedAtDate = new Date(params.startedAt);
   const datePart = Number.isNaN(startedAtDate.getTime())
     ? "invalid"
-    : `${startedAtDate.getUTCFullYear()}${pad(startedAtDate.getUTCMonth() + 1)}${pad(startedAtDate.getUTCDate())}${pad(startedAtDate.getUTCHours())}${pad(startedAtDate.getUTCMinutes())}`;
+    : `${startedAtDate.getFullYear()}${pad(startedAtDate.getMonth() + 1)}${pad(startedAtDate.getDate())}${pad(startedAtDate.getHours())}${pad(startedAtDate.getMinutes())}`;
 
   return `${params.courseId}-${params.day}-${params.sessionNo}-${datePart}`;
 }

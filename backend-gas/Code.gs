@@ -31,6 +31,9 @@ function doGet(e) {
       case 'presence/status':
         return sendSuccess(getPresenceStatus(params.user_id, params.course_id, params.session_id));
 
+      case 'presence/list':
+        return sendSuccess(getPresenceList(params.course_id, params.session_id, params.limit));
+
       case 'telemetry/accel/latest':
         return sendSuccess(getAccelLatest(params.device_id));
 
@@ -96,6 +99,7 @@ function getApiInfo() {
     endpoints: {
       GET: [
         '?path=presence/status',
+        '?path=presence/list',
         '?path=telemetry/accel/latest',
         '?path=telemetry/gps/latest',
         '?path=telemetry/gps/history',
@@ -195,39 +199,42 @@ function checkin(body) {
 
   var tokensSheet = getOrCreateSheet(SHEET.TOKENS);
   var tokensData = tokensSheet.getDataRange().getValues();
-  var tokenRowIndex = -1;
+  var tokenFound = false;
   var checkTime = body.ts ? new Date(body.ts) : new Date();
 
-  for (var i = 1; i < tokensData.length; i++) {
+  for (var i = tokensData.length - 1; i >= 1; i--) {
     var rowToken = String(tokensData[i][0]);
     var rowCourse = String(tokensData[i][1]);
     var rowSession = String(tokensData[i][2]);
     var rowExpiresAt = new Date(tokensData[i][4]);
-    var rowUsed = tokensData[i][5] === true || String(tokensData[i][5]).toLowerCase() === 'true';
 
     if (rowToken === String(body.qr_token) &&
         rowCourse === String(body.course_id) &&
         rowSession === String(body.session_id)) {
-      if (rowUsed) {
-        throw new Error('token_already_used');
-      }
-
       if (checkTime > rowExpiresAt) {
         throw new Error('token_expired');
       }
 
-      tokenRowIndex = i;
+      tokenFound = true;
       break;
     }
   }
 
-  if (tokenRowIndex < 0) {
+  if (!tokenFound) {
     throw new Error('token_invalid');
   }
 
-  tokensSheet.getRange(tokenRowIndex + 1, 6).setValue(true);
-
   var presenceSheet = getOrCreateSheet(SHEET.PRESENCE);
+  var presenceData = presenceSheet.getDataRange().getValues();
+
+  for (var j = presenceData.length - 1; j >= 1; j--) {
+    if (String(presenceData[j][1]) === String(body.user_id) &&
+        String(presenceData[j][3]) === String(body.course_id) &&
+        String(presenceData[j][4]) === String(body.session_id)) {
+      throw new Error('already_checked_in');
+    }
+  }
+
   var presenceId = shortId('PR-', 4);
 
   presenceSheet.appendRow([
@@ -244,6 +251,48 @@ function checkin(body) {
   return {
     presence_id: presenceId,
     status: 'checked_in',
+  };
+}
+
+function getPresenceList(courseId, sessionId, limit) {
+  if (!courseId) throw new Error('missing_field: course_id');
+  if (!sessionId) throw new Error('missing_field: session_id');
+
+  var sheet = getOrCreateSheet(SHEET.PRESENCE);
+  var data = sheet.getDataRange().getValues();
+
+  var maxItems = limit ? parseInt(limit, 10) : 200;
+  if (isNaN(maxItems) || maxItems <= 0) {
+    maxItems = 200;
+  }
+
+  var total = 0;
+  var items = [];
+
+  for (var i = data.length - 1; i >= 1; i--) {
+    if (String(data[i][3]) !== String(courseId) || String(data[i][4]) !== String(sessionId)) {
+      continue;
+    }
+
+    total += 1;
+    if (items.length >= maxItems) {
+      continue;
+    }
+
+    items.push({
+      presence_id: data[i][0],
+      user_id: data[i][1],
+      device_id: data[i][2],
+      ts: data[i][6],
+      recorded_at: data[i][7],
+    });
+  }
+
+  return {
+    course_id: String(courseId),
+    session_id: String(sessionId),
+    total: total,
+    items: items,
   };
 }
 

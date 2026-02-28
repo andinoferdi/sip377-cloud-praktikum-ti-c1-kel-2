@@ -1,0 +1,321 @@
+Praktik Komputasi Awan:
+Kickoff Projek + API Contract Simple v1
+Faisal Fahmi
+
+Agenda
+• Projek
+• Presensi QR Dinamis (generate QR → scan → check-in → status)
+• Accelerometer Telemetry (kirim batch → ambil latest)
+• GPS Tracking + Tampil di Peta (log → latest marker → history polyline)
+• Versi A (Google Apps Script (GAS) + Google Sheets) vs Versi B
+(Firebase)
+• Versi A harus lulus dulu (nilai dasar).
+• Versi B hanya bonus dan tidak boleh mengubah kontrak Versi A.
+• Mekanisme swap test + pengecekan random oleh dosen
+
+Struktur Proyek & Penilaian (Versi A)
+• Presensi QR Dinamis
+• QR token bisa dibuat (generate) dan dipakai untuk check-in
+• Status presensi bisa dicek cepat (endpoint status)
+• Accelerometer (Batch Telemetry)
+• Bisa kirim batch data dan bisa ambil data terbaru (latest)
+• GPS + Peta
+• Bisa log GPS, ambil latest (marker), ambil history (polyline)
+• Peta tampil minimal: marker + polyline
+
+Struktur Proyek & Penilaian (Versi B)
+• Target: upgrade kualitas (keamanan, performa, realtime, query
+lebih kaya)
+• Dinilai hanya jika Versi A sudah lulus
+• Kontrak endpoint Versi A tidak boleh berubah (agar client antar
+kelompok tetap kompatibel)
+• Versi B cukup mengganti backend (Firebase), bukan mengganti
+format request/response
+
+Aturan Kelompok dan Peran Anggota
+• 3–5 orang per kelompok (ideal: 4)
+• Peran Minimal (boleh rangkap, tapi harus jelas)
+• Backend/API (GAS + Sheets)
+• Implement endpoint Versi A sesuai kontrak
+• Validasi input & simpan data
+• Client (Web/PWA/Mobile)
+• Scan QR & kirim presensi
+• Kirim accelerometer batch
+• Kirim GPS + tampilkan peta
+• QA & Swap Testing
+• Uji silang: client tim sendiri ke server tim lain
+• Menjalankan Postman smoke test & mencatat bug
+• Dokumentasi & Deploy
+• Menulis “API Contract Simple v1” (1 halaman)
+• Menulis README: cara run, baseUrl, contoh request
+
+Aturan Kelompok dan Peran Anggota (2)
+• 1 repo per kelompok (Git)
+• Setiap anggota wajib kontribusi (commit bermakna)
+• Gunakan task board sederhana (To Do / Doing / Done)
+
+API Contract Simple v1
+• Tujuan API Contract
+• Semua kelompok bisa saling uji: client mana pun server mana pun
+• Bebas bahasa/platform, tapi endpoint & format data harus sama
+• Base URL
+• Setiap server wajib menyediakan:
+• {{BASE_URL}} = https://script.google.com/macros/s/<deployment-id>/exec
+• Semua request menggunakan base URL ini.
+• Pahami pathInfo jika menggunakan GAS
+• Format Data
+• Request dan response menggunakan JSON
+• Timestamp wajib ISO-8601, contoh: 2026-02-18T10:15:30Z
+• Identitas Minimal
+• Presensi: user_id, device_id, course_id, session_id
+• Sensor & GPS: device_id
+• Semua modul memakai ts (timestamp)
+
+API Contract Simple v1 (2)
+• Catatan Implementasi Versi A (GAS)
+• Backend wajib: Google Apps Script + Google Sheets
+• Storage minimal:
+• Sheet tokens (QR aktif)
+• Sheet presence
+• Sheet accel
+• Sheet gps
+• Kompatibilitas Versi B (Firebase)
+• Jika ambil bonus Firebase, endpoint & format JSON harus tetap sama
+(hanya backend yang diganti).
+
+Format Response Standar
+• Response Sukses
+• { "ok": true, "data": { } }
+• Response Gagal
+• { "ok": false, "error": "pesan error singkat" }
+• Contoh Error yang Baik
+• token_expired
+• token_invalid
+• missing_field: user_id
+• device_not_found
+
+Modul 1: Presensi QR Dinamis
+• Tujuan Modul Presensi
+• Presensi tidak manual, tetapi memakai QRCode dinamis untuk
+mencegah titip absen.
+• Alur Presensi QR Dinamis (End-to-End)
+• Dosen/Admin membuat QR untuk sesi kuliah
+• QR ditampilkan di kelas (proyektor/monitor)
+• Mahasiswa scan QR → mendapatkan qr_token
+• Client mengirim check-in dengan qr_token + identitas minimal
+• Server memvalidasi token (benar & belum expired)
+• Server menyimpan presensi
+• Dosen cek cepat via endpoint status
+
+Modul 1: Presensi QR Dinamis (2)
+• Data yang Terlibat (Minimal)
+• Sesi: course_id, session_id
+• Mahasiswa: user_id
+• Perangkat: device_id
+• Token: qr_token + expiry
+• Waktu: ts
+• Output yang Harus Terlihat Saat Demo
+• QR token bisa dibuat
+• Check-in sukses setelah scan
+• Status berubah menjadi checked_in untuk user tersebut
+
+Endpoint Minimum & Contoh Payload
+1) Generate QR Token
+• POST {{BASE_URL}}/presence/qr/generate
+• Request:
+{
+"course_id": "cloud-101",
+"session_id": "sesi-02",
+"ts": "2026-02-18T10:00:00Z"
+}
+• Response (contoh):
+{
+"ok": true,
+"data": {
+"qr_token": "TKN-8F2A19",
+"expires_at": "2026-02-18T10:02:00Z"
+}
+}
+
+Endpoint Minimum & Contoh Payload (2)
+2) Check-in (menggunakan token hasil scan)
+• POST {{BASE_URL}}/presence/checkin
+• Request:
+{
+"user_id": "2023xxxx",
+"device_id": "dev-001",
+"course_id": "cloud-101",
+"session_id": "sesi-02",
+"qr_token": "TKN-8F2A19",
+"ts": "2026-02-18T10:01:10Z"
+}
+• Response (contoh):
+{
+"ok": true,
+"data": {
+"presence_id": "PR-0001",
+"status": "checked_in"
+}
+}
+
+Endpoint Minimum & Contoh Payload (3)
+3) Cek Status
+• GET {{BASE_URL}}/presence/status?user_id=...&course_id=...&session_id=...
+• Response (contoh):
+{
+"ok": true,
+"data": {
+"user_id": "2023xxxx",
+"course_id": "cloud-101",
+"session_id": "sesi-02",
+"status": "checked_in",
+"last_ts": "2026-02-18T10:01:10Z"
+}
+}
+
+Modul 2: Accelerometer
+• Tujuan Modul Accelerometer
+• Mengirim data sensor dari smartphone secara periodik ke cloud
+(backend) dan menampilkan data terbaru.
+• Alur Sistem (End-to-End)
+• Client membaca accelerometer (x, y, z) dari smartphone
+• Client mengumpulkan data dalam batch (mis. 2–5 detik)
+• Client mengirim batch ke server:
+• POST {{BASE_URL}}/telemetry/accel
+• Server menyimpan data (Versi A: Google Sheets)
+• Client mengambil data terbaru untuk ditampilkan:
+• GET {{BASE_URL}}/telemetry/accel/latest?device_id=...
+
+Modul 2: Accelerometer (2)
+• Data Minimal yang Harus Ada
+• Identitas perangkat: device_id
+• Timestamp server/client: ts
+• Isi batch: samples[] berisi titik data:
+• t, x, y, z
+• Output Demo Minimal
+• Setelah POST telemetry/accel, request sukses (ok=true)
+• GET telemetry/accel/latest menampilkan nilai x,y,z terbaru untuk device
+tersebut
+• Bonus jika ditampilkan dalam grafik realtime.
+
+Endpoint Minimum & Contoh Payload
+1) Kirim Data Accelerometer (Batch)
+• POST {{BASE_URL}}/telemetry/accel
+• Request (contoh):
+{
+"device_id": "dev-001",
+"ts": "2026-02-18T10:15:30Z",
+"samples": [
+{ "t": "2026-02-18T10:15:29.100Z", "x": 0.12, "y": 0.01, "z": 9.70 },
+{ "t": "2026-02-18T10:15:29.300Z", "x": 0.15, "y": 0.02, "z": 9.68 }
+]
+}
+• Response (contoh):
+{ "ok": true, "data": { "accepted": 2 } }
+
+Endpoint Minimum & Contoh Payload (2)
+2) Ambil Data Terbaru (Latest)
+• GET {{BASE_URL}}/telemetry/accel/latest?device_id=dev-001
+• Response (contoh):
+{
+"ok": true,
+"data": { "t": "2026-02-18T10:15:29.300Z", "x": 0.15, "y": 0.02, "z": 9.68 }
+}
+
+Modul 3: GPS + Peta
+• Tujuan Modul GPS (Wajib)
+• Mengirim lokasi GPS dari smartphone ke cloud dan menampilkannya di peta
+sebagai:
+• Marker (posisi terbaru)
+• Polyline (jejak perjalanan)
+• Alur Sistem (End-to-End)
+• Client meminta izin lokasi (GPS) di smartphone
+• Client membaca lat, lng, accuracy secara periodik
+• Client mengirim titik lokasi ke server:
+• POST {{BASE_URL}}/telemetry/gps
+• Server menyimpan data lokasi (Versi A: Google Sheets)
+• Client menampilkan peta:
+• Marker dari GET {{BASE_URL}}/telemetry/gps/latest?device_id=...
+• Polyline dari GET {{BASE_URL}}/telemetry/gps/history?device_id=...&limit=...
+
+Modul 3: GPS + Peta (2)
+• Data Minimal GPS
+• device_id
+• ts (timestamp)
+• lat, lng
+• Opsional: accuracy_m
+• Output Demo Minimal
+• Setelah POST telemetry/gps, latest berubah
+• history menghasilkan daftar titik yang bisa digambar jadi polyline di peta
+
+Endpoint Minimum & Contoh Payload
+1) Log GPS Point
+• POST {{BASE_URL}}/telemetry/gps
+• Request (contoh):
+{
+"device_id": "dev-001",
+"ts": "2026-02-18T10:15:30Z",
+"lat": -7.2575,
+"lng": 112.7521,
+"accuracy_m": 12.5
+}
+Response (contoh):
+• { "ok": true, "data": { "accepted": true } }
+
+Endpoint Minimum & Contoh Payload (2)
+2) Ambil GPS Terbaru (untuk Marker)
+• GET {{BASE_URL}}/telemetry/gps/latest?device_id=dev-001
+• Response (contoh):
+{
+"ok": true,
+"data": {
+"ts": "2026-02-18T10:15:30Z",
+"lat": -7.2575,
+"lng": 112.7521,
+"accuracy_m": 12.5
+}
+}
+
+Endpoint Minimum & Contoh Payload (3)
+3) Ambil GPS History (untuk Polyline)
+• GET {{BASE_URL}}/telemetry/gps/history?device_id=dev-001&limit=200
+• Response (contoh):
+• {
+"ok": true,
+"data": {
+"device_id": "dev-001",
+"items": [
+{ "ts": "2026-02-18T10:15:00Z", "lat": -7.2570, "lng": 112.7515 },
+{ "ts": "2026-02-18T10:15:10Z", "lat": -7.2572, "lng": 112.7518 },
+{ "ts": "2026-02-18T10:15:30Z", "lat": -7.2575, "lng": 112.7521 }
+]
+}
+}
+
+Format Laporan
+• Backend aktif (staging)
+• URL Web App GAS (berakhiran /exec)
+• Base URL yang dipakai untuk uji:
+• {{BASE_URL}} = https://script.google.com/macros/s/<id>/exec
+• Endpoint Versi A sudah jalan
+• Presensi QR:
+• POST /presence/qr/generate
+• POST /presence/checkin
+• GET /presence/status
+• Accelerometer:
+• POST /telemetry/accel
+• GET /telemetry/accel/latest
+• GPS:
+• POST /telemetry/gps
+• GET /telemetry/gps/latest
+• GET /telemetry/gps/history
+
+Format Laporan (2)
+• Client/demo minimal
+• Presensi: scan QR → check-in → status berubah
+• Sensor: kirim batch → latest tampil
+• GPS: peta tampil marker + polyline
+• Dokumentasi ringkas (1 halaman)
+• Base URL + daftar endpoint
+• Contoh request/response JSON (minimal 1 contoh tiap modul)
+• Cara menjalankan demo

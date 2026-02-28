@@ -5,7 +5,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
-import { Card } from "@/components/ui/card";
+import DatePicker from "@/components/ui/date-picker";
 import StyledQr from "@/components/ui/styled-qr";
 import { getAuthSession } from "@/lib/auth/session";
 import { attendanceGasService } from "@/services/attendance-gas-service";
@@ -21,8 +21,23 @@ import {
 } from "@/utils/home/lecturer-qr-session";
 import { Clock, QrCode, RefreshCw } from "lucide-react";
 
-const QR_TOTAL_SECONDS = 90;
+const QR_TOTAL_SECONDS = 120;
 const QR_RETRY_MS = 5_000;
+
+function toLocalDateTimeInputValue(date: Date) {
+  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return localDate.toISOString().slice(0, 19);
+}
+
+function normalizeStartedAtForInput(value: string | null | undefined) {
+  if (!value) return toLocalDateTimeInputValue(new Date());
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/.test(value)) {
+    return value.length === 16 ? `${value}:00` : value;
+  }
+  const parsedDate = new Date(value);
+  if (Number.isNaN(parsedDate.getTime())) return toLocalDateTimeInputValue(new Date());
+  return toLocalDateTimeInputValue(parsedDate);
+}
 
 const createQrSchema = z.object({
   course_id: z.string().trim().min(1, "course_id wajib diisi"),
@@ -37,15 +52,21 @@ const DEFAULT_VALUES: CreateQrForm = {
   course_id: "cloud-101",
   day: "senin",
   session_no: "02",
-  started_at: new Date().toISOString(),
+  started_at: toLocalDateTimeInputValue(new Date()),
 };
 
 const FORM_FIELDS = [
   { name: "course_id" as const, label: "Course ID", placeholder: "cloud-101" },
   { name: "day" as const, label: "Hari", placeholder: "senin" },
   { name: "session_no" as const, label: "Sesi", placeholder: "02" },
-  { name: "started_at" as const, label: "Waktu Mulai", placeholder: "ISO 8601 timestamp" },
+  { name: "started_at" as const, label: "Waktu Mulai", placeholder: "Pilih waktu mulai" },
 ] as const;
+
+const LABEL_CLASS =
+  "mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.08em] text-(--token-gray-400) dark:text-(--token-gray-500)";
+
+const INPUT_CLASS =
+  "h-10 w-full rounded-lg border border-(--token-gray-300) bg-(--token-white) px-3 text-sm text-(--token-gray-900) outline-none transition-colors placeholder:text-(--token-gray-400) focus:border-primary-500 dark:border-(--color-marketing-dark-border) dark:bg-(--color-surface-dark-subtle) dark:text-(--token-white-90) dark:placeholder:text-(--token-gray-500)";
 
 function QrInfoItem({
   label,
@@ -59,14 +80,18 @@ function QrInfoItem({
   truncate?: boolean;
 }) {
   return (
-    <div className="rounded-xl bg-(--token-gray-50) px-3 py-2.5 dark:bg-(--token-white-5)">
-      <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-widest text-(--token-gray-400) dark:text-(--token-gray-500)">
+    <div className="rounded-lg border border-soft bg-(--token-gray-50) px-3 py-2.5 dark:bg-(--token-white-5)">
+      <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-(--token-gray-400) dark:text-(--token-gray-500)">
         {label}
       </p>
       <p
-        className={`text-sm font-semibold text-(--token-gray-900) dark:text-(--token-white) ${
-          mono ? "font-mono" : ""
-        } ${truncate ? "break-all" : ""}`}
+        className={[
+          "text-sm font-semibold text-(--token-gray-900) dark:text-(--token-white)",
+          mono ? "font-mono" : "",
+          truncate ? "break-all" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
       >
         {value}
       </p>
@@ -74,21 +99,31 @@ function QrInfoItem({
   );
 }
 
-function StatusBadge({ active }: { active: boolean }) {
+function StatusBadge({ status }: { status: "active" | "expired" | "stopped" }) {
+  const isActive = status === "active";
+  const isStopped = status === "stopped";
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-        active
-          ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-500/20"
-          : "bg-red-50 text-red-700 ring-1 ring-red-200 dark:bg-red-500/10 dark:text-red-400 dark:ring-red-500/20"
-      }`}
+      className={[
+        "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[11px] font-semibold",
+        isActive
+          ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400"
+          : isStopped
+            ? "border-soft bg-(--token-gray-100) text-(--token-gray-600) dark:bg-(--token-white-8) dark:text-(--token-gray-300)"
+            : "border-red-200 bg-red-50 text-red-600 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-400",
+      ].join(" ")}
     >
       <span
-        className={`h-1.5 w-1.5 rounded-full ${
-          active ? "bg-emerald-500 shadow-[0_0_0_2px_rgba(16,185,129,0.25)]" : "bg-red-500"
-        }`}
+        className={[
+          "h-1.5 w-1.5 rounded-full",
+          isActive
+            ? "bg-emerald-500"
+            : isStopped
+              ? "bg-(--token-gray-400)"
+              : "bg-red-500",
+        ].join(" ")}
       />
-      {active ? "Active" : "Expired"}
+      {isActive ? "Active" : isStopped ? "Stopped" : "Expired"}
     </span>
   );
 }
@@ -102,15 +137,23 @@ export default function DosenCreateQrPage() {
 
   const form = useForm<CreateQrForm>({
     resolver: zodResolver(createQrSchema),
-    defaultValues: persistedQrState?.form_values ?? DEFAULT_VALUES,
+    defaultValues: {
+      ...(persistedQrState?.form_values ?? DEFAULT_VALUES),
+      started_at: normalizeStartedAtForInput(DEFAULT_VALUES.started_at),
+    },
   });
 
   const [activePayload, setActivePayload] = useState<AttendanceQrPayload | null>(
-    persistedQrState?.active_payload ?? null,
+    persistedQrState?.is_stopped ? null : (persistedQrState?.active_payload ?? null),
   );
   const [nextRotationAt, setNextRotationAt] = useState<string | null>(
-    persistedQrState?.active_payload?.expires_at ?? persistedQrState?.next_rotation_at ?? null,
+    persistedQrState?.is_stopped
+      ? null
+      : (persistedQrState?.active_payload?.expires_at ??
+          persistedQrState?.next_rotation_at ??
+          null),
   );
+  const [isStopped, setIsStopped] = useState<boolean>(persistedQrState?.is_stopped ?? false);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [rotationError, setRotationError] = useState<string | null>(null);
 
@@ -131,9 +174,7 @@ export default function DosenCreateQrPage() {
         ts: new Date().toISOString(),
       });
 
-      if (!response.ok) {
-        throw new Error(response.error);
-      }
+      if (!response.ok) throw new Error(response.error);
 
       const payload: AttendanceQrPayload = {
         v: 1,
@@ -147,6 +188,7 @@ export default function DosenCreateQrPage() {
     },
     onSuccess: (payload) => {
       const nextRotationTimestamp = payload.expires_at;
+      setIsStopped(false);
       setActivePayload(payload);
       setNextRotationAt(nextRotationTimestamp);
       setRotationError(null);
@@ -154,6 +196,7 @@ export default function DosenCreateQrPage() {
         ownerIdentifier: sessionIdentifier,
         activePayload: payload,
         nextRotationAt: nextRotationTimestamp,
+        isStopped: false,
         formValues: form.getValues(),
       });
     },
@@ -166,8 +209,24 @@ export default function DosenCreateQrPage() {
     }
   }
 
+  function handleStopQr() {
+    clearRotationTimer();
+    setIsStopped(true);
+    setActivePayload(null);
+    setNextRotationAt(null);
+    setCountdown(null);
+    setRotationError(null);
+    saveLecturerQrSessionState({
+      ownerIdentifier: sessionIdentifier,
+      activePayload: null,
+      nextRotationAt: null,
+      isStopped: true,
+      formValues: form.getValues(),
+    });
+  }
+
   useEffect(() => {
-    if (!activePayload) {
+    if (!activePayload || isStopped) {
       clearRotationTimer();
       return;
     }
@@ -177,21 +236,15 @@ export default function DosenCreateQrPage() {
     const scheduleRetry = (delayMs: number) => {
       clearRotationTimer();
       rotationTimerRef.current = window.setTimeout(async () => {
-        if (cancelled) {
-          return;
-        }
-
+        if (cancelled) return;
         if (generateMutation.isPending) {
           scheduleRetry(500);
           return;
         }
-
         try {
           await generateMutation.mutateAsync(form.getValues());
         } catch (error) {
-          if (cancelled) {
-            return;
-          }
+          if (cancelled) return;
           setRotationError(
             error instanceof Error
               ? `Rotasi QR gagal sementara: ${error.message}. Coba lagi otomatis...`
@@ -213,23 +266,26 @@ export default function DosenCreateQrPage() {
       cancelled = true;
       clearRotationTimer();
     };
-  }, [activePayload, form, generateMutation]);
+  }, [activePayload, form, generateMutation, isStopped]);
 
   useEffect(() => {
-    if (!nextRotationAt) {
+    if (!nextRotationAt || isStopped) {
       setCountdown(null);
       return;
     }
 
     const tick = () => {
-      const remaining = Math.max(0, Math.round((Date.parse(nextRotationAt) - Date.now()) / 1000));
+      const remaining = Math.max(
+        0,
+        Math.round((Date.parse(nextRotationAt) - Date.now()) / 1000),
+      );
       setCountdown(remaining);
     };
 
     tick();
     const id = window.setInterval(tick, 1000);
     return () => window.clearInterval(id);
-  }, [nextRotationAt]);
+  }, [isStopped, nextRotationAt]);
 
   const encodedQrValue = useMemo(() => {
     if (!activePayload) return "";
@@ -241,6 +297,11 @@ export default function DosenCreateQrPage() {
   const watchedSessionNo = useWatch({ control: form.control, name: "session_no" });
   const watchedStartedAt = useWatch({ control: form.control, name: "started_at" });
 
+  const browserTimeZone = useMemo(
+    () => Intl.DateTimeFormat().resolvedOptions().timeZone ?? "Browser local timezone",
+    [],
+  );
+
   const sessionPreview = buildAttendanceSessionId({
     courseId: watchedCourseId ?? "",
     day: watchedDay ?? "",
@@ -248,107 +309,176 @@ export default function DosenCreateQrPage() {
     startedAt: watchedStartedAt ?? "",
   });
 
-  const isActiveQr = !!activePayload && !isExpiredTimestamp(activePayload.expires_at);
+  const isActiveQr =
+    !!activePayload && !isStopped && !isExpiredTimestamp(activePayload.expires_at);
 
   return (
-    <div>
-      <div className="mb-5">
-        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-primary-600 dark:text-primary-400">
-          <QrCode size={14} />
-          Dosen - Modul Presensi
-        </div>
+    <div className="space-y-5">
+      {/* Page header */}
+      <div>
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-primary-600 dark:text-primary-400">
+          Dosen — Modul Presensi
+        </p>
         <h1 className="mt-1 text-xl font-bold text-(--token-gray-900) dark:text-(--token-white) sm:text-2xl">
           Buat QR Presensi
         </h1>
         <p className="mt-1 text-sm text-(--token-gray-500) dark:text-(--token-gray-400)">
-          QR dinamis berganti otomatis berdasarkan waktu expired token. Satu token berlaku untuk banyak mahasiswa.
+          QR dinamis berganti otomatis berdasarkan waktu expired token. Satu token berlaku
+          untuk banyak mahasiswa.
+        </p>
+        <p className="mt-0.5 text-xs text-(--token-gray-400) dark:text-(--token-gray-500)">
+          Zona waktu browser: {browserTimeZone}
         </p>
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[1fr_1.2fr]">
-        <Card variant="default" size="md" className="rounded-2xl">
+        {/* Form card */}
+        <div className="overflow-visible rounded-2xl border border-soft surface-elevated">
+          <div className="border-b border-soft px-5 py-4">
+            <h2 className="text-sm font-semibold text-(--token-gray-900) dark:text-(--token-white)">
+              Parameter Sesi
+            </h2>
+          </div>
+
           <form
-            className="space-y-4"
-            onSubmit={form.handleSubmit((values) => generateMutation.mutate(values))}
+            className="space-y-4 p-5"
+            onSubmit={form.handleSubmit((values) => {
+              setIsStopped(false);
+              generateMutation.mutate(values);
+            })}
           >
             {FORM_FIELDS.map((field) => (
               <div key={field.name}>
-                <label className="mb-1.5 block text-xs font-semibold text-(--token-gray-700) dark:text-(--token-gray-200)">
-                  {field.label}
-                </label>
-                <input
-                  {...form.register(field.name)}
-                  placeholder={field.placeholder}
-                  className="h-11 w-full rounded-xl border border-(--token-gray-300) bg-(--token-white) px-3 text-sm text-(--token-gray-900) outline-none transition-colors placeholder:text-(--token-gray-400) focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-(--color-marketing-dark-border) dark:bg-(--color-surface-dark-subtle) dark:text-(--token-white-90) dark:placeholder:text-(--token-gray-500)"
-                />
+                <label className={LABEL_CLASS}>{field.label}</label>
+                {field.name === "started_at" ? (
+                  <>
+                    <input type="hidden" {...form.register(field.name)} />
+                    <DatePicker
+                      id={`${field.name}_picker`}
+                      mode="single"
+                      defaultDate={watchedStartedAt || undefined}
+                      placeholder={field.placeholder}
+                      onChange={(selectedDates) => {
+                        const selected = selectedDates?.[0];
+                        if (!selected) return;
+                        form.setValue(
+                          field.name,
+                          toLocalDateTimeInputValue(selected),
+                          { shouldValidate: true },
+                        );
+                      }}
+                    />
+                  </>
+                ) : (
+                  <input
+                    {...form.register(field.name)}
+                    type="text"
+                    placeholder={field.placeholder}
+                    className={INPUT_CLASS}
+                  />
+                )}
                 {form.formState.errors[field.name]?.message && (
-                  <p className="mt-1 text-xs text-red-600">{form.formState.errors[field.name]!.message}</p>
+                  <p className="mt-1 text-xs text-red-500">
+                    {form.formState.errors[field.name]!.message}
+                  </p>
                 )}
               </div>
             ))}
 
-            <div className="rounded-xl border border-dashed border-(--token-gray-300) bg-(--token-gray-50) p-3 text-xs text-(--token-gray-600) dark:border-(--color-marketing-dark-border) dark:bg-(--token-white-5) dark:text-(--token-gray-300)">
-              <span className="font-semibold">session_id preview: </span>
-              <span className="font-mono">{sessionPreview}</span>
+            {/* Session preview */}
+            <div className="rounded-lg border border-soft bg-(--token-gray-50) px-3 py-2.5 dark:bg-(--token-white-5)">
+              <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-(--token-gray-400) dark:text-(--token-gray-500)">
+                session_id preview
+              </p>
+              <p className="break-all font-mono text-xs text-(--token-gray-700) dark:text-(--token-gray-300)">
+                {sessionPreview}
+              </p>
             </div>
 
+            {/* Actions */}
             <div className="flex flex-wrap gap-2 pt-1">
               <button
                 type="submit"
                 disabled={generateMutation.isPending}
-                className="gradient-btn inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-primary-500/15 transition-transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 disabled:hover:scale-100"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-80 disabled:opacity-50 dark:hover:opacity-90"
               >
                 {generateMutation.isPending ? (
                   <>
-                    <RefreshCw size={14} className="animate-spin" />
+                    <RefreshCw size={13} className="animate-spin" />
                     Memproses...
                   </>
                 ) : (
                   "Generate QR"
                 )}
               </button>
+
               <button
                 type="button"
-                className="inline-flex items-center gap-1.5 rounded-full border border-soft px-4 py-2.5 text-sm font-medium text-(--token-gray-600) transition-colors hover:bg-(--token-gray-100) dark:text-(--token-gray-300) dark:hover:bg-(--token-white-5)"
+                onClick={handleStopQr}
+                disabled={!activePayload && !generateMutation.isPending}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-red-500/25 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/15"
+              >
+                Stop QR
+              </button>
+
+              <button
+                type="button"
                 onClick={() =>
-                  form.setValue("started_at", new Date().toISOString(), {
+                  form.setValue("started_at", toLocalDateTimeInputValue(new Date()), {
                     shouldValidate: true,
                   })
                 }
+                className="inline-flex items-center gap-1.5 rounded-lg border border-soft px-4 py-2.5 text-sm font-medium text-(--token-gray-600) transition-colors hover:bg-(--token-gray-100) dark:text-(--token-gray-300) dark:hover:bg-(--token-white-5)"
               >
-                <Clock size={14} />
+                <Clock size={13} />
                 Waktu Sekarang
               </button>
             </div>
 
             {generateMutation.isError && (
-              <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-400">
+              <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-400">
                 {generateMutation.error instanceof Error
                   ? generateMutation.error.message
                   : "Gagal membuat QR."}
               </div>
             )}
           </form>
-        </Card>
+        </div>
 
-        <Card variant="default" size="md" className="rounded-2xl">
-          <div className="flex items-start justify-between gap-3">
+        {/* QR display card */}
+        <div className="overflow-hidden rounded-2xl border border-soft surface-elevated">
+          <div className="flex items-center justify-between gap-3 border-b border-soft px-5 py-4">
             <div>
-              <h2 className="text-base font-semibold text-(--token-gray-900) dark:text-(--token-white)">
+              <h2 className="text-sm font-semibold text-(--token-gray-900) dark:text-(--token-white)">
                 QR Dinamis
-                <span className="ml-2 rounded-full bg-black/5 px-2 py-0.5 text-xs font-medium text-(--token-gray-500) dark:bg-white/8 dark:text-(--token-gray-400)">
-                  One-to-Many
-                </span>
               </h2>
               {rotationError && (
-                <p className="mt-1 text-xs text-red-600 dark:text-red-400">{rotationError}</p>
+                <p className="mt-0.5 text-xs text-red-500 dark:text-red-400">
+                  {rotationError}
+                </p>
               )}
             </div>
-            {activePayload && <StatusBadge active={isActiveQr} />}
+            {(activePayload || isStopped) && (
+              <StatusBadge
+                status={isStopped ? "stopped" : isActiveQr ? "active" : "expired"}
+              />
+            )}
           </div>
 
-          {activePayload ? (
-            <div className="mt-5">
+          <div className="p-5">
+            {isStopped ? (
+              <div className="flex flex-col items-center px-6 py-14 text-center">
+                <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl border border-soft bg-(--token-gray-50) dark:bg-(--token-white-5)">
+                  <QrCode size={20} className="text-(--token-gray-500)" />
+                </div>
+                <p className="text-sm font-medium text-(--token-gray-700) dark:text-(--token-gray-300)">
+                  QR dihentikan oleh dosen
+                </p>
+                <p className="mt-1 text-xs text-(--token-gray-400) dark:text-(--token-gray-500)">
+                  Klik Generate QR untuk memulai lagi.
+                </p>
+              </div>
+            ) : activePayload ? (
               <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-start">
                 <div className="shrink-0">
                   <StyledQr
@@ -362,35 +492,50 @@ export default function DosenCreateQrPage() {
 
                 <div className="w-full min-w-0 flex-1 space-y-2">
                   <QrInfoItem label="course_id" value={activePayload.course_id} mono />
-                  <QrInfoItem label="session_id" value={activePayload.session_id} mono truncate />
-                  <QrInfoItem label="qr_token" value={activePayload.qr_token} mono truncate />
+                  <QrInfoItem
+                    label="session_id"
+                    value={activePayload.session_id}
+                    mono
+                    truncate
+                  />
+                  <QrInfoItem
+                    label="qr_token"
+                    value={activePayload.qr_token}
+                    mono
+                    truncate
+                  />
 
                   <div className="grid grid-cols-2 gap-2">
                     <QrInfoItem
                       label="expires_at"
                       value={
                         activePayload.expires_at
-                          ? new Date(activePayload.expires_at).toLocaleTimeString("id-ID")
+                          ? new Date(activePayload.expires_at).toLocaleTimeString(
+                              undefined,
+                              { hour: "2-digit", minute: "2-digit", second: "2-digit" },
+                            )
                           : "-"
                       }
                       mono
                     />
                     <div
-                      className={`flex flex-col justify-center rounded-xl px-3 py-2.5 ${
+                      className={[
+                        "flex flex-col justify-center rounded-lg border px-3 py-2.5",
                         isActiveQr
-                          ? "bg-emerald-50 ring-1 ring-emerald-200 dark:bg-emerald-500/8 dark:ring-emerald-500/20"
-                          : "bg-red-50 ring-1 ring-red-200 dark:bg-red-500/8 dark:ring-red-500/20"
-                      }`}
+                          ? "border-emerald-200 bg-emerald-50 dark:border-emerald-500/20 dark:bg-emerald-500/8"
+                          : "border-red-200 bg-red-50 dark:border-red-500/20 dark:bg-red-500/8",
+                      ].join(" ")}
                     >
-                      <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-widest text-(--token-gray-400) dark:text-(--token-gray-500)">
+                      <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-(--token-gray-400) dark:text-(--token-gray-500)">
                         rotasi dalam
                       </p>
                       <p
-                        className={`text-sm font-bold tabular-nums ${
+                        className={[
+                          "text-sm font-bold tabular-nums",
                           isActiveQr
                             ? "text-emerald-700 dark:text-emerald-400"
-                            : "text-red-700 dark:text-red-400"
-                        }`}
+                            : "text-red-600 dark:text-red-400",
+                        ].join(" ")}
                       >
                         {countdown !== null && countdown > 0 ? `${countdown}s` : "Expired"}
                       </p>
@@ -398,21 +543,21 @@ export default function DosenCreateQrPage() {
                   </div>
                 </div>
               </div>
-            </div>
-          ) : (
-            <div className="mt-4 flex flex-col items-center rounded-xl border-2 border-dashed border-(--token-gray-200) px-6 py-10 text-center dark:border-(--color-marketing-dark-border)">
-              <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-(--token-gray-100) dark:bg-(--token-white-5)">
-                <QrCode size={24} className="text-(--token-gray-400)" />
+            ) : (
+              <div className="flex flex-col items-center px-6 py-14 text-center">
+                <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl border border-soft bg-(--token-gray-50) dark:bg-(--token-white-5)">
+                  <QrCode size={20} className="text-(--token-gray-400)" />
+                </div>
+                <p className="text-sm font-medium text-(--token-gray-500) dark:text-(--token-gray-400)">
+                  QR belum dibuat
+                </p>
+                <p className="mt-1 text-xs text-(--token-gray-400) dark:text-(--token-gray-500)">
+                  Isi parameter sesi lalu klik Generate QR.
+                </p>
               </div>
-              <p className="text-sm font-medium text-(--token-gray-500) dark:text-(--token-gray-400)">
-                QR belum dibuat
-              </p>
-              <p className="mt-1 text-xs text-(--token-gray-400) dark:text-(--token-gray-500)">
-                Isi parameter sesi lalu klik <span className="font-semibold">Generate QR</span>
-              </p>
-            </div>
-          )}
-        </Card>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

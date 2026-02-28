@@ -34,7 +34,7 @@ export default function StyledQr({
   variant = "default",
   isExpired = false,
   secondsLeft,
-  totalSeconds = 90,
+  totalSeconds = 120,
 }: StyledQrProps) {
   const hasRing = secondsLeft !== undefined;
   const progress = hasRing
