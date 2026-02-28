@@ -17,8 +17,30 @@ describe("attendance-qr-utils", () => {
     expect(sessionId).toBe("cloud-101-senin-02-202602271015");
   });
 
-  it("serializes and parses qr payload", () => {
+  it("serializes and parses compact qr payload", () => {
     const rawValue = serializeAttendanceQrPayload({
+      v: 1,
+      course_id: "cloud-101",
+      session_id: "cloud-101-senin-02-202602271015",
+      qr_token: "TKN-123ABC",
+      expires_at: "2026-02-27T10:16:30.000Z",
+    });
+
+    expect(rawValue.startsWith("CTC1|")).toBe(true);
+
+    const parsed = parseAttendanceQrPayload(rawValue);
+
+    expect(parsed).toEqual({
+      v: 1,
+      course_id: "cloud-101",
+      session_id: "cloud-101-senin-02-202602271015",
+      qr_token: "TKN-123ABC",
+      expires_at: "2026-02-27T10:16:30.000Z",
+    });
+  });
+
+  it("parses legacy json payload", () => {
+    const rawValue = JSON.stringify({
       v: 1,
       course_id: "cloud-101",
       session_id: "cloud-101-senin-02-202602271015",
@@ -35,5 +57,10 @@ describe("attendance-qr-utils", () => {
       qr_token: "TKN-123ABC",
       expires_at: "2026-02-27T10:16:30.000Z",
     });
+  });
+
+  it("returns null for invalid compact payload", () => {
+    const parsed = parseAttendanceQrPayload("CTC1|cloud-101|session-01|TKN-123ABC|invalid");
+    expect(parsed).toBeNull();
   });
 });

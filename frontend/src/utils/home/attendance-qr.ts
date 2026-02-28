@@ -1,5 +1,8 @@
 import type { AttendanceQrPayload } from "@/utils/home/attendance-types";
 
+const QR_COMPACT_PREFIX = "CTC1";
+const QR_COMPACT_SEPARATOR = "|";
+
 function pad(value: number) {
   return value.toString().padStart(2, "0");
 }
@@ -18,19 +21,11 @@ export function buildAttendanceSessionId(params: {
   return `${params.courseId}-${params.day}-${params.sessionNo}-${datePart}`;
 }
 
-export function serializeAttendanceQrPayload(payload: AttendanceQrPayload) {
-  return JSON.stringify(payload);
+function isValidTimestamp(value: string) {
+  return Number.isFinite(Date.parse(value));
 }
 
-export function isExpiredTimestamp(expiresAt: string) {
-  const expiresAtMs = Date.parse(expiresAt);
-  if (!Number.isFinite(expiresAtMs)) {
-    return true;
-  }
-  return Date.now() >= expiresAtMs;
-}
-
-export function parseAttendanceQrPayload(rawValue: string): AttendanceQrPayload | null {
+function parseLegacyAttendanceQrPayload(rawValue: string): AttendanceQrPayload | null {
   try {
     const parsedValue = JSON.parse(rawValue) as Partial<AttendanceQrPayload>;
     if (
@@ -38,7 +33,8 @@ export function parseAttendanceQrPayload(rawValue: string): AttendanceQrPayload 
       typeof parsedValue.course_id !== "string" ||
       typeof parsedValue.session_id !== "string" ||
       typeof parsedValue.qr_token !== "string" ||
-      typeof parsedValue.expires_at !== "string"
+      typeof parsedValue.expires_at !== "string" ||
+      !isValidTimestamp(parsedValue.expires_at)
     ) {
       return null;
     }
@@ -53,4 +49,66 @@ export function parseAttendanceQrPayload(rawValue: string): AttendanceQrPayload 
   } catch {
     return null;
   }
+}
+
+function parseCompactAttendanceQrPayload(rawValue: string): AttendanceQrPayload | null {
+  if (!rawValue.startsWith(`${QR_COMPACT_PREFIX}${QR_COMPACT_SEPARATOR}`)) {
+    return null;
+  }
+
+  const segments = rawValue.split(QR_COMPACT_SEPARATOR);
+  if (segments.length !== 5) {
+    return null;
+  }
+
+  const [, encodedCourseId, encodedSessionId, qrToken, encodedExpiresAt] = segments;
+
+  let courseId = "";
+  let sessionId = "";
+  let expiresAt = "";
+
+  try {
+    courseId = decodeURIComponent(encodedCourseId);
+    sessionId = decodeURIComponent(encodedSessionId);
+    expiresAt = decodeURIComponent(encodedExpiresAt);
+  } catch {
+    return null;
+  }
+
+  if (!courseId || !sessionId || !qrToken || !expiresAt || !isValidTimestamp(expiresAt)) {
+    return null;
+  }
+
+  return {
+    v: 1,
+    course_id: courseId,
+    session_id: sessionId,
+    qr_token: qrToken,
+    expires_at: expiresAt,
+  };
+}
+
+export function serializeAttendanceQrPayload(payload: AttendanceQrPayload) {
+  return [
+    QR_COMPACT_PREFIX,
+    encodeURIComponent(payload.course_id),
+    encodeURIComponent(payload.session_id),
+    payload.qr_token,
+    encodeURIComponent(payload.expires_at),
+  ].join(QR_COMPACT_SEPARATOR);
+}
+
+export function isExpiredTimestamp(expiresAt: string) {
+  const expiresAtMs = Date.parse(expiresAt);
+  if (!Number.isFinite(expiresAtMs)) {
+    return true;
+  }
+  return Date.now() >= expiresAtMs;
+}
+
+export function parseAttendanceQrPayload(rawValue: string): AttendanceQrPayload | null {
+  return (
+    parseCompactAttendanceQrPayload(rawValue) ??
+    parseLegacyAttendanceQrPayload(rawValue)
+  );
 }

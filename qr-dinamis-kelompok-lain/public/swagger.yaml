@@ -1,0 +1,543 @@
+openapi: 3.0.3
+info:
+  title: Presensi QR Dinamis — Kelompok 3 (v2)
+  description: |
+    API untuk sistem presensi kuliah berbasis QR Code dinamis.
+    
+    **Backend**: Google Apps Script (GAS) + Google Sheets  
+    **Versi**: v2 (Dengan Session Management & Real-time Attendance)  
+    **Mata Kuliah**: Praktik Komputasi Awan
+
+    ## Alur Sistem
+    1. Admin mendaftarkan sesi pertemuan (`POST /presence/sessions/create`).
+    2. Admin men-generate QR Token untuk sesi kuliah tertentu (`POST /presence/qr/generate`).
+    3. QR ditampilkan di layar dashboard admin secara real-time.
+    4. Mahasiswa scan QR → mendapatkan `qr_token`.
+    5. Mahasiswa mengirim check-in hanya dengan `device_id`, `user_id`, dan `qr_token` (`POST /presence/checkin`).
+    6. Server mengambil `course_id` dan `session_id` langsung dari token di database (menghindari kecurangan/mismatch).
+    7. Mahasiswa tercatat hadir, token ditandai usang (`is_used: true`).
+    8. Admin melihat daftar kehadiran secara live via `GET /presence/session-attendance`.
+
+    ## Format Response
+    - **Sukses**: `{ "ok": true, "data": { ... } }`
+    - **Gagal**: `{ "ok": false, "error": "pesan_error" }`
+
+    ## Catatan Penting
+    - Semua request POST menggunakan format body JSON (`application/json`).
+    - Semua request melalui **Next.js Proxy** (`/api/proxy`) untuk menghindari CORS error.
+    - Masukkan URL GAS di input field di atas sebelum melakukan testing.
+  version: 2.0.0
+  contact:
+    name: Kelompok 3
+
+servers:
+  - url: /api/proxy
+    description: Next.js Proxy (ke GAS via server-side)
+
+tags:
+  - name: Sessions
+    description: Manajemen Sesi Perkuliahan
+  - name: Auth & QR
+    description: Manajemen Token QR
+  - name: Attendance
+    description: Pencatatan & Monitoring Presensi
+
+paths:
+  /?path=presence/sessions/create:
+    post:
+      tags:
+        - Sessions
+      summary: Buat Sesi Baru
+      description: |
+        Membuat sesi pertemuan baru (misal: "Minggu 1") untuk suatu course.
+        Sesi harus unik per kombinasi `session_id` + `course_id`.
+      operationId: createSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSessionRequest"
+      responses:
+        "200":
+          description: Sesi dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateSessionResponse"
+              examples:
+                success:
+                  summary: Sesi berhasil dibuat
+                  value:
+                    ok: true
+                    data:
+                      session_id: "sesi-03"
+                      session_name: "Minggu 3 - Load Balancing"
+                      course_id: "cloud-101"
+                duplicate:
+                  summary: Sesi sudah ada
+                  value:
+                    ok: false
+                    error: "session_exists"
+                missing:
+                  summary: Field wajib tidak ada
+                  value:
+                    ok: false
+                    error: "missing_field: session_id"
+
+  /?path=presence/qr/generate:
+    post:
+      tags:
+        - Auth & QR
+      summary: Generate QR Token
+      description: |
+        Membuat QR token baru untuk sesi kuliah tertentu.
+        Token berlaku selama **2 menit** sejak dibuat.
+        Token disimpan ke sheet `tokens` di Google Sheets.
+      operationId: generateQRToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateQRRequest"
+      responses:
+        "200":
+          description: Token berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenerateQRSuccessResponse"
+              examples:
+                success:
+                  summary: QR token berhasil dibuat
+                  value:
+                    ok: true
+                    data:
+                      qr_token: "TKN-8F2A19"
+                      expires_at: "2026-02-18T10:02:00Z"
+                      course_id: "cloud-101"
+                      session_id: "sesi-02"
+                missing:
+                  summary: Field wajib tidak ada
+                  value:
+                    ok: false
+                    error: "missing_field: course_id"
+
+  /?path=presence/checkin:
+    post:
+      tags:
+        - Attendance
+      summary: Check-in Presensi
+      description: |
+        Melakukan check-in presensi menggunakan token hasil scan QR.
+        
+        **Catatan:** Client **tidak perlu** mengirim `course_id` & `session_id`.
+        Backend akan mengambil data tersebut langsung dari token yang valid di database.
+        
+        **Validasi:**
+        - `qr_token` harus ada di sheet `tokens`
+        - Token belum expired (`expires_at > now`)
+        - Jika user sudah check-in di sesi yang sama → tetap `ok: true` dengan note `already_checked_in`
+      operationId: checkin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CheckinRequest"
+      responses:
+        "200":
+          description: Hasil check-in
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/CheckinSuccessResponse"
+                  - $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                success:
+                  summary: Check-in berhasil
+                  value:
+                    ok: true
+                    data:
+                      presence_id: "PR-0001"
+                      status: "checked_in"
+                      course_id: "cloud-101"
+                      session_id: "sesi-02"
+                already:
+                  summary: Sudah check-in sebelumnya
+                  value:
+                    ok: true
+                    data:
+                      presence_id: "PR-0001"
+                      status: "checked_in"
+                      note: "already_checked_in"
+                      course_id: "cloud-101"
+                      session_id: "sesi-02"
+                invalid:
+                  summary: Token tidak ditemukan
+                  value:
+                    ok: false
+                    error: "token_invalid"
+                expired:
+                  summary: Token kadaluarsa
+                  value:
+                    ok: false
+                    error: "token_expired"
+
+  /?path=presence/sessions:
+    get:
+      tags:
+        - Sessions
+      summary: List Sesi Perkuliahan
+      description: Mengambil daftar sesi untuk course tertentu. Jika `course_id` tidak diberikan, mengembalikan semua sesi.
+      operationId: listSessions
+      parameters:
+        - name: course_id
+          in: query
+          required: false
+          schema:
+            type: string
+            example: "cloud-101"
+          description: Filter berdasarkan ID mata kuliah
+      responses:
+        "200":
+          description: Daftar sesi
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListSessionsResponse"
+              examples:
+                success:
+                  summary: Daftar sesi
+                  value:
+                    ok: true
+                    data:
+                      sessions:
+                        - session_id: "sesi-01"
+                          session_name: "Minggu 1 - Intro Cloud"
+                          course_id: "cloud-101"
+                          created_at: "2026-02-18T08:00:00Z"
+
+  /?path=presence/session-attendance:
+    get:
+      tags:
+        - Attendance
+      summary: Kehadiran per Sesi (Realtime)
+      description: |
+        Mengambil daftar mahasiswa yang sudah hadir pada sesi tertentu.
+        Digunakan untuk polling realtime dashboard admin.
+      operationId: getSessionAttendance
+      parameters:
+        - name: course_id
+          in: query
+          required: true
+          schema:
+            type: string
+            example: "cloud-101"
+        - name: session_id
+          in: query
+          required: true
+          schema:
+            type: string
+            example: "sesi-02"
+      responses:
+        "200":
+          description: Daftar kehadiran
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionAttendanceResponse"
+              examples:
+                success:
+                  summary: Data kehadiran
+                  value:
+                    ok: true
+                    data:
+                      course_id: "cloud-101"
+                      session_id: "sesi-02"
+                      total: 2
+                      attendees:
+                        - presence_id: "PR-0001"
+                          user_id: "434231033"
+                          ts: "2026-02-18T10:01:10Z"
+                          recorded_at: "2026-02-18T10:01:10Z"
+                missing:
+                  summary: Field wajib tidak ada
+                  value:
+                    ok: false
+                    error: "missing_field: session_id"
+
+  /?path=presence/status:
+    get:
+      tags:
+        - Attendance
+      summary: Cek Status Presensi Individu
+      description: Cek apakah seorang mahasiswa spesifik sudah hadir di sesi tertentu.
+      operationId: getPresenceStatus
+      parameters:
+        - name: user_id
+          in: query
+          required: true
+          schema:
+            type: string
+            example: "434231033"
+          description: NIM / ID mahasiswa
+        - name: course_id
+          in: query
+          required: true
+          schema:
+            type: string
+            example: "cloud-101"
+          description: ID mata kuliah
+        - name: session_id
+          in: query
+          required: true
+          schema:
+            type: string
+            example: "sesi-02"
+          description: ID sesi kuliah
+      responses:
+        "200":
+          description: Status presensi
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatusResponse"
+              examples:
+                checked_in:
+                  summary: Mahasiswa sudah check-in
+                  value:
+                    ok: true
+                    data:
+                      user_id: "434231033"
+                      course_id: "cloud-101"
+                      session_id: "sesi-02"
+                      status: "checked_in"
+                      last_ts: "2026-02-18T10:01:10Z"
+                not_present:
+                  summary: Mahasiswa belum check-in
+                  value:
+                    ok: true
+                    data:
+                      user_id: "434231033"
+                      course_id: "cloud-101"
+                      session_id: "sesi-02"
+                      status: "not_present"
+                      last_ts: null
+                missing:
+                  summary: Field wajib tidak ada
+                  value:
+                    ok: false
+                    error: "missing_field: user_id"
+
+components:
+  schemas:
+    CreateSessionRequest:
+      type: object
+      required: [session_id, session_name, course_id]
+      properties:
+        session_id:
+          type: string
+          description: ID unik sesi
+          example: "sesi-03"
+        session_name:
+          type: string
+          description: Nama deskriptif sesi
+          example: "Minggu 3 - Load Balancing"
+        course_id:
+          type: string
+          description: ID mata kuliah
+          example: "cloud-101"
+
+    GenerateQRRequest:
+      type: object
+      required: [course_id, session_id]
+      properties:
+        course_id:
+          type: string
+          description: ID mata kuliah
+          example: "cloud-101"
+        session_id:
+          type: string
+          description: ID sesi kuliah
+          example: "sesi-02"
+
+    CheckinRequest:
+      type: object
+      required: [user_id, device_id, qr_token]
+      properties:
+        user_id:
+          type: string
+          description: NIM mahasiswa
+          example: "434231033"
+        device_id:
+          type: string
+          description: ID perangkat mahasiswa
+          example: "dev-001"
+        qr_token:
+          type: string
+          description: Token dari hasil scan QR
+          example: "TKN-8F2A19"
+        ts:
+          type: string
+          format: date-time
+          description: Timestamp check-in (opsional, default server time)
+          example: "2026-02-18T10:01:10Z"
+
+    CreateSessionResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            session_id:
+              type: string
+            session_name:
+              type: string
+            course_id:
+              type: string
+
+    GenerateQRSuccessResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            qr_token:
+              type: string
+              description: Token unik sementara (format TKN-XXXXXX)
+              example: "TKN-8F2A19"
+            expires_at:
+              type: string
+              format: date-time
+              description: Waktu kadaluarsa token (ISO-8601)
+              example: "2026-02-18T10:02:00Z"
+            course_id:
+              type: string
+            session_id:
+              type: string
+
+    CheckinSuccessResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            presence_id:
+              type: string
+              example: "PR-0001"
+            status:
+              type: string
+              example: "checked_in"
+            course_id:
+              type: string
+            session_id:
+              type: string
+            note:
+              type: string
+              description: Muncul jika sudah pernah check-in
+              example: "already_checked_in"
+
+    ListSessionsResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            sessions:
+              type: array
+              items:
+                type: object
+                properties:
+                  session_id:
+                    type: string
+                  session_name:
+                    type: string
+                  course_id:
+                    type: string
+                  created_at:
+                    type: string
+
+    SessionAttendanceResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            course_id:
+              type: string
+            session_id:
+              type: string
+            total:
+              type: integer
+            attendees:
+              type: array
+              items:
+                type: object
+                properties:
+                  presence_id:
+                    type: string
+                  user_id:
+                    type: string
+                  ts:
+                    type: string
+                  recorded_at:
+                    type: string
+
+    StatusResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            user_id:
+              type: string
+            course_id:
+              type: string
+            session_id:
+              type: string
+            status:
+              type: string
+              enum: [checked_in, not_present]
+            last_ts:
+              type: string
+              nullable: true
+
+    ErrorResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+          example: false
+        error:
+          type: string
+          description: |
+            Pesan error. Contoh:
+            - `missing_field: course_id`
+            - `token_invalid`
+            - `token_expired`
+            - `session_exists`
+            - `invalid_json`
+            - `unknown_path: ...`
+            - `server_error: ...`
+          example: "token_expired"

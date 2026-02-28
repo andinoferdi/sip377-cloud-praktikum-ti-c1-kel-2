@@ -1,10 +1,8 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import type { IScannerControls } from "@zxing/browser";
-import { BrowserQRCodeReader } from "@zxing/browser";
 import { useMutation } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { getErrorMessage } from "@/lib/errors";
@@ -23,14 +21,50 @@ const checkinSchema = z.object({
 
 type CheckinForm = z.infer<typeof checkinSchema>;
 
+type Html5QrcodeScanner = {
+  start: (
+    cameraIdOrConfig: string | MediaTrackConstraints,
+    configuration: {
+      fps?: number;
+      qrbox?: {
+        width: number;
+        height: number;
+      };
+    },
+    qrCodeSuccessCallback: (decodedText: string) => void,
+    qrCodeErrorCallback?: (errorMessage: string) => void,
+  ) => Promise<void>;
+  stop: () => Promise<void>;
+  clear: () => Promise<void>;
+};
+
+type Html5QrcodeStatic = {
+  new (
+    elementId: string,
+    config?: {
+      verbose?: boolean;
+    },
+  ): Html5QrcodeScanner;
+  getCameras: () => Promise<
+    Array<{
+      id: string;
+      label: string;
+    }>
+  >;
+};
+
 const INPUT_CLASS =
   "h-10 w-full rounded-lg border border-(--token-gray-300) bg-(--token-white) px-3 text-sm text-(--token-gray-900) outline-none transition-colors placeholder:text-(--token-gray-400) focus:border-primary-500 dark:border-(--color-marketing-dark-border) dark:bg-(--color-surface-dark-subtle) dark:text-(--token-white-90) dark:placeholder:text-(--token-gray-500)";
 
 const LABEL_CLASS =
   "mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.08em] text-(--token-gray-400) dark:text-(--token-gray-500)";
 
+const SCANNER_REGION_ID = "attendance-camera-scanner-region";
 const SCANNER_ERROR_FLASH_MS = 1200;
 const STOP_AFTER_SUCCESS_MS = 900;
+const SCAN_HINT_DELAY_MS = 10000;
+const SCAN_FPS = 10;
+const REAR_CAMERA_LABEL_PATTERN = /back|rear|environment|traseira|belakang/i;
 
 const FIELD_LABELS: Record<keyof CheckinForm, string> = {
   course_id: "Course ID",
@@ -58,13 +92,66 @@ function normalizeCheckinForm(values: CheckinForm): CheckinForm {
   };
 }
 
+function getScannerQrboxSize() {
+  if (typeof window === "undefined") {
+    return 220;
+  }
+
+  const shortestSide = Math.min(window.innerWidth, window.innerHeight);
+  const computed = Math.floor(shortestSide * 0.55);
+  return Math.max(180, Math.min(computed, 280));
+}
+
+function formatScannerStartError(error: unknown) {
+  const message = getErrorMessage(error);
+  const normalized = message.toLowerCase();
+
+  if (
+    normalized.includes("notallowederror") ||
+    normalized.includes("permission") ||
+    normalized.includes("denied")
+  ) {
+    return "Izin kamera ditolak. Izinkan akses kamera di browser lalu coba lagi.";
+  }
+
+  if (
+    normalized.includes("notfounderror") ||
+    normalized.includes("no camera") ||
+    normalized.includes("kamera tidak ditemukan")
+  ) {
+    return "Kamera tidak ditemukan pada perangkat ini.";
+  }
+
+  if (
+    normalized.includes("notreadableerror") ||
+    normalized.includes("could not start video source")
+  ) {
+    return "Kamera sedang dipakai aplikasi lain. Tutup aplikasi lain lalu coba lagi.";
+  }
+
+  if (normalized.includes("overconstrainederror")) {
+    return "Konfigurasi kamera tidak didukung perangkat. Coba ulangi pemindaian.";
+  }
+
+  if (normalized.includes("secure context")) {
+    return "Akses kamera butuh secure context. Buka aplikasi lewat HTTPS.";
+  }
+
+  return `Gagal mengaktifkan kamera: ${message}`;
+}
+
+async function loadHtml5Qrcode() {
+  const html5QrModule = await import("html5-qrcode");
+  return html5QrModule.Html5Qrcode as unknown as Html5QrcodeStatic;
+}
+
 export default function MahasiswaScanPage() {
   const session = useAuthSession();
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const controlsRef = useRef<IScannerControls | null>(null);
-  const readerRef = useRef<BrowserQRCodeReader | null>(null);
+  const scannerRef = useRef<Html5QrcodeScanner | null>(null);
+  const scannerStartedRef = useRef(false);
   const errorFlashTimeoutRef = useRef<number | null>(null);
   const stopAfterSuccessTimeoutRef = useRef<number | null>(null);
+  const scanHintTimeoutRef = useRef<number | null>(null);
   const isSubmittingFromScanRef = useRef(false);
 
   const [scannerStatus, setScannerStatus] = useState<
@@ -72,6 +159,7 @@ export default function MahasiswaScanPage() {
   >("idle");
   const [scannerError, setScannerError] = useState<string | null>(null);
   const [rawScanResult, setRawScanResult] = useState<string | null>(null);
+  const [showScanHint, setShowScanHint] = useState(false);
 
   const form = useForm<CheckinForm>({
     resolver: zodResolver(checkinSchema),
@@ -108,7 +196,7 @@ export default function MahasiswaScanPage() {
     },
   });
 
-  function clearScannerTimers() {
+  const clearScannerTimers = useCallback(() => {
     if (errorFlashTimeoutRef.current !== null) {
       window.clearTimeout(errorFlashTimeoutRef.current);
       errorFlashTimeoutRef.current = null;
@@ -117,15 +205,50 @@ export default function MahasiswaScanPage() {
       window.clearTimeout(stopAfterSuccessTimeoutRef.current);
       stopAfterSuccessTimeoutRef.current = null;
     }
-  }
+    if (scanHintTimeoutRef.current !== null) {
+      window.clearTimeout(scanHintTimeoutRef.current);
+      scanHintTimeoutRef.current = null;
+    }
+  }, []);
 
-  function stopScanner() {
-    controlsRef.current?.stop();
-    controlsRef.current = null;
-    readerRef.current = null;
+  const startScanHintTimer = useCallback(() => {
+    if (scanHintTimeoutRef.current !== null) {
+      window.clearTimeout(scanHintTimeoutRef.current);
+    }
+
+    setShowScanHint(false);
+    scanHintTimeoutRef.current = window.setTimeout(() => {
+      setShowScanHint(true);
+      scanHintTimeoutRef.current = null;
+    }, SCAN_HINT_DELAY_MS);
+  }, []);
+
+  const stopScanner = useCallback(async (setStatusToIdle = true) => {
+    const scanner = scannerRef.current;
+    scannerRef.current = null;
+    scannerStartedRef.current = false;
     clearScannerTimers();
-    setScannerStatus("idle");
-  }
+    setShowScanHint(false);
+
+    if (scanner) {
+      try {
+        await scanner.stop();
+      } catch {
+        // Ignore stop errors when scanner is not actively running.
+      }
+
+      try {
+        await scanner.clear();
+      } catch {
+        // Ignore clear errors to keep stop idempotent.
+      }
+    }
+
+    if (setStatusToIdle) {
+      setScannerStatus("idle");
+      setScannerError(null);
+    }
+  }, [clearScannerTimers]);
 
   function flashScannerError(message: string) {
     setScannerError(message);
@@ -137,19 +260,6 @@ export default function MahasiswaScanPage() {
       setScannerStatus((prev) => (prev === "idle" ? "idle" : "active"));
       errorFlashTimeoutRef.current = null;
     }, SCANNER_ERROR_FLASH_MS);
-  }
-
-  async function pickPreferredVideoInputId() {
-    try {
-      const devices = await BrowserQRCodeReader.listVideoInputDevices();
-      if (!devices.length) return undefined;
-      const rearCamera = devices.find((d) =>
-        /back|rear|environment|traseira|belakang/i.test(d.label),
-      );
-      return rearCamera?.deviceId ?? devices[0].deviceId;
-    } catch {
-      return undefined;
-    }
   }
 
   async function handleDecodedQrText(text: string) {
@@ -173,6 +283,7 @@ export default function MahasiswaScanPage() {
     });
 
     setRawScanResult(text);
+    setShowScanHint(false);
     form.setValue("course_id", normalizedPayload.course_id, { shouldValidate: true });
     form.setValue("session_id", normalizedPayload.session_id, { shouldValidate: true });
     form.setValue("qr_token", normalizedPayload.qr_token, { shouldValidate: true });
@@ -188,7 +299,7 @@ export default function MahasiswaScanPage() {
         window.clearTimeout(stopAfterSuccessTimeoutRef.current);
       }
       stopAfterSuccessTimeoutRef.current = window.setTimeout(() => {
-        stopScanner();
+        void stopScanner();
       }, STOP_AFTER_SUCCESS_MS);
     } catch (error) {
       flashScannerError(getErrorMessage(error));
@@ -198,8 +309,6 @@ export default function MahasiswaScanPage() {
   }
 
   async function startScanner() {
-    if (!videoRef.current) return;
-
     const isMediaDevicesAvailable =
       typeof navigator !== "undefined" &&
       typeof navigator.mediaDevices !== "undefined" &&
@@ -215,58 +324,108 @@ export default function MahasiswaScanPage() {
 
     if (!window.isSecureContext) {
       setScannerStatus("error");
-      setScannerError(
-        "Akses kamera butuh secure context. Buka aplikasi lewat HTTPS.",
-      );
+      setScannerError("Akses kamera butuh secure context. Buka aplikasi lewat HTTPS.");
       return;
     }
 
-    stopScanner();
+    await stopScanner(false);
     setScannerStatus("requesting");
     setScannerError(null);
+    setShowScanHint(false);
 
     try {
-      const qrReader = new BrowserQRCodeReader();
-      readerRef.current = qrReader;
-      const preferredDeviceId = await pickPreferredVideoInputId();
+      const Html5Qrcode = await loadHtml5Qrcode();
+      const scanner = new Html5Qrcode(SCANNER_REGION_ID, { verbose: false });
+      scannerRef.current = scanner;
 
-      const controls = await qrReader.decodeFromVideoDevice(
-        preferredDeviceId,
-        videoRef.current,
-        (result) => {
-          if (!result) return;
-          void handleDecodedQrText(result.getText());
-        },
+      const cameras = await Html5Qrcode.getCameras();
+      const rearCamera = cameras.find((camera) =>
+        REAR_CAMERA_LABEL_PATTERN.test(camera.label),
       );
+      const firstCamera = cameras[0];
 
-      controlsRef.current = controls;
+      const cameraSources: Array<string | MediaTrackConstraints> = [];
+      if (rearCamera?.id) {
+        cameraSources.push(rearCamera.id);
+      } else if (firstCamera?.id) {
+        cameraSources.push(firstCamera.id);
+      }
+      cameraSources.push({ facingMode: { exact: "environment" } });
+      cameraSources.push({ facingMode: "environment" });
+
+      if (firstCamera?.id && !cameraSources.includes(firstCamera.id)) {
+        cameraSources.push(firstCamera.id);
+      }
+
+      const qrboxSize = getScannerQrboxSize();
+      const scannerConfig = {
+        fps: SCAN_FPS,
+        qrbox: { width: qrboxSize, height: qrboxSize },
+      };
+
+      let started = false;
+      let lastError: unknown = null;
+
+      for (const source of cameraSources) {
+        try {
+          await scanner.start(
+            source,
+            scannerConfig,
+            (decodedText) => {
+              void handleDecodedQrText(decodedText);
+            },
+            () => {
+              // Ignore per-frame decode errors; scanner should keep running.
+            },
+          );
+          started = true;
+          scannerStartedRef.current = true;
+          break;
+        } catch (error) {
+          lastError = error;
+        }
+      }
+
+      if (!started) {
+        throw lastError ?? new Error("Kamera tidak tersedia.");
+      }
+
       setScannerStatus("active");
+      startScanHintTimer();
     } catch (error) {
+      await stopScanner(false);
       setScannerStatus("error");
-      setScannerError(
-        error instanceof Error ? error.message : "Kamera tidak tersedia.",
-      );
+      setScannerError(formatScannerStartError(error));
     }
   }
 
   useEffect(() => {
     return () => {
-      controlsRef.current?.stop();
-      controlsRef.current = null;
-      readerRef.current = null;
-      clearScannerTimers();
+      void stopScanner(false);
       isSubmittingFromScanRef.current = false;
     };
-  }, []);
+  }, [stopScanner]);
 
   const scannerInfo = useMemo(() => {
     if (scannerStatus === "requesting")
-      return { text: "Meminta izin kamera...", color: "text-amber-500 dark:text-amber-400" };
+      return {
+        text: "Meminta izin kamera...",
+        color: "text-amber-500 dark:text-amber-400",
+      };
     if (scannerStatus === "active")
-      return { text: "Scanner aktif - arahkan ke QR presensi", color: "text-emerald-600 dark:text-emerald-400" };
+      return {
+        text: "Scanner aktif - arahkan ke QR presensi",
+        color: "text-emerald-600 dark:text-emerald-400",
+      };
     if (scannerStatus === "error")
-      return { text: scannerError ?? "Scanner gagal diinisialisasi.", color: "text-red-500 dark:text-red-400" };
-    return { text: "Scanner belum aktif", color: "text-(--token-gray-400) dark:text-(--token-gray-500)" };
+      return {
+        text: scannerError ?? "Scanner gagal diinisialisasi.",
+        color: "text-red-500 dark:text-red-400",
+      };
+    return {
+      text: "Scanner belum aktif",
+      color: "text-(--token-gray-400) dark:text-(--token-gray-500)",
+    };
   }, [scannerError, scannerStatus]);
 
   const showLiveScannerOverlay =
@@ -274,15 +433,42 @@ export default function MahasiswaScanPage() {
 
   return (
     <div className="space-y-5">
-      <style jsx>{`
-        @keyframes scan-line {
-          0%   { transform: translateY(-120px); opacity: 0.2; }
-          50%  { opacity: 0.85; }
-          100% { transform: translateY(120px); opacity: 0.2; }
+      <style jsx global>{`
+        #${SCANNER_REGION_ID},
+        #${SCANNER_REGION_ID}__scan_region {
+          width: 100%;
+          height: 100%;
+        }
+
+        #${SCANNER_REGION_ID}__scan_region video {
+          width: 100% !important;
+          height: 100% !important;
+          object-fit: cover;
+        }
+
+        #${SCANNER_REGION_ID}__dashboard_section,
+        #${SCANNER_REGION_ID}__header_message {
+          display: none !important;
         }
       `}</style>
 
-        {/* Page header */}
+      <style jsx>{`
+        @keyframes scan-line {
+          0% {
+            transform: translateY(-120px);
+            opacity: 0.2;
+          }
+          50% {
+            opacity: 0.85;
+          }
+          100% {
+            transform: translateY(120px);
+            opacity: 0.2;
+          }
+        }
+      `}</style>
+
+      {/* Page header */}
       <div>
         <p className="text-[10px] font-semibold uppercase tracking-widest text-primary-600 dark:text-primary-400">
           Mahasiswa - Modul Presensi
@@ -307,11 +493,9 @@ export default function MahasiswaScanPage() {
           <div className="space-y-4 p-5">
             {/* Viewfinder */}
             <div className="relative overflow-hidden rounded-xl border border-soft bg-black">
-              <video
-                ref={videoRef}
-                className="h-[280px] w-full object-cover sm:h-[320px]"
-                muted
-                playsInline
+              <div
+                id={SCANNER_REGION_ID}
+                className="h-[280px] w-full sm:h-[320px]"
               />
 
               {showLiveScannerOverlay && (
@@ -335,15 +519,22 @@ export default function MahasiswaScanPage() {
               {scannerStatus === "idle" && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/75">
                   <Camera size={28} className="text-white/30" />
-                  <p className="text-xs text-white/40">Klik &quot;Aktifkan Kamera&quot; untuk mulai</p>
+                  <p className="text-xs text-white/40">
+                    Klik &quot;Aktifkan Kamera&quot; untuk mulai
+                  </p>
                 </div>
               )}
             </div>
 
             {/* Status text */}
-            <p className={`text-xs font-medium ${scannerInfo.color}`}>
-              {scannerInfo.text}
-            </p>
+            <p className={`text-xs font-medium ${scannerInfo.color}`}>{scannerInfo.text}</p>
+
+            {showScanHint && scannerStatus === "active" && (
+              <p className="text-xs text-(--token-gray-500) dark:text-(--token-gray-400)">
+                Belum terbaca? Dekatkan kamera ke QR, luruskan posisi, dan pastikan layar
+                QR cukup terang.
+              </p>
+            )}
 
             {/* Controls */}
             <div className="flex flex-wrap gap-2">
@@ -357,7 +548,7 @@ export default function MahasiswaScanPage() {
               </button>
               <button
                 type="button"
-                onClick={stopScanner}
+                onClick={() => void stopScanner()}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-soft px-4 py-2 text-sm font-medium text-(--token-gray-600) transition-colors hover:bg-(--token-gray-100) dark:text-(--token-gray-300) dark:hover:bg-(--token-white-5)"
               >
                 <CameraOff size={13} />
@@ -406,9 +597,15 @@ export default function MahasiswaScanPage() {
               className="space-y-4"
               onSubmit={form.handleSubmit((values) => {
                 const normalizedValues = normalizeCheckinForm(values);
-                form.setValue("course_id", normalizedValues.course_id, { shouldValidate: true });
-                form.setValue("session_id", normalizedValues.session_id, { shouldValidate: true });
-                form.setValue("qr_token", normalizedValues.qr_token, { shouldValidate: true });
+                form.setValue("course_id", normalizedValues.course_id, {
+                  shouldValidate: true,
+                });
+                form.setValue("session_id", normalizedValues.session_id, {
+                  shouldValidate: true,
+                });
+                form.setValue("qr_token", normalizedValues.qr_token, {
+                  shouldValidate: true,
+                });
                 checkinMutation.mutate(normalizedValues);
               })}
             >
@@ -417,7 +614,11 @@ export default function MahasiswaScanPage() {
                   <label className={LABEL_CLASS}>{FIELD_LABELS[field]}</label>
                   <input
                     {...form.register(field)}
-                    placeholder={field === "qr_token" ? "Paste token jika tidak pakai kamera" : undefined}
+                    placeholder={
+                      field === "qr_token"
+                        ? "Paste token jika tidak pakai kamera"
+                        : undefined
+                    }
                     className={INPUT_CLASS}
                     autoCapitalize="off"
                     autoCorrect="off"
