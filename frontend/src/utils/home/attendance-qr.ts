@@ -9,8 +9,6 @@ function pad(value: number) {
 
 export function buildAttendanceSessionId(params: {
   courseId: string;
-  day: string;
-  sessionNo: string;
   startedAt: string;
 }) {
   const startedAtDate = new Date(params.startedAt);
@@ -18,7 +16,7 @@ export function buildAttendanceSessionId(params: {
     ? "invalid"
     : `${startedAtDate.getFullYear()}${pad(startedAtDate.getMonth() + 1)}${pad(startedAtDate.getDate())}${pad(startedAtDate.getHours())}${pad(startedAtDate.getMinutes())}`;
 
-  return `${params.courseId}-${params.day}-${params.sessionNo}-${datePart}`;
+  return `${params.courseId}-${datePart}`;
 }
 
 function isValidTimestamp(value: string) {

@@ -42,8 +42,6 @@ function normalizeStartedAtForInput(value: string | null | undefined) {
 
 const createQrSchema = z.object({
   course_id: z.string().trim().min(1, "course_id wajib diisi"),
-  day: z.string().trim().min(1, "day wajib diisi"),
-  session_no: z.string().trim().min(1, "session_no wajib diisi"),
   started_at: z.string().trim().min(1, "started_at wajib diisi"),
 });
 
@@ -58,34 +56,20 @@ function normalizeCourseId(value: string) {
   return value.trim().toLowerCase();
 }
 
-function normalizeDay(value: string) {
-  return value.trim().toLowerCase();
-}
-
-function normalizeSessionNo(value: string) {
-  return value.trim().toLowerCase();
-}
-
 function normalizeCreateQrForm(values: CreateQrForm): CreateQrForm {
   return {
     course_id: normalizeCourseId(values.course_id),
-    day: normalizeDay(values.day),
-    session_no: normalizeSessionNo(values.session_no),
     started_at: values.started_at.trim(),
   };
 }
 
 const DEFAULT_VALUES: CreateQrForm = {
   course_id: "cloud-101",
-  day: "senin",
-  session_no: "02",
   started_at: toLocalDateTimeInputValue(new Date()),
 };
 
 const FORM_FIELDS = [
   { name: "course_id" as const, label: "Course ID", placeholder: "cloud-101" },
-  { name: "day" as const, label: "Hari", placeholder: "senin" },
-  { name: "session_no" as const, label: "Sesi", placeholder: "02" },
   { name: "started_at" as const, label: "Waktu Mulai", placeholder: "Pilih waktu mulai" },
 ] as const;
 
@@ -195,8 +179,6 @@ export default function DosenCreateQrPage() {
         params.fixedSessionId ??
         buildAttendanceSessionId({
           courseId: normalizedValues.course_id,
-          day: normalizedValues.day,
-          sessionNo: normalizedValues.session_no,
           startedAt: normalizedValues.started_at,
         });
 
@@ -378,8 +360,6 @@ export default function DosenCreateQrPage() {
   }, [activePayload]);
 
   const watchedCourseId = useWatch({ control: form.control, name: "course_id" });
-  const watchedDay = useWatch({ control: form.control, name: "day" });
-  const watchedSessionNo = useWatch({ control: form.control, name: "session_no" });
   const watchedStartedAt = useWatch({ control: form.control, name: "started_at" });
 
   const browserTimeZone = useMemo(
@@ -389,8 +369,6 @@ export default function DosenCreateQrPage() {
 
   const sessionPreview = buildAttendanceSessionId({
     courseId: normalizeCourseId(watchedCourseId ?? ""),
-    day: normalizeDay(watchedDay ?? ""),
-    sessionNo: normalizeSessionNo(watchedSessionNo ?? ""),
     startedAt: watchedStartedAt ?? "",
   });
 
@@ -430,8 +408,6 @@ export default function DosenCreateQrPage() {
             onSubmit={form.handleSubmit((values) => {
               const normalizedValues = normalizeCreateQrForm(values);
               form.setValue("course_id", normalizedValues.course_id, { shouldValidate: true });
-              form.setValue("day", normalizedValues.day, { shouldValidate: true });
-              form.setValue("session_no", normalizedValues.session_no, { shouldValidate: true });
               setIsStopped(false);
               generateMutation.mutate({ values: normalizedValues });
             })}

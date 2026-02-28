@@ -4,8 +4,6 @@ const LECTURER_ACTIVE_QR_KEY = "ctc_dosen_active_qr";
 
 export type LecturerQrFormValues = {
   course_id: string;
-  day: string;
-  session_no: string;
   started_at: string;
 };
 
@@ -46,8 +44,6 @@ function isValidFormValues(values: unknown): values is LecturerQrFormValues {
   const candidate = values as Partial<LecturerQrFormValues>;
   return (
     typeof candidate.course_id === "string" &&
-    typeof candidate.day === "string" &&
-    typeof candidate.session_no === "string" &&
     typeof candidate.started_at === "string"
   );
 }
@@ -87,12 +83,17 @@ export function readLecturerQrSessionState(ownerIdentifier: string | null) {
       return null;
     }
 
+    const normalizedFormValues: LecturerQrFormValues = {
+      course_id: parsed.form_values.course_id,
+      started_at: parsed.form_values.started_at,
+    };
+
     return {
       owner_identifier: parsed.owner_identifier ?? null,
       active_payload: parsed.active_payload ?? null,
       next_rotation_at: parsed.next_rotation_at ?? null,
       is_stopped: isStopped,
-      form_values: parsed.form_values,
+      form_values: normalizedFormValues,
       updated_at: parsed.updated_at,
     } satisfies LecturerQrSessionState;
   } catch {

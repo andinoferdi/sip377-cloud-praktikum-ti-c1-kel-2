@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { getAuthSession } from "@/lib/auth/session";
+import Select from "@/components/ui/select";
 import { getErrorMessage } from "@/lib/errors";
 import { attendanceGasService } from "@/services/attendance-gas-service";
 import { readLecturerQrSessionState } from "@/utils/home/lecturer-qr-session";
@@ -239,17 +240,15 @@ export default function DosenMonitorPage() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className={LABEL_CLASS}>Session Aktif</label>
-                <select
-                  className={INPUT_CLASS}
-                  value={selectedSessionKey}
-                  onChange={(event) => setSelectedSessionKey(event.target.value)}
-                >
-                  {sessionOptions.map((option) => (
-                    <option key={option.key} value={option.key}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+                <Select
+                  value={selectedSessionKey || undefined}
+                  onChange={setSelectedSessionKey}
+                  options={sessionOptions.map((option) => ({
+                    value: option.key,
+                    label: option.label,
+                  }))}
+                  placeholder="Pilih sesi aktif"
+                />
               </div>
 
               <div>
