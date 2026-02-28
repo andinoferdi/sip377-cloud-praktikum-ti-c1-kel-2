@@ -225,6 +225,20 @@ export default function DosenCreateQrPage() {
     },
   });
 
+  const stopSessionMutation = useMutation({
+    mutationFn: async (payload: { course_id: string; session_id: string }) => {
+      const response = await attendanceGasService.stopSession({
+        course_id: payload.course_id,
+        session_id: payload.session_id,
+        ts: new Date().toISOString(),
+      });
+      if (!response.ok) {
+        throw new Error(response.error);
+      }
+      return response.data;
+    },
+  });
+
   function clearRotationTimer() {
     if (rotationTimerRef.current !== null) {
       window.clearTimeout(rotationTimerRef.current);
@@ -232,7 +246,7 @@ export default function DosenCreateQrPage() {
     }
   }
 
-  function handleStopQr() {
+  function applyStoppedState() {
     clearRotationTimer();
     setIsStopped(true);
     setActivePayload(null);
@@ -246,6 +260,33 @@ export default function DosenCreateQrPage() {
       isStopped: true,
       formValues: normalizeCreateQrForm(form.getValues()),
     });
+  }
+
+  function handleStopQr() {
+    if (stopSessionMutation.isPending) {
+      return;
+    }
+
+    if (!activePayload) {
+      applyStoppedState();
+      return;
+    }
+
+    setRotationError(null);
+    stopSessionMutation.mutate(
+      {
+        course_id: activePayload.course_id,
+        session_id: activePayload.session_id,
+      },
+      {
+        onSuccess: () => {
+          applyStoppedState();
+        },
+        onError: (error) => {
+          setRotationError(`Gagal menghentikan sesi: ${getErrorMessage(error)}`);
+        },
+      },
+    );
   }
 
   useEffect(() => {
@@ -443,10 +484,17 @@ export default function DosenCreateQrPage() {
               <button
                 type="button"
                 onClick={handleStopQr}
-                disabled={!activePayload && !generateMutation.isPending}
+                disabled={stopSessionMutation.isPending || (!activePayload && !generateMutation.isPending)}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-red-500/25 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/15"
               >
-                Stop QR
+                {stopSessionMutation.isPending ? (
+                  <>
+                    <RefreshCw size={13} className="animate-spin" />
+                    Menghentikan...
+                  </>
+                ) : (
+                  "Stop QR"
+                )}
               </button>
 
               <button

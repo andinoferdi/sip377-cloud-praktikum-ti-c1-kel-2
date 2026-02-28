@@ -29,6 +29,19 @@ export type AttendanceQrData = {
   expires_at: string;
 };
 
+export type StopSessionRequest = {
+  course_id: string;
+  session_id: string;
+  ts: string;
+};
+
+export type StopSessionData = {
+  course_id: string;
+  session_id: string;
+  status: "stopped";
+  stopped_at: string;
+};
+
 export type CheckInRequest = {
   user_id: string;
   device_id: string;

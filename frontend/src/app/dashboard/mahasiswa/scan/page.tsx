@@ -11,7 +11,7 @@ import { attendanceGasService } from "@/services/attendance-gas-service";
 import { getOrCreateAttendanceDeviceId } from "@/utils/home/attendance-device-id";
 import { appendAttendanceHistory } from "@/utils/home/attendance-history";
 import { isExpiredTimestamp, parseAttendanceQrPayload } from "@/utils/home/attendance-qr";
-import { Camera, CameraOff, CheckCircle2, AlertCircle } from "lucide-react";
+import { Camera, CameraOff, CheckCircle2, AlertCircle, RefreshCw } from "lucide-react";
 
 const checkinSchema = z.object({
   course_id: z.string().trim().min(1, "course_id wajib diisi"),
@@ -61,7 +61,6 @@ const LABEL_CLASS =
 
 const SCANNER_REGION_ID = "attendance-camera-scanner-region";
 const SCANNER_ERROR_FLASH_MS = 1200;
-const STOP_AFTER_SUCCESS_MS = 900;
 const SCAN_HINT_DELAY_MS = 10000;
 const SCAN_FPS = 10;
 const REAR_CAMERA_LABEL_PATTERN = /back|rear|environment|traseira|belakang/i;
@@ -90,6 +89,17 @@ function normalizeCheckinForm(values: CheckinForm): CheckinForm {
     session_id: normalizeSessionId(values.session_id),
     qr_token: normalizeQrToken(values.qr_token),
   };
+}
+
+function getFriendlyCheckinErrorMessage(error: unknown) {
+  const message = getErrorMessage(error);
+  if (message === "already_checked_in") {
+    return "Anda sudah check-in pada sesi ini.";
+  }
+  if (message === "session_closed") {
+    return "Sesi presensi sudah ditutup dosen.";
+  }
+  return message;
 }
 
 function getScannerQrboxSize() {
@@ -147,11 +157,12 @@ async function loadHtml5Qrcode() {
 
 export default function MahasiswaScanPage() {
   const session = useAuthSession();
+  const formCardRef = useRef<HTMLDivElement | null>(null);
   const scannerRef = useRef<Html5QrcodeScanner | null>(null);
   const scannerStartedRef = useRef(false);
   const errorFlashTimeoutRef = useRef<number | null>(null);
-  const stopAfterSuccessTimeoutRef = useRef<number | null>(null);
   const scanHintTimeoutRef = useRef<number | null>(null);
+  const scanFlashTimeoutRef = useRef<number | null>(null);
   const isSubmittingFromScanRef = useRef(false);
 
   const [scannerStatus, setScannerStatus] = useState<
@@ -160,6 +171,8 @@ export default function MahasiswaScanPage() {
   const [scannerError, setScannerError] = useState<string | null>(null);
   const [rawScanResult, setRawScanResult] = useState<string | null>(null);
   const [showScanHint, setShowScanHint] = useState(false);
+  const [scanSubmitLoading, setScanSubmitLoading] = useState(false);
+  const [scanSuccessFlash, setScanSuccessFlash] = useState(false);
 
   const form = useForm<CheckinForm>({
     resolver: zodResolver(checkinSchema),
@@ -201,13 +214,13 @@ export default function MahasiswaScanPage() {
       window.clearTimeout(errorFlashTimeoutRef.current);
       errorFlashTimeoutRef.current = null;
     }
-    if (stopAfterSuccessTimeoutRef.current !== null) {
-      window.clearTimeout(stopAfterSuccessTimeoutRef.current);
-      stopAfterSuccessTimeoutRef.current = null;
-    }
     if (scanHintTimeoutRef.current !== null) {
       window.clearTimeout(scanHintTimeoutRef.current);
       scanHintTimeoutRef.current = null;
+    }
+    if (scanFlashTimeoutRef.current !== null) {
+      window.clearTimeout(scanFlashTimeoutRef.current);
+      scanFlashTimeoutRef.current = null;
     }
   }, []);
 
@@ -284,26 +297,33 @@ export default function MahasiswaScanPage() {
 
     setRawScanResult(text);
     setShowScanHint(false);
+    setScanSuccessFlash(true);
+    if (scanFlashTimeoutRef.current !== null) {
+      window.clearTimeout(scanFlashTimeoutRef.current);
+    }
+    scanFlashTimeoutRef.current = window.setTimeout(() => {
+      setScanSuccessFlash(false);
+      scanFlashTimeoutRef.current = null;
+    }, 250);
+
     form.setValue("course_id", normalizedPayload.course_id, { shouldValidate: true });
     form.setValue("session_id", normalizedPayload.session_id, { shouldValidate: true });
     form.setValue("qr_token", normalizedPayload.qr_token, { shouldValidate: true });
 
     isSubmittingFromScanRef.current = true;
+    setScanSubmitLoading(true);
+    checkinMutation.reset();
+
+    await stopScanner();
+    formCardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
 
     try {
       await checkinMutation.mutateAsync(normalizedPayload);
-
-      setScannerError(null);
-
-      if (stopAfterSuccessTimeoutRef.current !== null) {
-        window.clearTimeout(stopAfterSuccessTimeoutRef.current);
-      }
-      stopAfterSuccessTimeoutRef.current = window.setTimeout(() => {
-        void stopScanner();
-      }, STOP_AFTER_SUCCESS_MS);
     } catch (error) {
-      flashScannerError(getErrorMessage(error));
+      setScannerError(getFriendlyCheckinErrorMessage(error));
     } finally {
+      setScanSubmitLoading(false);
+      setScanSuccessFlash(false);
       isSubmittingFromScanRef.current = false;
     }
   }
@@ -498,6 +518,10 @@ export default function MahasiswaScanPage() {
                 className="h-[280px] w-full sm:h-[320px]"
               />
 
+              {scanSuccessFlash && (
+                <div className="pointer-events-none absolute inset-0 border-2 border-emerald-400 shadow-[0_0_16px_rgba(52,211,153,0.7)]" />
+              )}
+
               {showLiveScannerOverlay && (
                 <div className="pointer-events-none absolute inset-0">
                   <div className="absolute inset-0 bg-black/20" />
@@ -536,6 +560,13 @@ export default function MahasiswaScanPage() {
               </p>
             )}
 
+            {scanSubmitLoading && (
+              <div className="inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400">
+                <RefreshCw size={13} className="animate-spin" />
+                QR terbaca. Memproses check-in...
+              </div>
+            )}
+
             {/* Controls */}
             <div className="flex flex-wrap gap-2">
               <button
@@ -569,7 +600,10 @@ export default function MahasiswaScanPage() {
         </div>
 
         {/* Check-in form card */}
-        <div className="overflow-hidden rounded-2xl border border-soft surface-elevated">
+        <div
+          ref={formCardRef}
+          className="overflow-hidden rounded-2xl border border-soft surface-elevated"
+        >
           <div className="border-b border-soft px-5 py-4">
             <h2 className="text-sm font-semibold text-(--token-gray-900) dark:text-(--token-white)">
               Form Check-in
@@ -648,7 +682,7 @@ export default function MahasiswaScanPage() {
               {checkinMutation.isError && (
                 <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-400">
                   <AlertCircle size={15} className="mt-0.5 shrink-0" />
-                  {getErrorMessage(checkinMutation.error)}
+                  {getFriendlyCheckinErrorMessage(checkinMutation.error)}
                 </div>
               )}
 

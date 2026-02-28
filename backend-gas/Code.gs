@@ -11,6 +11,7 @@ const SHEET = {
   PRESENCE: 'presence',
   ACCEL: 'accel',
   GPS: 'gps',
+  SESSION_STATE: 'session_state',
 };
 
 const HEADERS = {
@@ -18,6 +19,7 @@ const HEADERS = {
   [SHEET.PRESENCE]: ['presence_id', 'user_id', 'device_id', 'course_id', 'session_id', 'qr_token', 'ts', 'recorded_at'],
   [SHEET.ACCEL]: ['device_id', 'x', 'y', 'z', 'sample_ts', 'batch_ts', 'recorded_at'],
   [SHEET.GPS]: ['device_id', 'lat', 'lng', 'accuracy_m', 'altitude_m', 'ts', 'recorded_at'],
+  [SHEET.SESSION_STATE]: ['course_id', 'session_id', 'is_stopped', 'started_at', 'stopped_at', 'updated_at'],
 };
 
 const QR_TOKEN_TTL_MS = 120 * 1000;
@@ -64,6 +66,9 @@ function doPost(e) {
       case 'presence/checkin':
         return sendSuccess(checkin(body));
 
+      case 'presence/qr/stop':
+        return sendSuccess(stopQrSession(body));
+
       case 'telemetry/accel':
         return sendSuccess(batchAccel(body));
 
@@ -108,6 +113,7 @@ function getApiInfo() {
       POST: [
         '?path=presence/qr/generate',
         '?path=presence/checkin',
+        '?path=presence/qr/stop',
         '?path=telemetry/accel',
         '?path=telemetry/gps',
       ],
@@ -178,6 +184,76 @@ function normalizeToken(value) {
   return String(value).trim().toUpperCase();
 }
 
+function getSessionState(courseId, sessionId) {
+  var normalizedCourseId = normalizeCourseId(courseId);
+  var normalizedSessionId = normalizeSessionId(sessionId);
+  var sheet = getOrCreateSheet(SHEET.SESSION_STATE);
+  var data = sheet.getDataRange().getValues();
+
+  for (var i = data.length - 1; i >= 1; i--) {
+    if (normalizeCourseId(data[i][0]) === normalizedCourseId &&
+        normalizeSessionId(data[i][1]) === normalizedSessionId) {
+      return {
+        row: i + 1,
+        course_id: normalizedCourseId,
+        session_id: normalizedSessionId,
+        is_stopped: data[i][2] === true || String(data[i][2]).toLowerCase() === 'true',
+        started_at: data[i][3] ? String(data[i][3]) : null,
+        stopped_at: data[i][4] ? String(data[i][4]) : null,
+        updated_at: data[i][5] ? String(data[i][5]) : null,
+      };
+    }
+  }
+
+  return null;
+}
+
+function upsertSessionState(courseId, sessionId, isStopped, eventTimeISO) {
+  var normalizedCourseId = normalizeCourseId(courseId);
+  var normalizedSessionId = normalizeSessionId(sessionId);
+  var sheet = getOrCreateSheet(SHEET.SESSION_STATE);
+  var existingState = getSessionState(normalizedCourseId, normalizedSessionId);
+  var now = eventTimeISO || nowISO();
+
+  if (!existingState) {
+    sheet.appendRow([
+      normalizedCourseId,
+      normalizedSessionId,
+      isStopped,
+      now,
+      isStopped ? now : '',
+      now,
+    ]);
+    return {
+      course_id: normalizedCourseId,
+      session_id: normalizedSessionId,
+      is_stopped: isStopped,
+      started_at: now,
+      stopped_at: isStopped ? now : null,
+      updated_at: now,
+    };
+  }
+
+  var startedAt = existingState.started_at || now;
+  var stoppedAt = isStopped ? now : '';
+
+  sheet.getRange(existingState.row, 3, 1, 4).setValues([[
+    isStopped,
+    startedAt,
+    stoppedAt,
+    now,
+  ]]);
+
+  return {
+    course_id: normalizedCourseId,
+    session_id: normalizedSessionId,
+    is_stopped: isStopped,
+    started_at: startedAt,
+    stopped_at: isStopped ? now : null,
+    updated_at: now,
+  };
+}
+
 function generateQRToken(body) {
   requireField(body, 'course_id');
   requireField(body, 'session_id');
@@ -198,9 +274,30 @@ function generateQRToken(body) {
     false,
   ]);
 
+  upsertSessionState(normalizedCourseId, normalizedSessionId, false, nowISO());
+
   return {
     qr_token: qrToken,
     expires_at: expiresAt.toISOString(),
+  };
+}
+
+function stopQrSession(body) {
+  requireField(body, 'course_id');
+  requireField(body, 'session_id');
+
+  var normalizedCourseId = normalizeCourseId(body.course_id);
+  var normalizedSessionId = normalizeSessionId(body.session_id);
+  var stopTime = body.ts ? new Date(body.ts) : new Date();
+  var stopTimeISO = isNaN(stopTime.getTime()) ? nowISO() : stopTime.toISOString();
+
+  upsertSessionState(normalizedCourseId, normalizedSessionId, true, stopTimeISO);
+
+  return {
+    course_id: normalizedCourseId,
+    session_id: normalizedSessionId,
+    status: 'stopped',
+    stopped_at: stopTimeISO,
   };
 }
 
@@ -219,7 +316,7 @@ function checkin(body) {
   var tokenFound = false;
   var tokenRowCourseId = '';
   var tokenRowSessionId = '';
-  var tokenRowIndex = -1;
+  var tokenRowExpiresAt = null;
   var checkTime = body.ts ? new Date(body.ts) : new Date();
 
   for (var i = tokensData.length - 1; i >= 1; i--) {
@@ -227,29 +324,29 @@ function checkin(body) {
     var rowCourse = normalizeCourseId(tokensData[i][1]);
     var rowSession = normalizeSessionId(tokensData[i][2]);
     var rowExpiresAt = new Date(tokensData[i][4]);
-    var rowUsed = tokensData[i][5] === true || String(tokensData[i][5]).toLowerCase() === 'true';
 
     if (rowToken === normalizedToken &&
         rowCourse === normalizedCourseId &&
         rowSession === normalizedSessionId) {
-      if (rowUsed) {
-        throw new Error('token_already_used');
-      }
-
-      if (checkTime > rowExpiresAt) {
-        throw new Error('token_expired');
-      }
-
       tokenFound = true;
       tokenRowCourseId = rowCourse;
       tokenRowSessionId = rowSession;
-      tokenRowIndex = i + 1;
+      tokenRowExpiresAt = rowExpiresAt;
       break;
     }
   }
 
   if (!tokenFound) {
     throw new Error('token_invalid');
+  }
+
+  var sessionState = getSessionState(tokenRowCourseId, tokenRowSessionId);
+  if (sessionState) {
+    if (sessionState.is_stopped) {
+      throw new Error('session_closed');
+    }
+  } else if (tokenRowExpiresAt && checkTime > tokenRowExpiresAt) {
+    throw new Error('token_expired');
   }
 
   var presenceSheet = getOrCreateSheet(SHEET.PRESENCE);
@@ -275,10 +372,6 @@ function checkin(body) {
     checkTime.toISOString(),
     nowISO(),
   ]);
-
-  if (tokenRowIndex > 0) {
-    tokensSheet.getRange(tokenRowIndex, 6).setValue(true);
-  }
 
   return {
     presence_id: presenceId,

@@ -14,8 +14,8 @@ info:
     Presence error codes:
     - `token_invalid`
     - `token_expired`
-    - `token_already_used`
     - `already_checked_in`
+    - `session_closed`
     Presence matching notes:
     - `course_id` and `session_id` are normalized to lowercase before matching.
     - `qr_token` is normalized to uppercase before matching.
@@ -26,7 +26,7 @@ servers:
     description: Google Apps Script Web App
     variables:
       deploymentId:
-        default: AKfycbx5GhbXrJqsg984ix4eZddEGZXc_WkFr_MmPB23CKcJYMM1vZ1bnm5k2w8GqIbxfF65
+        default: AKfycbzVGdxaC7TOkDit7STUHxgdBNn6lgdy7X8_HJWhcgcWAhMG8yd1-ygAU6RcpXQPcJnAVw
         description: Web App deployment ID
 
 security: []
@@ -183,6 +183,7 @@ paths:
             enum:
               - presence/qr/generate
               - presence/checkin
+              - presence/qr/stop
               - telemetry/accel
               - telemetry/gps
       requestBody:
@@ -193,6 +194,7 @@ paths:
               oneOf:
                 - $ref: '#/components/schemas/GenerateQRRequest'
                 - $ref: '#/components/schemas/CheckinRequest'
+                - $ref: '#/components/schemas/StopSessionRequest'
                 - $ref: '#/components/schemas/BatchAccelRequest'
                 - $ref: '#/components/schemas/LogGPSRequest'
       responses:
@@ -219,7 +221,16 @@ paths:
                   summary: checkin error
                   value:
                     ok: false
-                    error: "token_already_used"
+                    error: "already_checked_in"
+                stopSession:
+                  summary: path=presence/qr/stop
+                  value:
+                    ok: true
+                    data:
+                      course_id: "cloud-101"
+                      session_id: "cloud-101-senin-02-202602281626"
+                      status: "stopped"
+                      stopped_at: "2026-02-28T09:30:00.000Z"
                 accelBatch:
                   summary: path=telemetry/accel
                   value:
@@ -280,6 +291,22 @@ components:
           type: string
           example: TKN-8F2A19
           description: Matching is case-insensitive (normalized to uppercase).
+        ts:
+          type: string
+          format: date-time
+
+    StopSessionRequest:
+      type: object
+      required: [course_id, session_id]
+      properties:
+        course_id:
+          type: string
+          example: cloud-101
+          description: Session course ID to mark as closed.
+        session_id:
+          type: string
+          example: cloud-101-senin-02-202602281626
+          description: Session ID to mark as closed.
         ts:
           type: string
           format: date-time

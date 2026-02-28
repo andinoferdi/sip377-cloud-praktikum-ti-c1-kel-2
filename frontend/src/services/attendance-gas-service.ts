@@ -9,10 +9,13 @@ import type {
   AttendanceStatusRequest,
   CheckInData,
   CheckInRequest,
+  StopSessionData,
+  StopSessionRequest,
 } from "@/utils/home/attendance-types";
 
 const ATTENDANCE_API_PATHS = {
   generate: "/presence/qr/generate",
+  stopSession: "/presence/qr/stop",
   checkIn: "/presence/checkin",
   status: "/presence/status",
   list: "/presence/list",
@@ -21,6 +24,13 @@ const ATTENDANCE_API_PATHS = {
 export const attendanceGasService = {
   generateToken(payload: AttendanceQrRequest) {
     return requestGas<ApiResponse<AttendanceQrData>>(ATTENDANCE_API_PATHS.generate, {
+      method: "POST",
+      json: payload,
+    });
+  },
+
+  stopSession(payload: StopSessionRequest) {
+    return requestGas<ApiResponse<StopSessionData>>(ATTENDANCE_API_PATHS.stopSession, {
       method: "POST",
       json: payload,
     });
