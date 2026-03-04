@@ -1,0 +1,182 @@
+Dokumen ini berisi panduan Smoke Test, Swap Test, Negative Test (Backend), dan Client-Side Test (Frontend)?
+
+Semoga sesuai!!
+
+1. Persiapan Postman (Environment)
+
+Tambahkan variabel berikut:
+
+BASE_URL: https://script.google.com/macros/s/<DEPLOYMENT-ID>/exec (Isi dengan URL server tim yang sedang diuji)
+
+qr_token: (Kosongkan, akan diisi otomatis lewat Test Script)
+
+device_id: QA-Device-001
+
+user_id: 2023QA01
+
+course_id: cloud-101
+
+session_id: sesi-02
+
+
+2. Skenario Smoke Test (Happy Path - Backend)
+
+Pengujian ini memastikan fungsionalitas utama backend berjalan sesuai kontrak. Di Postman, buka tab Tests di setiap request dan masukkan script validasi otomatis berikut:
+
+A. Modul Presensi
+
+1. Generate QR Token
+
+Method/URL: POST {{BASE_URL}}/presence/qr/generate
+
+Payload: { "course_id": "{{course_id}}", "session_id": "{{session_id}}", "ts": "2026-03-03T10:00:00Z" }
+
+Postman Test Script:
+
+pm.test("Response is OK", function () {
+    pm.response.to.have.status(200);
+    var jsonData = pm.response.json();
+    pm.expect(jsonData.ok).to.be.true;
+    pm.expect(jsonData.data).to.have.property('qr_token');
+    // Simpan token otomatis untuk test check-in
+    pm.environment.set("qr_token", jsonData.data.qr_token);
+});
+
+
+2. Check-in
+
+Method/URL: POST {{BASE_URL}}/presence/checkin
+
+Payload: { "user_id": "{{user_id}}", "device_id": "{{device_id}}", "course_id": "{{course_id}}", "session_id": "{{session_id}}", "qr_token": "{{qr_token}}", "ts": "2026-03-03T10:05:00Z" }
+
+3. Status Presensi
+
+Method/URL: GET {{BASE_URL}}/presence/status?user_id={{user_id}}&course_id={{course_id}}&session_id={{session_id}}
+
+Postman Test Script: Validasi jsonData.data.status === "checked_in".
+
+
+B. Modul Accelerometer
+
+1. Kirim Batch Data
+
+Method/URL: POST {{BASE_URL}}/telemetry/accel
+
+Payload: ```json
+{
+"device_id": "{{device_id}}", "ts": "2026-03-03T10:15:30Z",
+"samples": [
+{ "t": "2026-03-03T10:15:29.100Z", "x": 0.12, "y": 0.01, "z": 9.70 },
+{ "t": "2026-03-03T10:15:29.300Z", "x": 0.15, "y": 0.02, "z": 9.68 }
+]
+}
+
+
+2. Ambil Data Terbaru (Latest)
+
+Method/URL: GET {{BASE_URL}}/telemetry/accel/latest?device_id={{device_id}}
+
+Postman Test Script: Validasi respons mengandung sumbu x, y, dan z.
+
+
+C. Modul GPS
+
+1. Kirim Lokasi GPS
+
+Method/URL: POST {{BASE_URL}}/telemetry/gps
+
+Payload: { "device_id": "{{device_id}}", "ts": "2026-03-03T10:15:30Z", "lat": -7.2575, "lng": 112.7521, "accuracy_m": 12.5 }
+
+2. Ambil GPS Latest (Marker)
+
+Method/URL: GET {{BASE_URL}}/telemetry/gps/latest?device_id={{device_id}}
+
+3. Ambil GPS History (Polyline)
+
+Method/URL: GET {{BASE_URL}}/telemetry/gps/history?device_id={{device_id}}&limit=200
+
+3. Swap Testing Checklist
+
+Tabel uji coba silang (Swap Test) dengan kelompok lain:
+
+Skenario
+
+Target Server
+
+Hasil (Pass/Fail)
+
+Catatan Bug
+
+Smoke Test Server Sendiri
+
+Server Kel 2
+
+
+
+
+
+Swap Test Backend (Postman)
+
+Server Kel X
+
+
+
+
+
+Client Swap (Modul QR)
+
+Web Kel. X vs Server Kel 2
+
+
+
+
+
+Client Swap (Modul Accel)
+
+Web Kel. X vs Server Kel 2
+
+
+
+
+
+4. Pengujian Lanjutan (Negative & Edge Cases - Backend)
+
+[ ] Replay Attack: Lakukan checkin 2 kali berturut-turut dengan qr_token yang sama. (Ekspektasi: Gagal di request kedua, atau data tidak terduplikasi).
+
+[ ] Expired Token: Gunakan token yang sudah melewati batas expires_at untuk checkin.
+
+[ ] Missing Fields: Kirim payload POST tanpa field wajib (misal: hilangkan lat pada GPS). (Ekspektasi: Error missing_field: lat).
+
+[ ] Data Type Injection: Kirim nilai string/negatif pada parameter limit di endpoint /gps/history?limit=-100.
+
+[ ] Invalid Timestamp: Ubah format ISO-8601 di field ts menjadi format asal (misal: 03/03/2026).
+
+5. Pengujian Client-Side Web (Vercel App)
+
+Gunakan Chrome/Firefox DevTools (F12) -> Tab Network (Filter: Fetch/XHR) saat melakukan pengujian ini. Tujuannya memastikan Web Frontend sudah mengirimkan payload sesuai kontrak.
+
+A. Modul Presensi QR
+
+[ ] Generate UI: Isi form Generate QR, klik tombol, pastikan QR Code muncul.
+
+[ ] Interogasi QR (OOSB): Scan QR Code di layar menggunakan kamera standar HP (bukan web). Catat isi datanya (Apakah hanya string token, atau URL lengkap?).
+
+[ ] Scan & Check-in: Gunakan scanner di Web App, arahkan ke QR. Pastikan ada request POST ke endpoint checkin di Network Tab dengan format data yang benar.
+
+[ ] Frontend Validation: Kosongkan user_id lalu tekan check-in/generate. Pastikan UI memblokir request tersebut (tidak ada request terkirim ke server).
+
+B. Modul Accelerometer
+
+[ ] Hardware Compatibility: Buka fitur ini di PC/Laptop. Pastikan web tidak crash total (seharusnya menampilkan error "Accelerometer tidak tersedia di perangkat ini" atau diam/kosong dengan aman).
+
+[ ] Batching Payload: Buka fitur ini di HP, gerakkan HP. Buka Inspect Element via USB Debugging (atau lihat di console). Pastikan web mengirim data dalam format array batching (banyak data dalam satu request), bukan membombardir server dengan 1 request per milidetik.
+
+C. Modul GPS
+
+[ ] Marker Test: Buka peta. Pastikan marker muncul tepat di kordinat terbaru.
+
+[ ] Polyline Test: Pastikan ada garis (polyline) yang terbentuk dari history perjalanan (jika ada lebih dari 1 titik).
+
+[ ] Permission Denied: Masuk mode Incognito, tolak/block izin akses lokasi. Pastikan web menampilkan pesan error UI yang jelas ("Izin lokasi ditolak"), bukan sekadar blank page.
+
+[ ] Offline Mode: Matikan koneksi internet (atau set Offline di Network Tab). Lakukan klik tombol yang mengirim data. Pastikan tidak ada Infinite Loading (loading berputar terus menerus tanpa henti).
