@@ -3,8 +3,10 @@
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { AUTH_SEED_USERS } from "@/schemas/seeder";
 import { getAuthSession } from "@/lib/auth/session";
 import Select from "@/components/ui/select";
+import TablePagination from "@/components/ui/table-pagination";
 import { getErrorMessage } from "@/lib/errors";
 import { attendanceGasService } from "@/services/attendance-gas-service";
 import { readLecturerQrSessionState } from "@/utils/home/lecturer-qr-session";
@@ -24,6 +26,7 @@ type ActiveSessionOption = {
 const ACTIVE_QR_STORAGE_KEY = "ctc_dosen_active_qr";
 const DEFAULT_LIMIT = 200;
 const ACTIVE_SESSION_LIMIT = 20;
+const DEFAULT_PAGE_SIZE = 20;
 const MONITOR_REFRESH_MS = 5000;
 
 const INPUT_CLASS =
@@ -34,6 +37,14 @@ const LABEL_CLASS =
 
 const TH_CLASS =
   "px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.08em] text-(--token-gray-400) dark:text-(--token-gray-500)";
+
+function buildUserNameMap() {
+  const map = new Map<string, string>();
+  for (const user of AUTH_SEED_USERS) {
+    map.set(user.identifier, user.name);
+  }
+  return map;
+}
 
 function parseMonitorLimit(limitInput: string) {
   const parsed = Number.parseInt(limitInput, 10);
@@ -66,12 +77,15 @@ function buildLocalSessionOptions(
 }
 
 export default function DosenMonitorPage() {
+  const userNameMap = useMemo(() => buildUserNameMap(), []);
   const sessionIdentifier = useMemo(() => getAuthSession()?.identifier ?? null, []);
   const [sessionSnapshot, setSessionSnapshot] = useState(() =>
     readLecturerQrSessionState(sessionIdentifier),
   );
   const [selectedSessionKey, setSelectedSessionKey] = useState("");
   const [limitInput, setLimitInput] = useState(String(DEFAULT_LIMIT));
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
   useEffect(() => {
     setSessionSnapshot(readLecturerQrSessionState(sessionIdentifier));
@@ -157,6 +171,10 @@ export default function DosenMonitorPage() {
     });
   }, [sessionOptions]);
 
+  useEffect(() => {
+    setPage(1);
+  }, [selectedSessionKey]);
+
   const selectedSession = useMemo(
     () => sessionOptions.find((option) => option.key === selectedSessionKey) ?? null,
     [selectedSessionKey, sessionOptions],
@@ -190,6 +208,22 @@ export default function DosenMonitorPage() {
       return response.data;
     },
   });
+
+  const allItems = useMemo(() => listQuery.data?.items ?? [], [listQuery.data]);
+  const totalItems = allItems.length;
+  const totalPages = useMemo(
+    () => Math.max(1, Math.ceil(Math.max(totalItems, 1) / pageSize)),
+    [pageSize, totalItems],
+  );
+
+  useEffect(() => {
+    setPage((previousPage) => Math.min(Math.max(previousPage, 1), totalPages));
+  }, [totalPages]);
+
+  const paginatedItems = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return allItems.slice(start, start + pageSize);
+  }, [allItems, page, pageSize]);
 
   const sourceLabel = useLocalFallback ? "Local fallback" : "Backend API";
 
@@ -331,7 +365,14 @@ export default function DosenMonitorPage() {
             <table className="min-w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-soft bg-(--token-gray-50) dark:bg-(--token-white-5)">
-                  {["Presence ID", "User ID", "Device ID", "Timestamp", "Recorded At"].map(
+                  {[
+                    "Presence ID",
+                    "User ID",
+                    "Nama User",
+                    "Device ID",
+                    "Timestamp",
+                    "Recorded At",
+                  ].map(
                     (column) => (
                       <th key={column} className={TH_CLASS}>
                         {column}
@@ -341,17 +382,17 @@ export default function DosenMonitorPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-soft">
-                {listQuery.data.items.length === 0 ? (
+                {paginatedItems.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={5}
+                      colSpan={6}
                       className="px-4 py-10 text-center text-sm text-(--token-gray-500) dark:text-(--token-gray-400)"
                     >
                       Belum ada check-in untuk sesi ini.
                     </td>
                   </tr>
                 ) : (
-                  listQuery.data.items.map((item) => (
+                  paginatedItems.map((item) => (
                     <tr
                       key={item.presence_id}
                       className="transition-colors hover:bg-(--token-gray-50) dark:hover:bg-(--token-white-5)"
@@ -361,6 +402,9 @@ export default function DosenMonitorPage() {
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-sm text-(--token-gray-700) dark:text-(--token-gray-300)">
                         {item.user_id}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-(--token-gray-700) dark:text-(--token-gray-300)">
+                        {userNameMap.get(item.user_id) ?? "-"}
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-(--token-gray-500) dark:text-(--token-gray-400)">
                         {item.device_id}
@@ -376,6 +420,16 @@ export default function DosenMonitorPage() {
                 )}
               </tbody>
             </table>
+            <TablePagination
+              totalItems={totalItems}
+              page={page}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              onPageSizeChange={(nextPageSize) => {
+                setPageSize(nextPageSize);
+                setPage(1);
+              }}
+            />
           </div>
         )}
 
