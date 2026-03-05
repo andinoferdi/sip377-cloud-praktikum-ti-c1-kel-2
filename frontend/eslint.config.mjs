@@ -14,6 +14,7 @@ export default defineConfig([
     ".next/**",
     "out/**",
     "build/**",
+    "public/docs/**",
     "legacy-ui/**",
     "next-env.d.ts",
   ]),

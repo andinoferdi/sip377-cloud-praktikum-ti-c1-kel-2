@@ -13,7 +13,7 @@ CloudTrack Campus menggunakan arsitektur monorepo:
 
 Base URL deployment aktif saat ini:
 
-`https://script.google.com/macros/s/AKfycbzwGB2egCMblZrIQUQJketAhlABHr5jde6JoBAwdY6RhiuLlcs3Wzm1C71cQykB-awqEw/exec`
+`https://script.google.com/macros/s/AKfycbwH1quz-8p7qLl5MIjzD3tCTWbIQxHgqVHqPt_zWoxI-O7wBFYyYCbxEAn1SSvNRddDhw/exec`
 
 ## 2. Struktur Repo
 
@@ -21,12 +21,7 @@ Base URL deployment aktif saat ini:
 .
 |-- frontend/        # Next.js client app
 |-- backend-gas/     # GAS source + OpenAPI + clasp config
-|-- docs/            # Dokumen operasional tambahan
-|-- postman/         # Koleksi Postman (saat ini placeholder)
-|-- scripts/         # Script utilitas git flow
-|-- chat-rules.md
-|-- code-rules-fe.md
-|-- code-rules-be.md
+|-- scripts/         # Script utilitas sinkronisasi docs/frontend
 `-- README.md        # Dokumen utama ini
 ```
 
@@ -45,9 +40,7 @@ Alur merge wajib:
 2. `fe` dan/atau `be` -> `test`.
 3. `test` -> `main`.
 
-Referensi detail:
-
-`docs/git-workflow.md`
+Referensi detail alur branch sudah diringkas pada bagian ini.
 
 ## 4. Panduan Frontend Developer
 
@@ -67,29 +60,84 @@ cp .env.example .env
 Isi `frontend/.env`:
 
 ```env
-NEXT_PUBLIC_GAS_BASE_URL="https://script.google.com/macros/s/AKfycbzwGB2egCMblZrIQUQJketAhlABHr5jde6JoBAwdY6RhiuLlcs3Wzm1C71cQykB-awqEw/exec"
+NEXT_PUBLIC_GAS_BASE_URL="https://script.google.com/macros/s/AKfycbwH1quz-8p7qLl5MIjzD3tCTWbIQxHgqVHqPt_zWoxI-O7wBFYyYCbxEAn1SSvNRddDhw/exec"
 ```
 
 Jalankan aplikasi:
 
 ```bash
+npm run docs:prepare
 npm run dev
 ```
+
+Sinkronkan spesifikasi OpenAPI untuk halaman docs frontend:
+
+```bash
+npm run docs:sync-openapi
+```
+
+Sinkronkan asset Swagger UI statis:
+
+```bash
+npm run docs:sync-swagger-ui-assets
+```
+
+Verifikasi sinkronisasi spec:
+
+```bash
+npm run docs:check-openapi-sync
+npm run docs:check-swagger-ui-assets
+```
+
+Swagger UI frontend tersedia di:
+
+`http://localhost:3000/docs`
 
 ### 4.3 Quality gate frontend
 
 Wajib jalan sebelum PR:
 
 ```bash
+npm run qa:modul1:prepr
+```
+
+Urutan detail:
+
+```bash
 npm run typecheck
 npm run lint
 npm run test:unit
+npm run test:e2e:qr
+npm run qa:modul1:api-smoke
 npm run build
+npm run repo:check-protected-files
 ```
 
-### 4.4 Aturan teknis frontend
+### 4.4 Proteksi File Patokan Tim
 
-1. Ikuti standar di `code-rules-fe.md`.
+File patokan yang tidak boleh terhapus didefinisikan di:
+
+`scripts/protected-files.allowlist`
+
+Validator-nya:
+
+`npm run repo:check-protected-files` (jalankan dari `frontend/`)
+
+### 4.5 Akun QA Seed (Modul 1)
+
+1. Dosen
+   `identifier`: `198701012020011001`
+   `password`: `198701012020011001`
+2. Mahasiswa
+   `identifier`: `434231079`
+   `password`: `434231079`
+3. Mahasiswa
+   `identifier`: `434231065`
+   `password`: `Kediri123#`
+
+### 4.6 Aturan teknis frontend
+
+1. Ikuti standar teknis frontend yang berlaku di codebase saat ini.
 2. Tetap pakai service layer:
    1. `src/services/fetcher.ts`
    2. `src/services/gas-client.ts`
@@ -97,7 +145,7 @@ npm run build
 3. Jangan hardcode URL GAS di source code.
 4. Jika menambah atau mengubah endpoint yang dipakai UI, koordinasi dengan backend dan update dokumentasi.
 
-### 4.5 Checklist PR frontend
+### 4.7 Checklist PR frontend
 
 1. Branch source dari `fe`.
 2. Scope PR jelas dan kecil.
@@ -263,8 +311,9 @@ Saat membuat bug report, wajib isi:
 1. `README.md` (dokumen lintas tim).
 2. `frontend/README.md` (setup dan flow frontend).
 3. `backend-gas/openapi.yaml` (kontrak API publik).
-4. `docs/git-workflow.md` (alur branch/PR).
-5. `code-rules-fe.md` dan `code-rules-be.md` jika ada perubahan standar teknis.
+4. `frontend/public/openapi.yaml` (salinan runtime untuk Swagger UI frontend, update via `npm run docs:sync-openapi`).
+5. `frontend/public/docs/*` (asset Swagger UI statis, update via `npm run docs:sync-swagger-ui-assets`).
+6. Standar teknis frontend/backend yang aktif di repository.
 
 ### 7.3 Standar kualitas dokumentasi
 
@@ -306,3 +355,4 @@ Perubahan dianggap selesai jika:
 3. QA smoke test lulus tanpa blocker kritis.
 4. Dokumentasi utama sudah diperbarui.
 5. Perubahan sudah tersinkron ke `main` sesuai alur release.
+

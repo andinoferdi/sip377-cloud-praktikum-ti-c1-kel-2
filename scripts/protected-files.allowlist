@@ -1,0 +1,7 @@
+# Files that must never be deleted accidentally.
+# Paths are relative to repo root.
+
+modul.txt
+chat-rules.md
+code-rules-fe.md
+code-rules-be.md

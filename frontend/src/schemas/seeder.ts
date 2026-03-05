@@ -2,11 +2,12 @@ import type { SeedUser } from "@/types/auth";
 
 export const AUTH_SEED_USERS: SeedUser[] = [
   {
+    // Password: 198701012020011001
     identifier: "198701012020011001",
     role: "dosen",
     name: "Dosen CloudTrack",
     salt: "e8b6ff3a79f89923134022bc3078144a",
-    password_hash: "$2a$12$l8lg5csq4KovSgzItDKTSeRl7Ilp.SgeSH7fp1ZbevkJPz6wuzJxO",
+    password_hash: "$2b$12$QBRNKkZmcmB.RcBvvviRfexhFQ.V83narVeMjigK7wCjsSCc3FxFq",
     iterations: 120000,
   },
   {

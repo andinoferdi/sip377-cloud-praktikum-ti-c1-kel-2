@@ -779,11 +779,11 @@ function getPresenceList(courseId, sessionId, limit) {
     }
 
     items.push({
-      presence_id: getValueByHeader(data[i], presenceMeta.headerMap, 'presence_id'),
-      user_id: getValueByHeader(data[i], presenceMeta.headerMap, 'user_id'),
-      device_id: getValueByHeader(data[i], presenceMeta.headerMap, 'device_id'),
-      ts: getValueByHeader(data[i], presenceMeta.headerMap, 'ts'),
-      recorded_at: getValueByHeader(data[i], presenceMeta.headerMap, 'recorded_at'),
+      presence_id: String(getValueByHeader(data[i], presenceMeta.headerMap, 'presence_id') || ''),
+      user_id: String(getValueByHeader(data[i], presenceMeta.headerMap, 'user_id') || ''),
+      device_id: String(getValueByHeader(data[i], presenceMeta.headerMap, 'device_id') || ''),
+      ts: String(getValueByHeader(data[i], presenceMeta.headerMap, 'ts') || ''),
+      recorded_at: String(getValueByHeader(data[i], presenceMeta.headerMap, 'recorded_at') || ''),
     });
   }
 
@@ -815,7 +815,7 @@ function getPresenceStatus(userId, courseId, sessionId) {
         course_id: normalizedCourseId,
         session_id: normalizedSessionId,
         status: 'checked_in',
-        last_ts: getValueByHeader(data[i], presenceMeta.headerMap, 'ts'),
+        last_ts: String(getValueByHeader(data[i], presenceMeta.headerMap, 'ts') || ''),
       };
     }
   }
