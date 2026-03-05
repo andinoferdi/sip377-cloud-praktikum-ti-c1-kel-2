@@ -104,6 +104,7 @@ export type ActiveSessionsRequest = {
   limit?: number;
   course_id?: string;
   meeting_only?: boolean;
+  include_stopped?: boolean;
 };
 
 export type ActiveSessionItem = {
@@ -111,9 +112,10 @@ export type ActiveSessionItem = {
   session_id: string;
   meeting_key: string | null;
   owner_identifier: string;
-  status: "active";
+  status: "active" | "stopped";
   started_at: string | null;
   updated_at: string | null;
+  stopped_at: string | null;
 };
 
 export type ActiveSessionsData = {

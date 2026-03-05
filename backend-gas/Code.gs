@@ -65,6 +65,7 @@ function doGet(e) {
           params.limit,
           params.course_id,
           params.meeting_only,
+          params.include_stopped,
         ));
       case 'presence/course/config':
         return sendSuccess(getCourseMeetingConfig(params.course_id));
@@ -989,12 +990,13 @@ function checkin(body) {
   };
 }
 
-function getActiveSessions(ownerIdentifier, limit, courseId, meetingOnly) {
+function getActiveSessions(ownerIdentifier, limit, courseId, meetingOnly, includeStopped) {
   requireField({ owner_identifier: ownerIdentifier }, 'owner_identifier');
 
   var normalizedOwnerIdentifier = normalizeOwnerIdentifier(ownerIdentifier);
   var normalizedCourseId = courseId ? normalizeCourseId(courseId) : '';
   var shouldFilterMeetingOnly = parseBooleanParam(meetingOnly);
+  var shouldIncludeStopped = parseBooleanParam(includeStopped);
   var maxItems = limit ? parseInt(limit, 10) : 20;
   if (isNaN(maxItems) || maxItems <= 0) {
     maxItems = 20;
@@ -1020,16 +1022,23 @@ function getActiveSessions(ownerIdentifier, limit, courseId, meetingOnly) {
     );
     var isStopped = getValueByHeader(data[i], sessionMeta.headerMap, 'is_stopped') === true ||
       String(getValueByHeader(data[i], sessionMeta.headerMap, 'is_stopped')).toLowerCase() === 'true';
+    var rowStoppedAt = getValueByHeader(data[i], sessionMeta.headerMap, 'stopped_at')
+      ? String(getValueByHeader(data[i], sessionMeta.headerMap, 'stopped_at'))
+      : '';
     var rowUpdatedAt = getValueByHeader(data[i], sessionMeta.headerMap, 'updated_at')
       ? String(getValueByHeader(data[i], sessionMeta.headerMap, 'updated_at'))
       : '';
 
-    if (isStopped) {
-      continue;
-    }
-    if (isSessionIdleExpired(rowUpdatedAt, new Date())) {
-      markSessionStateStoppedAtRow(sessionMeta, i + 1, nowISO());
-      continue;
+    var effectiveIsStopped = isStopped;
+    var effectiveStoppedAt = rowStoppedAt || null;
+    var effectiveUpdatedAt = rowUpdatedAt || null;
+
+    if (!effectiveIsStopped && isSessionIdleExpired(rowUpdatedAt, new Date())) {
+      var stopAtISO = nowISO();
+      markSessionStateStoppedAtRow(sessionMeta, i + 1, stopAtISO);
+      effectiveIsStopped = true;
+      effectiveStoppedAt = stopAtISO;
+      effectiveUpdatedAt = stopAtISO;
     }
     if (rowOwnerIdentifier !== normalizedOwnerIdentifier) {
       continue;
@@ -1038,6 +1047,9 @@ function getActiveSessions(ownerIdentifier, limit, courseId, meetingOnly) {
       continue;
     }
     if (shouldFilterMeetingOnly && !isMeetingSessionId(rowSessionId)) {
+      continue;
+    }
+    if (!shouldIncludeStopped && effectiveIsStopped) {
       continue;
     }
 
@@ -1052,13 +1064,12 @@ function getActiveSessions(ownerIdentifier, limit, courseId, meetingOnly) {
       session_id: rowSessionId,
       meeting_key: rowMeetingKey || null,
       owner_identifier: rowOwnerIdentifier,
-      status: 'active',
+      status: effectiveIsStopped ? 'stopped' : 'active',
       started_at: getValueByHeader(data[i], sessionMeta.headerMap, 'started_at')
         ? String(getValueByHeader(data[i], sessionMeta.headerMap, 'started_at'))
         : null,
-      updated_at: getValueByHeader(data[i], sessionMeta.headerMap, 'updated_at')
-        ? String(getValueByHeader(data[i], sessionMeta.headerMap, 'updated_at'))
-        : null,
+      updated_at: effectiveUpdatedAt,
+      stopped_at: effectiveIsStopped ? effectiveStoppedAt : null,
     });
   }
 

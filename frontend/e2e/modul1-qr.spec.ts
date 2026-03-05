@@ -18,6 +18,64 @@ const dosenSession = {
   name: "Dosen CloudTrack",
 };
 
+async function waitForActiveQrState(
+  page: import("@playwright/test").Page,
+  expectedCourseId: string,
+) {
+  const deadline = Date.now() + 60_000;
+  let lastRawValue: string | null = null;
+
+  while (Date.now() < deadline) {
+    lastRawValue = await page.evaluate(() =>
+      window.localStorage.getItem("ctc_dosen_active_qr"),
+    );
+
+    try {
+      const parsed = parseLecturerActiveQrState(lastRawValue);
+      const isValidSession = /-p01$/i.test(parsed.session_id);
+      if (
+        parsed.course_id === expectedCourseId &&
+        isValidSession &&
+        parsed.qr_token.trim() !== ""
+      ) {
+        return parsed;
+      }
+    } catch {
+      // Keep polling until timeout to tolerate slow GAS response.
+    }
+
+    await page.waitForTimeout(500);
+  }
+
+  const processingVisible = await page
+    .getByRole("button", { name: "Memproses..." })
+    .isVisible()
+    .catch(() => false);
+  const rotationErrorVisible = await page
+    .getByText("Rotasi QR gagal sementara", { exact: false })
+    .isVisible()
+    .catch(() => false);
+  const meetingOutOfRangeVisible = await page
+    .getByText("meeting_no_out_of_range", { exact: false })
+    .isVisible()
+    .catch(() => false);
+  const invalidSessionVisible = await page
+    .getByText("invalid_session_id_for_meeting", { exact: false })
+    .isVisible()
+    .catch(() => false);
+
+  throw new Error(
+    [
+      "Generate QR did not produce a valid active payload within 60s.",
+      `lastRawValue=${lastRawValue ?? "null"}`,
+      `processingVisible=${processingVisible}`,
+      `rotationErrorVisible=${rotationErrorVisible}`,
+      `meetingOutOfRangeVisible=${meetingOutOfRangeVisible}`,
+      `invalidSessionVisible=${invalidSessionVisible}`,
+    ].join(" "),
+  );
+}
+
 async function bootstrapDosenSession(page: import("@playwright/test").Page) {
   await page.goto("/login");
   await page.evaluate((session) => {
@@ -67,12 +125,7 @@ test("modul 1 qr: dosen generate, mahasiswa checkin, duplicate, stop session", a
   await page.locator('input[name="course_id"]').fill(uniqueCourseId);
   await page.getByRole("button", { name: "Generate QR" }).click();
 
-  await expect(page.getByText("Active")).toBeVisible({ timeout: 20_000 });
-
-  const rawActiveState = await page.evaluate(() =>
-    window.localStorage.getItem("ctc_dosen_active_qr"),
-  );
-  const activeQr = parseLecturerActiveQrState(rawActiveState);
+  const activeQr = await waitForActiveQrState(page, uniqueCourseId);
 
   await bootstrapMahasiswaSession(page, mahasiswaSecondary);
   await page.goto("/dashboard/mahasiswa/scan");
@@ -91,9 +144,16 @@ test("modul 1 qr: dosen generate, mahasiswa checkin, duplicate, stop session", a
 
   await bootstrapDosenSession(page);
   await page.goto("/dashboard/dosen/buat-qr");
-  await expect(page.getByText("Active")).toBeVisible({ timeout: 20_000 });
+  await waitForActiveQrState(page, uniqueCourseId);
   await page.getByRole("button", { name: "Stop QR" }).click();
-  await expect(page.getByText("Stopped")).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText("Stopped")).toBeVisible({ timeout: 30_000 });
+
+  await page.goto("/dashboard/dosen/monitor");
+  await expect(page.getByText("Riwayat Sesi Monitor")).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText(`${uniqueCourseId} - Pertemuan 1 (stopped)`)).toBeVisible({
+    timeout: 20_000,
+  });
+  await expect(page.getByText(mahasiswaSecondary.identifier)).toBeVisible({ timeout: 20_000 });
 
   await bootstrapMahasiswaSession(page, mahasiswaPrimary);
   await page.goto("/dashboard/mahasiswa/scan");

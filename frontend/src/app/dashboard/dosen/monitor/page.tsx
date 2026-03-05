@@ -20,6 +20,7 @@ type ActiveSessionOption = {
   course_id: string;
   session_id: string;
   meeting_key: string | null;
+  status: "active" | "stopped";
   label: string;
   source: "api" | "local";
 };
@@ -75,6 +76,7 @@ function buildLocalSessionOptions(
       session_id: sessionId,
       meeting_key: meetingKey ?? null,
       label: `${courseId} - ${formatMeetingLabel(sessionId)}`,
+      status: "active",
       source: "local",
     },
   ];
@@ -143,6 +145,7 @@ export default function DosenMonitorPage() {
         owner_identifier: sessionIdentifier,
         limit: ACTIVE_SESSION_LIMIT,
         meeting_only: true,
+        include_stopped: true,
       });
 
       if (!response.ok) {
@@ -172,7 +175,10 @@ export default function DosenMonitorPage() {
         course_id: item.course_id,
         session_id: item.session_id,
         meeting_key: item.meeting_key,
-        label: `${item.course_id} - ${formatMeetingLabel(item.session_id)}`,
+        label: `${item.course_id} - ${formatMeetingLabel(item.session_id)}${
+          item.status === "stopped" ? " (stopped)" : ""
+        }`,
+        status: item.status,
         source: "api",
       });
     }
@@ -281,7 +287,7 @@ export default function DosenMonitorPage() {
       <div className="overflow-hidden rounded-2xl border border-soft surface-elevated">
         <div className="flex items-center justify-between gap-3 border-b border-soft px-5 py-4">
           <h2 className="text-sm font-semibold text-(--token-gray-900) dark:text-(--token-white)">
-            Sesi Aktif
+            Riwayat Sesi Monitor
           </h2>
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center gap-1 rounded-md border border-soft px-2.5 py-1 text-[11px] font-semibold text-(--token-gray-600) dark:text-(--token-gray-300)">
@@ -301,8 +307,8 @@ export default function DosenMonitorPage() {
             <div className="mb-4 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-400">
               <CloudOff size={14} className="mt-0.5 shrink-0" />
               <div>
-                <p className="font-semibold">Gagal mengambil sesi aktif dari backend.</p>
-                <p className="mt-0.5">Menggunakan fallback sesi aktif dari browser ini.</p>
+                <p className="font-semibold">Gagal mengambil riwayat sesi monitor dari backend.</p>
+                <p className="mt-0.5">Menggunakan fallback sesi dari browser ini.</p>
               </div>
             </div>
           )}
@@ -316,7 +322,7 @@ export default function DosenMonitorPage() {
           {sessionOptions.length > 0 ? (
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className={LABEL_CLASS}>Session Aktif</label>
+                <label className={LABEL_CLASS}>Session Monitor</label>
                 <Select
                   value={selectedSessionKey || undefined}
                   onChange={setSelectedSessionKey}
@@ -324,7 +330,7 @@ export default function DosenMonitorPage() {
                     value: option.key,
                     label: option.label,
                   }))}
-                  placeholder="Pilih sesi aktif"
+                  placeholder="Pilih sesi monitor"
                 />
               </div>
 
@@ -344,7 +350,7 @@ export default function DosenMonitorPage() {
 
               <div className="sm:col-span-2">
                 <p className="text-xs text-(--token-gray-500) dark:text-(--token-gray-400)">
-                  Sumber sesi aktif diprioritaskan dari backend. Fallback local hanya saat API gagal.
+                  Sumber sesi monitor diprioritaskan dari backend. Fallback local hanya saat API gagal.
                 </p>
               </div>
             </div>
@@ -352,7 +358,7 @@ export default function DosenMonitorPage() {
             <div className="flex flex-col items-start gap-3 rounded-xl border border-soft bg-(--token-gray-50) p-4 dark:bg-(--token-white-5)">
               <div className="flex items-center gap-2 text-(--token-gray-700) dark:text-(--token-gray-300)">
                 <QrCode size={16} />
-                <p className="text-sm font-semibold">Belum ada sesi aktif.</p>
+                <p className="text-sm font-semibold">Belum ada sesi monitor.</p>
               </div>
               <p className="text-xs text-(--token-gray-500) dark:text-(--token-gray-400)">
                 Jika dosen belum generate QR, buka halaman Buat QR terlebih dahulu.
@@ -482,10 +488,10 @@ export default function DosenMonitorPage() {
               <BarChart3 size={20} className="text-(--token-gray-400)" />
             </div>
             <p className="text-sm font-medium text-(--token-gray-600) dark:text-(--token-gray-300)">
-              Belum ada sesi aktif untuk dimonitor.
+              Belum ada sesi monitor untuk ditampilkan.
             </p>
             <p className="mt-1 text-xs text-(--token-gray-400) dark:text-(--token-gray-500)">
-              Pilih sesi aktif dari backend atau buat QR baru terlebih dahulu.
+              Pilih sesi monitor dari backend atau buat QR baru terlebih dahulu.
             </p>
             <Link
               href="/dashboard/dosen/buat-qr"

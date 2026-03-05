@@ -26,7 +26,7 @@ servers:
     description: Google Apps Script Web App
     variables:
       deploymentId:
-        default: AKfycbxLtSJdzc-DJG4q8PNenWxU8ZAfK3uEONKO1Pr4ct5FK8gsr5lOPIV-yA-FZJm35NO_1Q
+        default: AKfycbyefwSDX8kZeQ1wSrSuoa8-FGzxhj8mpcqt-WDacmnNa6zazx6Us1qVzQJimyHTnDg2Og
         description: Web App deployment ID
 
 security: []
@@ -85,6 +85,12 @@ paths:
             minimum: 1
             default: 200
           description: Optional max items for path=presence/list, path=presence/sessions/active, or path=telemetry/gps/history
+        - name: include_stopped
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Optional for path=presence/sessions/active. If true, response includes both active and stopped sessions.
         - name: from
           in: query
           schema:
@@ -145,7 +151,7 @@ paths:
                     ok: true
                     data:
                       owner_identifier: "198701012020011001"
-                      total: 1
+                      total: 2
                       items:
                         - course_id: "cloud-101"
                           session_id: "cloud-101-p01"
@@ -154,6 +160,15 @@ paths:
                           status: "active"
                           started_at: "2026-02-28T09:26:00.000Z"
                           updated_at: "2026-02-28T09:28:00.000Z"
+                          stopped_at: null
+                        - course_id: "cloud-101"
+                          session_id: "cloud-101-p00"
+                          meeting_key: "MTG-CLOUD-101-P00"
+                          owner_identifier: "198701012020011001"
+                          status: "stopped"
+                          started_at: "2026-02-21T09:26:00.000Z"
+                          updated_at: "2026-02-21T09:40:00.000Z"
+                          stopped_at: "2026-02-21T09:40:00.000Z"
                 courseConfig:
                   summary: path=presence/course/config
                   value:
