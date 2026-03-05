@@ -15,6 +15,15 @@ const SHEET = {
   COURSE_CONFIG: 'course_config',
 };
 
+const SHEET_ORDER = [
+  SHEET.PRESENCE,
+  SHEET.TOKENS,
+  SHEET.SESSION_STATE,
+  SHEET.COURSE_CONFIG,
+  SHEET.ACCEL,
+  SHEET.GPS,
+];
+
 const HEADERS = {
   [SHEET.TOKENS]: ['qr_token', 'course_id', 'session_id', 'created_at', 'expires_at', 'used', 'meeting_key', 'owner_identifier'],
   [SHEET.PRESENCE]: ['presence_id', 'user_id', 'device_id', 'course_id', 'session_id', 'qr_token', 'ts', 'recorded_at', 'meeting_key'],
@@ -34,9 +43,12 @@ const QR_TOKEN_TTL_MS = 120 * 1000;
 const SESSION_IDLE_TIMEOUT_MS = 5 * 60 * 1000;
 const DEFAULT_TOTAL_MEETINGS = 14;
 const MAX_TOTAL_MEETINGS = 20;
+var SHEETS_BOOTSTRAPPED_IN_REQUEST = false;
 
 function doGet(e) {
   try {
+    ensureAllSheetsInitialized();
+
     const path = (e && e.parameter && e.parameter.path) ? e.parameter.path : '';
     const params = e && e.parameter ? e.parameter : {};
 
@@ -77,6 +89,8 @@ function doGet(e) {
 
 function doPost(e) {
   try {
+    ensureAllSheetsInitialized();
+
     const path = (e && e.parameter && e.parameter.path) ? e.parameter.path : '';
     const body = parseJsonBody(e);
 
@@ -163,6 +177,85 @@ function getSpreadsheet() {
   return SpreadsheetApp.openById(SPREADSHEET_ID);
 }
 
+function applyHeaderStyle(sheet, columnCount) {
+  if (!sheet || columnCount <= 0) {
+    return;
+  }
+
+  sheet.getRange(1, 1, 1, columnCount)
+    .setFontWeight('bold')
+    .setBackground('#4a86e8')
+    .setFontColor('#ffffff');
+}
+
+function ensureBootstrapSheets() {
+  var ss = getSpreadsheet();
+  var previousActiveSheet = ss.getActiveSheet();
+
+  for (var i = 0; i < SHEET_ORDER.length; i++) {
+    var sheetName = SHEET_ORDER[i];
+    var targetPosition = i + 1;
+    var sheet = ss.getSheetByName(sheetName);
+
+    if (!sheet) {
+      sheet = ss.insertSheet(sheetName, targetPosition);
+      var headers = HEADERS[sheetName] || [];
+      if (headers.length > 0) {
+        sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+      }
+    }
+
+    var sheets = ss.getSheets();
+    var currentPosition = sheets.indexOf(sheet) + 1;
+    if (currentPosition !== targetPosition) {
+      ss.setActiveSheet(sheet);
+      ss.moveActiveSheet(targetPosition);
+    }
+  }
+
+  if (previousActiveSheet) {
+    ss.setActiveSheet(previousActiveSheet);
+  }
+}
+
+function ensureSheetStructure(sheetName, sheet) {
+  var requiredHeaders = HEADERS[sheetName];
+  if (!requiredHeaders || requiredHeaders.length === 0) {
+    return;
+  }
+
+  ensureSheetHeaders(sheetName, sheet);
+
+  var columnCount = Math.max(sheet.getLastColumn(), requiredHeaders.length);
+  if (columnCount <= 0) {
+    return;
+  }
+
+  applyHeaderStyle(sheet, columnCount);
+
+  if (sheet.getFrozenRows() < 1) {
+    sheet.setFrozenRows(1);
+  }
+
+  sheet.autoResizeColumns(1, columnCount);
+}
+
+function ensureAllSheetsInitialized() {
+  if (SHEETS_BOOTSTRAPPED_IN_REQUEST) {
+    return;
+  }
+
+  ensureBootstrapSheets();
+
+  for (var i = 0; i < SHEET_ORDER.length; i++) {
+    var sheetName = SHEET_ORDER[i];
+    var sheet = getOrCreateSheet(sheetName);
+    ensureSheetStructure(sheetName, sheet);
+  }
+
+  SHEETS_BOOTSTRAPPED_IN_REQUEST = true;
+}
+
 function getOrCreateSheet(name) {
   var ss = getSpreadsheet();
   var sheet = ss.getSheetByName(name);
@@ -173,10 +266,7 @@ function getOrCreateSheet(name) {
 
     if (headers && headers.length > 0) {
       sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
-      sheet.getRange(1, 1, 1, headers.length)
-        .setFontWeight('bold')
-        .setBackground('#4a86e8')
-        .setFontColor('#ffffff');
+      applyHeaderStyle(sheet, headers.length);
       sheet.setFrozenRows(1);
     }
   }
@@ -383,10 +473,7 @@ function ensureSheetHeaders(sheetName, sheet) {
   if (toAppend.length > 0) {
     var appendStart = sheet.getLastColumn() + 1;
     sheet.getRange(1, appendStart, 1, toAppend.length).setValues([toAppend]);
-    sheet.getRange(1, appendStart, 1, toAppend.length)
-      .setFontWeight('bold')
-      .setBackground('#4a86e8')
-      .setFontColor('#ffffff');
+    applyHeaderStyle(sheet, sheet.getLastColumn());
   }
 
   if (sheet.getFrozenRows() < 1) {
