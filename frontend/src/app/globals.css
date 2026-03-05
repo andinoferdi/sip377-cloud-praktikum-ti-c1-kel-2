@@ -515,6 +515,22 @@ html.theme-switching *::after {
   }
 }
 
+@keyframes qr-pulse {
+  0%,
+  100% {
+    opacity: 0.3;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: 0.12;
+    transform: translate(-50%, -50%) scale(1.1);
+  }
+}
+
+.qr-pulse {
+  animation: qr-pulse 2.5s ease-in-out infinite;
+}
+
 @keyframes float-y {
   0%,
   100% {

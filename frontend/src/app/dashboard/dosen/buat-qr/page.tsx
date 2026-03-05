@@ -9,6 +9,7 @@ import DatePicker from "@/components/ui/date-picker";
 import StyledQr from "@/components/ui/styled-qr";
 import { getAuthSession } from "@/lib/auth/session";
 import { getErrorMessage } from "@/lib/errors";
+import { normalizeStopSessionErrorMessage } from "@/lib/home/qr-stop-errors";
 import { attendanceGasService } from "@/services/attendance-gas-service";
 import {
   buildAttendanceSessionId,
@@ -139,6 +140,113 @@ function StatusBadge({ status }: { status: "active" | "expired" | "stopped" }) {
   );
 }
 
+function ActiveQrContent({
+  activePayload,
+  encodedQrValue,
+  isActiveQr,
+  nextRotationAt,
+}: {
+  activePayload: AttendanceQrPayload;
+  encodedQrValue: string;
+  isActiveQr: boolean;
+  nextRotationAt: string | null;
+}) {
+  const [countdown, setCountdown] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!nextRotationAt) {
+      setCountdown(null);
+      return;
+    }
+
+    const tick = () => {
+      const remaining = Math.max(
+        0,
+        Math.round((Date.parse(nextRotationAt) - Date.now()) / 1000),
+      );
+      setCountdown(remaining);
+    };
+
+    tick();
+    const id = window.setInterval(tick, 1000);
+    return () => window.clearInterval(id);
+  }, [nextRotationAt]);
+
+  return (
+    <div className="flex flex-col items-center gap-5">
+      <div className="shrink-0">
+        <StyledQr
+          value={encodedQrValue}
+          size={280}
+          renderMode="stable"
+          secondsLeft={countdown ?? undefined}
+          totalSeconds={QR_TOTAL_SECONDS}
+          isExpired={!isActiveQr}
+        />
+      </div>
+
+      <div className="w-full min-w-0 space-y-2">
+        <QrInfoItem label="course_id" value={activePayload.course_id} mono />
+        <QrInfoItem
+          label="session_id"
+          value={activePayload.session_id}
+          mono
+          truncate
+        />
+        <QrInfoItem
+          label="meeting_key"
+          value={activePayload.meeting_key ?? "-"}
+          mono
+          truncate
+        />
+        <QrInfoItem
+          label="qr_token"
+          value={activePayload.qr_token}
+          mono
+          truncate
+        />
+
+        <div className="grid grid-cols-1 gap-2">
+          <QrInfoItem
+            label="expires_at"
+            value={
+              activePayload.expires_at
+                ? new Date(activePayload.expires_at).toLocaleTimeString(
+                    undefined,
+                    { hour: "2-digit", minute: "2-digit", second: "2-digit" },
+                  )
+                : "-"
+            }
+            mono
+          />
+          <div
+            className={[
+              "flex flex-col justify-center rounded-lg border px-3 py-2.5",
+              isActiveQr
+                ? "border-emerald-200 bg-emerald-50 dark:border-emerald-500/20 dark:bg-emerald-500/8"
+                : "border-red-200 bg-red-50 dark:border-red-500/20 dark:bg-red-500/8",
+            ].join(" ")}
+          >
+            <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-(--token-gray-400) dark:text-(--token-gray-500)">
+              rotasi dalam
+            </p>
+            <p
+              className={[
+                "text-sm font-bold tabular-nums",
+                isActiveQr
+                  ? "text-emerald-700 dark:text-emerald-400"
+                  : "text-red-600 dark:text-red-400",
+              ].join(" ")}
+            >
+              {countdown !== null && countdown > 0 ? `${countdown}s` : "Expired"}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function DosenCreateQrPage() {
   const sessionIdentifier = useMemo(() => getAuthSession()?.identifier ?? null, []);
   const persistedQrState = useMemo(
@@ -167,7 +275,6 @@ export default function DosenCreateQrPage() {
           null),
   );
   const [isStopped, setIsStopped] = useState<boolean>(persistedQrState?.is_stopped ?? false);
-  const [countdown, setCountdown] = useState<number | null>(null);
   const [rotationError, setRotationError] = useState<string | null>(null);
 
   const rotationTimerRef = useRef<number | null>(null);
@@ -251,7 +358,6 @@ export default function DosenCreateQrPage() {
     setIsStopped(true);
     setActivePayload(null);
     setNextRotationAt(null);
-    setCountdown(null);
     setRotationError(null);
     saveLecturerQrSessionState({
       ownerIdentifier: sessionIdentifier,
@@ -284,7 +390,9 @@ export default function DosenCreateQrPage() {
           applyStoppedState();
         },
         onError: (error) => {
-          setRotationError(`Gagal menghentikan sesi: ${getErrorMessage(error)}`);
+          setRotationError(
+            normalizeStopSessionErrorMessage(getErrorMessage(error)),
+          );
         },
       },
     );
@@ -334,25 +442,6 @@ export default function DosenCreateQrPage() {
       clearRotationTimer();
     };
   }, [activePayload, form, generateMutation, isStopped]);
-
-  useEffect(() => {
-    if (!nextRotationAt || isStopped) {
-      setCountdown(null);
-      return;
-    }
-
-    const tick = () => {
-      const remaining = Math.max(
-        0,
-        Math.round((Date.parse(nextRotationAt) - Date.now()) / 1000),
-      );
-      setCountdown(remaining);
-    };
-
-    tick();
-    const id = window.setInterval(tick, 1000);
-    return () => window.clearInterval(id);
-  }, [isStopped, nextRotationAt]);
 
   const encodedQrValue = useMemo(() => {
     if (!activePayload) return "";
@@ -552,76 +641,12 @@ export default function DosenCreateQrPage() {
                 </p>
               </div>
             ) : activePayload ? (
-              <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-start">
-                <div className="shrink-0">
-                  <StyledQr
-                    value={encodedQrValue}
-                    size={190}
-                    secondsLeft={countdown ?? undefined}
-                    totalSeconds={QR_TOTAL_SECONDS}
-                    isExpired={!isActiveQr}
-                  />
-                </div>
-
-                <div className="w-full min-w-0 flex-1 space-y-2">
-                  <QrInfoItem label="course_id" value={activePayload.course_id} mono />
-                  <QrInfoItem
-                    label="session_id"
-                    value={activePayload.session_id}
-                    mono
-                    truncate
-                  />
-                  <QrInfoItem
-                    label="meeting_key"
-                    value={activePayload.meeting_key ?? "-"}
-                    mono
-                    truncate
-                  />
-                  <QrInfoItem
-                    label="qr_token"
-                    value={activePayload.qr_token}
-                    mono
-                    truncate
-                  />
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <QrInfoItem
-                      label="expires_at"
-                      value={
-                        activePayload.expires_at
-                          ? new Date(activePayload.expires_at).toLocaleTimeString(
-                              undefined,
-                              { hour: "2-digit", minute: "2-digit", second: "2-digit" },
-                            )
-                          : "-"
-                      }
-                      mono
-                    />
-                    <div
-                      className={[
-                        "flex flex-col justify-center rounded-lg border px-3 py-2.5",
-                        isActiveQr
-                          ? "border-emerald-200 bg-emerald-50 dark:border-emerald-500/20 dark:bg-emerald-500/8"
-                          : "border-red-200 bg-red-50 dark:border-red-500/20 dark:bg-red-500/8",
-                      ].join(" ")}
-                    >
-                      <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-(--token-gray-400) dark:text-(--token-gray-500)">
-                        rotasi dalam
-                      </p>
-                      <p
-                        className={[
-                          "text-sm font-bold tabular-nums",
-                          isActiveQr
-                            ? "text-emerald-700 dark:text-emerald-400"
-                            : "text-red-600 dark:text-red-400",
-                        ].join(" ")}
-                      >
-                        {countdown !== null && countdown > 0 ? `${countdown}s` : "Expired"}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <ActiveQrContent
+                activePayload={activePayload}
+                encodedQrValue={encodedQrValue}
+                isActiveQr={isActiveQr}
+                nextRotationAt={nextRotationAt}
+              />
             ) : (
               <div className="flex flex-col items-center px-6 py-14 text-center">
                 <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl border border-soft bg-(--token-gray-50) dark:bg-(--token-white-5)">
