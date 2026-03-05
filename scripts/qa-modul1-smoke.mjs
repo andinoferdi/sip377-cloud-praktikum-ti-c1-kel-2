@@ -65,8 +65,9 @@ function assertStringField(value, fieldName) {
 
 async function run() {
   const now = new Date();
-  const sessionId = `qa-${now.toISOString().replace(/[-:.TZ]/g, "").slice(0, 14)}`;
-  const courseId = "cloud-101";
+  const meetingNo = 1;
+  const courseId = `qa-cloud-${now.toISOString().replace(/[-:.TZ]/g, "").slice(-6)}`;
+  const sessionId = `${courseId}-p${String(meetingNo).padStart(2, "0")}`;
   const ownerIdentifier = "198701012020011001";
 
   const generate = await requestJson("presence/qr/generate", {
@@ -74,6 +75,7 @@ async function run() {
     body: {
       course_id: courseId,
       session_id: sessionId,
+      meeting_no: meetingNo,
       owner_identifier: ownerIdentifier,
       ts: now.toISOString(),
     },

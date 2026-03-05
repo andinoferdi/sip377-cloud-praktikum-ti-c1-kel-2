@@ -12,6 +12,7 @@ const SHEET = {
   ACCEL: 'accel',
   GPS: 'gps',
   SESSION_STATE: 'session_state',
+  COURSE_CONFIG: 'course_config',
 };
 
 const HEADERS = {
@@ -20,6 +21,7 @@ const HEADERS = {
   [SHEET.ACCEL]: ['device_id', 'x', 'y', 'z', 'sample_ts', 'batch_ts', 'recorded_at'],
   [SHEET.GPS]: ['device_id', 'lat', 'lng', 'accuracy_m', 'altitude_m', 'ts', 'recorded_at'],
   [SHEET.SESSION_STATE]: ['course_id', 'session_id', 'is_stopped', 'started_at', 'stopped_at', 'updated_at', 'owner_identifier', 'meeting_key'],
+  [SHEET.COURSE_CONFIG]: ['course_id', 'total_meetings', 'updated_at'],
 };
 
 const HEADER_ALIASES = {
@@ -29,6 +31,8 @@ const HEADER_ALIASES = {
 };
 
 const QR_TOKEN_TTL_MS = 120 * 1000;
+const DEFAULT_TOTAL_MEETINGS = 14;
+const MAX_TOTAL_MEETINGS = 20;
 
 function doGet(e) {
   try {
@@ -44,6 +48,8 @@ function doGet(e) {
 
       case 'presence/sessions/active':
         return sendSuccess(getActiveSessions(params.owner_identifier, params.limit, params.course_id));
+      case 'presence/course/config':
+        return sendSuccess(getCourseMeetingConfig(params.course_id));
 
       case 'telemetry/accel/latest':
         return sendSuccess(getAccelLatest(params.device_id));
@@ -77,6 +83,8 @@ function doPost(e) {
 
       case 'presence/qr/stop':
         return sendSuccess(stopQrSession(body));
+      case 'presence/course/config':
+        return sendSuccess(upsertCourseMeetingConfig(body));
 
       case 'telemetry/accel':
         return sendSuccess(batchAccel(body));
@@ -115,6 +123,7 @@ function getApiInfo() {
         '?path=presence/status',
         '?path=presence/list',
         '?path=presence/sessions/active',
+        '?path=presence/course/config',
         '?path=telemetry/accel/latest',
         '?path=telemetry/gps/latest',
         '?path=telemetry/gps/history',
@@ -124,6 +133,7 @@ function getApiInfo() {
         '?path=presence/qr/generate',
         '?path=presence/checkin',
         '?path=presence/qr/stop',
+        '?path=presence/course/config',
         '?path=telemetry/accel',
         '?path=telemetry/gps',
       ],
@@ -204,6 +214,38 @@ function normalizeMeetingKey(value) {
 
 function createMeetingKey() {
   return shortId('MTG-', 8);
+}
+
+function parseMeetingNo(value) {
+  var parsed = parseInt(value, 10);
+  if (isNaN(parsed)) {
+    return null;
+  }
+  return parsed;
+}
+
+function normalizeTotalMeetings(value) {
+  var parsed = parseMeetingNo(value);
+  if (!parsed || parsed < 1 || parsed > MAX_TOTAL_MEETINGS) {
+    return DEFAULT_TOTAL_MEETINGS;
+  }
+  return parsed;
+}
+
+function padMeetingNo(meetingNo) {
+  return ('0' + meetingNo).slice(-2);
+}
+
+function buildMeetingSessionId(courseId, meetingNo) {
+  return normalizeCourseId(courseId) + '-p' + padMeetingNo(meetingNo);
+}
+
+function buildMeetingKey(courseId, meetingNo) {
+  var normalizedCourseUpper = normalizeCourseId(courseId)
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return 'MTG-' + normalizedCourseUpper + '-P' + padMeetingNo(meetingNo);
 }
 
 function toHeaderKey(value) {
@@ -336,6 +378,87 @@ function setValueByHeader(row, headerMap, headerName, value) {
     return;
   }
   row[index] = value;
+}
+
+function getCourseMeetingConfig(courseId) {
+  requireField({ course_id: courseId }, 'course_id');
+
+  var normalizedCourseId = normalizeCourseId(courseId);
+  var configMeta = getSheetMeta(SHEET.COURSE_CONFIG);
+  var data = configMeta.sheet.getDataRange().getValues();
+
+  for (var i = data.length - 1; i >= 1; i--) {
+    var rowCourseId = normalizeCourseId(
+      getValueByHeader(data[i], configMeta.headerMap, 'course_id') || '',
+    );
+    if (rowCourseId !== normalizedCourseId) {
+      continue;
+    }
+
+    return {
+      course_id: normalizedCourseId,
+      total_meetings: normalizeTotalMeetings(
+        getValueByHeader(data[i], configMeta.headerMap, 'total_meetings'),
+      ),
+    };
+  }
+
+  return {
+    course_id: normalizedCourseId,
+    total_meetings: DEFAULT_TOTAL_MEETINGS,
+  };
+}
+
+function upsertCourseMeetingConfig(body) {
+  requireField(body, 'course_id');
+  requireField(body, 'total_meetings');
+
+  var normalizedCourseId = normalizeCourseId(body.course_id);
+  var parsedTotalMeetings = parseMeetingNo(body.total_meetings);
+  if (!parsedTotalMeetings || parsedTotalMeetings < 1 || parsedTotalMeetings > MAX_TOTAL_MEETINGS) {
+    throw new Error('invalid_total_meetings');
+  }
+
+  var updatedAt = body.ts ? new Date(body.ts) : new Date();
+  var updatedAtISO = isNaN(updatedAt.getTime()) ? nowISO() : updatedAt.toISOString();
+  var configMeta = getSheetMeta(SHEET.COURSE_CONFIG);
+  var data = configMeta.sheet.getDataRange().getValues();
+
+  for (var i = data.length - 1; i >= 1; i--) {
+    var rowCourseId = normalizeCourseId(
+      getValueByHeader(data[i], configMeta.headerMap, 'course_id') || '',
+    );
+    if (rowCourseId !== normalizedCourseId) {
+      continue;
+    }
+
+    var row = configMeta.sheet.getRange(i + 1, 1, 1, configMeta.columnCount).getValues()[0];
+    setValueByHeader(row, configMeta.headerMap, 'course_id', normalizedCourseId);
+    setValueByHeader(row, configMeta.headerMap, 'total_meetings', parsedTotalMeetings);
+    setValueByHeader(row, configMeta.headerMap, 'updated_at', updatedAtISO);
+    configMeta.sheet.getRange(i + 1, 1, 1, configMeta.columnCount).setValues([row]);
+
+    return {
+      course_id: normalizedCourseId,
+      total_meetings: parsedTotalMeetings,
+      updated_at: updatedAtISO,
+    };
+  }
+
+  var appendRow = new Array(configMeta.columnCount);
+  for (var idx = 0; idx < appendRow.length; idx++) {
+    appendRow[idx] = '';
+  }
+  setValueByHeader(appendRow, configMeta.headerMap, 'course_id', normalizedCourseId);
+  setValueByHeader(appendRow, configMeta.headerMap, 'total_meetings', parsedTotalMeetings);
+  setValueByHeader(appendRow, configMeta.headerMap, 'updated_at', updatedAtISO);
+  configMeta.sheet.appendRow(appendRow);
+
+  return {
+    course_id: normalizedCourseId,
+    total_meetings: parsedTotalMeetings,
+    updated_at: updatedAtISO,
+  };
 }
 
 function getSessionState(criteria) {
@@ -496,15 +619,28 @@ function upsertSessionState(params) {
 function generateQRToken(body) {
   requireField(body, 'course_id');
   requireField(body, 'session_id');
+  requireField(body, 'meeting_no');
 
   var normalizedCourseId = normalizeCourseId(body.course_id);
   var normalizedSessionId = normalizeSessionId(body.session_id);
+  var meetingNo = parseMeetingNo(body.meeting_no);
+  if (!meetingNo) {
+    throw new Error('invalid_meeting_no');
+  }
+  var courseConfig = getCourseMeetingConfig(normalizedCourseId);
+  if (meetingNo < 1 || meetingNo > courseConfig.total_meetings) {
+    throw new Error('meeting_no_out_of_range');
+  }
+
+  var expectedSessionId = buildMeetingSessionId(normalizedCourseId, meetingNo);
+  if (normalizedSessionId !== expectedSessionId) {
+    throw new Error('invalid_session_id_for_meeting');
+  }
+
   var normalizedOwnerIdentifier = body.owner_identifier
     ? normalizeOwnerIdentifier(body.owner_identifier)
     : '';
-  var meetingKey = body.meeting_key
-    ? normalizeMeetingKey(body.meeting_key)
-    : createMeetingKey();
+  var meetingKey = buildMeetingKey(normalizedCourseId, meetingNo);
   var tokensMeta = getSheetMeta(SHEET.TOKENS);
   var now = body.ts ? new Date(body.ts) : new Date();
   var expiresAt = new Date(now.getTime() + QR_TOKEN_TTL_MS);

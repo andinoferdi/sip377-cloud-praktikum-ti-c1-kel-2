@@ -4,7 +4,7 @@ const LECTURER_ACTIVE_QR_KEY = "ctc_dosen_active_qr";
 
 export type LecturerQrFormValues = {
   course_id: string;
-  started_at: string;
+  meeting_no: number;
 };
 
 type LecturerQrSessionState = {
@@ -44,7 +44,7 @@ function isValidFormValues(values: unknown): values is LecturerQrFormValues {
   const candidate = values as Partial<LecturerQrFormValues>;
   return (
     typeof candidate.course_id === "string" &&
-    typeof candidate.started_at === "string"
+    typeof candidate.meeting_no === "number"
   );
 }
 
@@ -85,7 +85,7 @@ export function readLecturerQrSessionState(ownerIdentifier: string | null) {
 
     const normalizedFormValues: LecturerQrFormValues = {
       course_id: parsed.form_values.course_id,
-      started_at: parsed.form_values.started_at,
+      meeting_no: parsed.form_values.meeting_no,
     };
 
     return {

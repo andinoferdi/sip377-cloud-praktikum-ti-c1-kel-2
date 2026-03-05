@@ -19,6 +19,23 @@ export function buildAttendanceSessionId(params: {
   return `${params.courseId}-${datePart}`;
 }
 
+export function buildAttendanceSessionIdByMeeting(params: {
+  courseId: string;
+  meetingNo: number;
+}) {
+  const meetingNo = Number.isFinite(params.meetingNo)
+    ? Math.max(1, Math.trunc(params.meetingNo))
+    : 1;
+  return `${params.courseId}-p${meetingNo.toString().padStart(2, "0")}`;
+}
+
+export function parseMeetingNoFromSessionId(sessionId: string): number | null {
+  const match = sessionId.match(/-p(\d{2})$/i);
+  if (!match) return null;
+  const parsed = Number.parseInt(match[1], 10);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 function isValidTimestamp(value: string) {
   return Number.isFinite(Date.parse(value));
 }

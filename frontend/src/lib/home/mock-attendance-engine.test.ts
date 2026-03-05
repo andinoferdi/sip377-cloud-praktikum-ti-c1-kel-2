@@ -6,7 +6,8 @@ describe("mock-attendance-engine", () => {
     const engine = createAttendanceSimulationEngine();
     const generated = engine.generateToken({
       course_id: "cloud-101",
-      session_id: "sesi-02",
+      session_id: "cloud-101-p01",
+      meeting_no: 1,
       ts: "2026-02-27T10:00:00.000Z",
     });
 
@@ -18,7 +19,7 @@ describe("mock-attendance-engine", () => {
       user_id: "2023xxxx",
       device_id: "dev-001",
       course_id: "cloud-101",
-      session_id: "sesi-02",
+      session_id: "cloud-101-p01",
       qr_token: generated.data.qr_token,
       ts: "2026-02-27T10:00:30.000Z",
     });
@@ -26,7 +27,7 @@ describe("mock-attendance-engine", () => {
       user_id: "2023yyyy",
       device_id: "dev-002",
       course_id: "cloud-101",
-      session_id: "sesi-02",
+      session_id: "cloud-101-p01",
       qr_token: generated.data.qr_token,
       ts: "2026-02-27T10:00:40.000Z",
     });
@@ -39,7 +40,8 @@ describe("mock-attendance-engine", () => {
     const engine = createAttendanceSimulationEngine();
     const generated = engine.generateToken({
       course_id: "cloud-101",
-      session_id: "sesi-02",
+      session_id: "cloud-101-p01",
+      meeting_no: 1,
       ts: "2026-02-27T10:00:00.000Z",
     });
 
@@ -51,7 +53,7 @@ describe("mock-attendance-engine", () => {
       user_id: "2023xxxx",
       device_id: "dev-001",
       course_id: "cloud-101",
-      session_id: "sesi-02",
+      session_id: "cloud-101-p01",
       qr_token: generated.data.qr_token,
       ts: "2026-02-27T10:00:30.000Z",
     });
@@ -59,7 +61,7 @@ describe("mock-attendance-engine", () => {
       user_id: "2023xxxx",
       device_id: "dev-001",
       course_id: "cloud-101",
-      session_id: "sesi-02",
+      session_id: "cloud-101-p01",
       qr_token: generated.data.qr_token,
       ts: "2026-02-27T10:00:40.000Z",
     });
@@ -72,7 +74,8 @@ describe("mock-attendance-engine", () => {
     const engine = createAttendanceSimulationEngine();
     const generated = engine.generateToken({
       course_id: "cloud-101",
-      session_id: "sesi-02",
+      session_id: "cloud-101-p01",
+      meeting_no: 1,
       ts: "2026-02-27T10:00:00.000Z",
     });
 
@@ -84,7 +87,7 @@ describe("mock-attendance-engine", () => {
       user_id: "2023xxxx",
       device_id: "dev-001",
       course_id: "cloud-202",
-      session_id: "sesi-02",
+      session_id: "cloud-101-p01",
       qr_token: generated.data.qr_token,
       ts: "2026-02-27T10:00:30.000Z",
     });

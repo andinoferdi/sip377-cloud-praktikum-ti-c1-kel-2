@@ -1,18 +1,19 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
-import DatePicker from "@/components/ui/date-picker";
+import Select from "@/components/ui/select";
 import StyledQr from "@/components/ui/styled-qr";
 import { getAuthSession } from "@/lib/auth/session";
 import { getErrorMessage } from "@/lib/errors";
 import { normalizeStopSessionErrorMessage } from "@/lib/home/qr-stop-errors";
 import { attendanceGasService } from "@/services/attendance-gas-service";
 import {
-  buildAttendanceSessionId,
+  buildAttendanceSessionIdByMeeting,
+  parseMeetingNoFromSessionId,
   isExpiredTimestamp,
   serializeAttendanceQrPayload,
 } from "@/utils/home/attendance-qr";
@@ -21,58 +22,51 @@ import {
   readLecturerQrSessionState,
   saveLecturerQrSessionState,
 } from "@/utils/home/lecturer-qr-session";
-import { Clock, QrCode, RefreshCw } from "lucide-react";
+import { QrCode, RefreshCw } from "lucide-react";
 
 const QR_TOTAL_SECONDS = 120;
 const QR_RETRY_MS = 5_000;
-
-function toLocalDateTimeInputValue(date: Date) {
-  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
-  return localDate.toISOString().slice(0, 19);
-}
-
-function normalizeStartedAtForInput(value: string | null | undefined) {
-  if (!value) return toLocalDateTimeInputValue(new Date());
-  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/.test(value)) {
-    return value.length === 16 ? `${value}:00` : value;
-  }
-  const parsedDate = new Date(value);
-  if (Number.isNaN(parsedDate.getTime())) return toLocalDateTimeInputValue(new Date());
-  return toLocalDateTimeInputValue(parsedDate);
-}
+const DEFAULT_TOTAL_MEETINGS = 14;
 
 const createQrSchema = z.object({
   course_id: z.string().trim().min(1, "course_id wajib diisi"),
-  started_at: z.string().trim().min(1, "started_at wajib diisi"),
+  meeting_no: z.string().trim().min(1, "meeting_no wajib dipilih"),
 });
 
 type CreateQrForm = z.infer<typeof createQrSchema>;
 type GenerateQrParams = {
-  values: CreateQrForm;
+  values: NormalizedCreateQrForm;
   fixedSessionId?: string;
   meetingKey?: string;
+};
+type NormalizedCreateQrForm = {
+  course_id: string;
+  meeting_no: number;
 };
 
 function normalizeCourseId(value: string) {
   return value.trim().toLowerCase();
 }
 
-function normalizeCreateQrForm(values: CreateQrForm): CreateQrForm {
+function normalizeMeetingNo(value: string): number {
+  const parsed = Number.parseInt(value, 10);
+  if (Number.isNaN(parsed) || parsed < 1) {
+    return 1;
+  }
+  return parsed;
+}
+
+function normalizeCreateQrForm(values: CreateQrForm): NormalizedCreateQrForm {
   return {
     course_id: normalizeCourseId(values.course_id),
-    started_at: values.started_at.trim(),
+    meeting_no: normalizeMeetingNo(values.meeting_no),
   };
 }
 
 const DEFAULT_VALUES: CreateQrForm = {
   course_id: "cloud-101",
-  started_at: toLocalDateTimeInputValue(new Date()),
+  meeting_no: "1",
 };
-
-const FORM_FIELDS = [
-  { name: "course_id" as const, label: "Course ID", placeholder: "cloud-101" },
-  { name: "started_at" as const, label: "Waktu Mulai", placeholder: "Pilih waktu mulai" },
-] as const;
 
 const LABEL_CLASS =
   "mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.08em] text-(--token-gray-400) dark:text-(--token-gray-500)";
@@ -257,9 +251,9 @@ export default function DosenCreateQrPage() {
   const form = useForm<CreateQrForm>({
     resolver: zodResolver(createQrSchema),
     defaultValues: {
-      ...(persistedQrState?.form_values ?? DEFAULT_VALUES),
-      started_at: normalizeStartedAtForInput(
-        persistedQrState?.form_values?.started_at ?? DEFAULT_VALUES.started_at,
+      course_id: persistedQrState?.form_values?.course_id ?? DEFAULT_VALUES.course_id,
+      meeting_no: String(
+        persistedQrState?.form_values?.meeting_no ?? DEFAULT_VALUES.meeting_no,
       ),
     },
   });
@@ -278,20 +272,54 @@ export default function DosenCreateQrPage() {
   const [rotationError, setRotationError] = useState<string | null>(null);
 
   const rotationTimerRef = useRef<number | null>(null);
+  const watchedCourseId = useWatch({ control: form.control, name: "course_id" });
+  const watchedMeetingNo = useWatch({ control: form.control, name: "meeting_no" });
+  const normalizedWatchedCourseId = normalizeCourseId(watchedCourseId ?? "");
+
+  const courseConfigQuery = useQuery({
+    queryKey: ["course-config", normalizedWatchedCourseId],
+    enabled: normalizedWatchedCourseId.length > 0,
+    queryFn: async () => {
+      const response = await attendanceGasService.getCourseMeetingConfig({
+        course_id: normalizedWatchedCourseId,
+      });
+      if (!response.ok) {
+        throw new Error(response.error);
+      }
+      return response.data;
+    },
+  });
+
+  const totalMeetings = courseConfigQuery.data?.total_meetings ?? DEFAULT_TOTAL_MEETINGS;
+  const meetingOptions = useMemo(
+    () =>
+      Array.from({ length: totalMeetings }, (_, index) => ({
+        value: String(index + 1),
+        label: `Pertemuan ${index + 1}`,
+      })),
+    [totalMeetings],
+  );
+
+  useEffect(() => {
+    const currentMeetingNo = normalizeMeetingNo(watchedMeetingNo ?? "1");
+    if (currentMeetingNo > totalMeetings) {
+      form.setValue("meeting_no", String(totalMeetings), { shouldValidate: true });
+    }
+  }, [form, totalMeetings, watchedMeetingNo]);
 
   const generateMutation = useMutation({
     mutationFn: async (params: GenerateQrParams) => {
-      const normalizedValues = normalizeCreateQrForm(params.values);
-      const sessionId =
-        params.fixedSessionId ??
-        buildAttendanceSessionId({
+      const normalizedValues = params.values;
+      const sessionId = params.fixedSessionId
+        ?? buildAttendanceSessionIdByMeeting({
           courseId: normalizedValues.course_id,
-          startedAt: normalizedValues.started_at,
+          meetingNo: normalizedValues.meeting_no,
         });
 
       const response = await attendanceGasService.generateToken({
         course_id: normalizedValues.course_id,
         session_id: sessionId,
+        meeting_no: normalizedValues.meeting_no,
         ts: new Date().toISOString(),
         owner_identifier: sessionIdentifier ?? undefined,
         meeting_key: params.meetingKey,
@@ -310,7 +338,7 @@ export default function DosenCreateQrPage() {
 
       return payload;
     },
-    onSuccess: (payload) => {
+    onSuccess: (payload, params) => {
       const nextRotationTimestamp = payload.expires_at;
       setIsStopped(false);
       setActivePayload(payload);
@@ -321,7 +349,7 @@ export default function DosenCreateQrPage() {
         activePayload: payload,
         nextRotationAt: nextRotationTimestamp,
         isStopped: false,
-        formValues: normalizeCreateQrForm(form.getValues()),
+        formValues: params.values,
       });
     },
   });
@@ -416,7 +444,7 @@ export default function DosenCreateQrPage() {
         }
         try {
           await generateMutation.mutateAsync({
-            values: form.getValues(),
+            values: normalizeCreateQrForm(form.getValues()),
             fixedSessionId: activePayload.session_id,
             meetingKey: activePayload.meeting_key,
           });
@@ -448,18 +476,17 @@ export default function DosenCreateQrPage() {
     return serializeAttendanceQrPayload(activePayload);
   }, [activePayload]);
 
-  const watchedCourseId = useWatch({ control: form.control, name: "course_id" });
-  const watchedStartedAt = useWatch({ control: form.control, name: "started_at" });
-
   const browserTimeZone = useMemo(
     () => Intl.DateTimeFormat().resolvedOptions().timeZone ?? "Browser local timezone",
     [],
   );
 
-  const sessionPreview = buildAttendanceSessionId({
-    courseId: normalizeCourseId(watchedCourseId ?? ""),
-    startedAt: watchedStartedAt ?? "",
+  const sessionPreview = buildAttendanceSessionIdByMeeting({
+    courseId: normalizedWatchedCourseId || DEFAULT_VALUES.course_id,
+    meetingNo: normalizeMeetingNo(watchedMeetingNo ?? DEFAULT_VALUES.meeting_no),
   });
+  const previewMeetingNo = parseMeetingNoFromSessionId(sessionPreview)
+    ?? normalizeMeetingNo(watchedMeetingNo ?? DEFAULT_VALUES.meeting_no);
 
   const isActiveQr =
     !!activePayload && !isStopped && !isExpiredTimestamp(activePayload.expires_at);
@@ -497,50 +524,52 @@ export default function DosenCreateQrPage() {
             onSubmit={form.handleSubmit((values) => {
               const normalizedValues = normalizeCreateQrForm(values);
               form.setValue("course_id", normalizedValues.course_id, { shouldValidate: true });
+              form.setValue("meeting_no", String(normalizedValues.meeting_no), {
+                shouldValidate: true,
+              });
               setIsStopped(false);
               generateMutation.mutate({ values: normalizedValues });
             })}
           >
-            {FORM_FIELDS.map((field) => (
-              <div key={field.name}>
-                <label className={LABEL_CLASS}>{field.label}</label>
-                {field.name === "started_at" ? (
-                  <>
-                    <input type="hidden" {...form.register(field.name)} />
-                    <DatePicker
-                      id={`${field.name}_picker`}
-                      mode="single"
-                      defaultDate={watchedStartedAt || undefined}
-                      placeholder={field.placeholder}
-                      onChange={(selectedDates) => {
-                        const selected = selectedDates?.[0];
-                        if (!selected) return;
-                        form.setValue(
-                          field.name,
-                          toLocalDateTimeInputValue(selected),
-                          { shouldValidate: true },
-                        );
-                      }}
-                    />
-                  </>
-                ) : (
-                  <input
-                    {...form.register(field.name)}
-                    type="text"
-                    placeholder={field.placeholder}
-                    className={INPUT_CLASS}
-                    autoCapitalize="off"
-                    autoCorrect="off"
-                    spellCheck={false}
-                  />
-                )}
-                {form.formState.errors[field.name]?.message && (
-                  <p className="mt-1 text-xs text-red-500">
-                    {form.formState.errors[field.name]!.message}
-                  </p>
-                )}
-              </div>
-            ))}
+            <div>
+              <label className={LABEL_CLASS}>Course ID</label>
+              <input
+                {...form.register("course_id")}
+                type="text"
+                placeholder="cloud-101"
+                className={INPUT_CLASS}
+                autoCapitalize="off"
+                autoCorrect="off"
+                spellCheck={false}
+              />
+              {form.formState.errors.course_id?.message && (
+                <p className="mt-1 text-xs text-red-500">
+                  {form.formState.errors.course_id.message}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className={LABEL_CLASS}>Pertemuan</label>
+              <Select
+                value={watchedMeetingNo ?? "1"}
+                onChange={(value) =>
+                  form.setValue("meeting_no", value, { shouldValidate: true })
+                }
+                options={meetingOptions}
+                hasSearch
+                searchPlaceholder="Cari pertemuan..."
+                placeholder="Pilih pertemuan"
+              />
+              <p className="mt-1 text-xs text-(--token-gray-400) dark:text-(--token-gray-500)">
+                Total pertemuan course ini: {totalMeetings}
+              </p>
+              {form.formState.errors.meeting_no?.message && (
+                <p className="mt-1 text-xs text-red-500">
+                  {form.formState.errors.meeting_no.message}
+                </p>
+              )}
+            </div>
 
             {/* Session preview */}
             <div className="rounded-lg border border-soft bg-(--token-gray-50) px-3 py-2.5 dark:bg-(--token-white-5)">
@@ -550,7 +579,16 @@ export default function DosenCreateQrPage() {
               <p className="break-all font-mono text-xs text-(--token-gray-700) dark:text-(--token-gray-300)">
                 {sessionPreview}
               </p>
+              <p className="mt-1 text-xs text-(--token-gray-500) dark:text-(--token-gray-400)">
+                Pertemuan {previewMeetingNo} / {totalMeetings}
+              </p>
             </div>
+
+            {courseConfigQuery.isError && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-400">
+                Gagal mengambil konfigurasi total pertemuan. Menggunakan default {DEFAULT_TOTAL_MEETINGS}.
+              </div>
+            )}
 
             {/* Actions */}
             <div className="flex flex-wrap gap-2 pt-1">
@@ -583,19 +621,6 @@ export default function DosenCreateQrPage() {
                 ) : (
                   "Stop QR"
                 )}
-              </button>
-
-              <button
-                type="button"
-                onClick={() =>
-                  form.setValue("started_at", toLocalDateTimeInputValue(new Date()), {
-                    shouldValidate: true,
-                  })
-                }
-                className="inline-flex items-center gap-1.5 rounded-lg border border-soft px-4 py-2.5 text-sm font-medium text-(--token-gray-600) transition-colors hover:bg-(--token-gray-100) dark:text-(--token-gray-300) dark:hover:bg-(--token-white-5)"
-              >
-                <Clock size={13} />
-                Waktu Sekarang
               </button>
             </div>
 

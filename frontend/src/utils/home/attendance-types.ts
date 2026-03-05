@@ -22,6 +22,7 @@ export type AttendanceQrPayload = {
 export type AttendanceQrRequest = {
   course_id: string;
   session_id: string;
+  meeting_no: number;
   ts: string;
   owner_identifier?: string;
   meeting_key?: string;
@@ -118,4 +119,25 @@ export type ActiveSessionsData = {
   owner_identifier: string;
   total: number;
   items: ActiveSessionItem[];
+};
+
+export type CourseMeetingConfigRequest = {
+  course_id: string;
+};
+
+export type CourseMeetingConfigData = {
+  course_id: string;
+  total_meetings: number;
+};
+
+export type CourseMeetingConfigUpsertRequest = {
+  course_id: string;
+  total_meetings: number;
+  ts?: string;
+};
+
+export type CourseMeetingConfigUpsertData = {
+  course_id: string;
+  total_meetings: number;
+  updated_at: string;
 };

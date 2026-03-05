@@ -2,8 +2,14 @@
 
 import * as React from "react";
 import * as SelectPrimitive from "@radix-ui/react-select";
-import { CheckIcon, ChevronDownIcon, SearchIcon, XIcon } from "lucide-react";
+import {
+  CheckIcon,
+  ChevronDownIcon,
+  SearchIcon,
+  XIcon,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
+
 
 export type SelectOption = {
   label: string;
@@ -18,6 +24,8 @@ type SimpleSelectProps = {
   className?: string;
   placeholder?: string;
   disabled?: boolean;
+  hasSearch?: boolean;
+  searchPlaceholder?: string;
 };
 
 interface SelectTriggerProps
@@ -26,7 +34,23 @@ interface SelectTriggerProps
   hasError?: boolean;
 }
 
+interface SelectContentProps
+  extends React.ComponentProps<typeof SelectPrimitive.Content> {
+  hasSearch?: boolean;
+  onSearchChange?: (value: string) => void;
+  searchValue?: string;
+  searchPlaceholder?: string;
+}
+
+interface SelectItemProps
+  extends React.ComponentProps<typeof SelectPrimitive.Item> {
+  icon?: React.ReactNode;
+  badge?: React.ReactNode;
+}
+
+
 const Select = SelectPrimitive.Root;
+
 
 const SelectTrigger = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Trigger>,
@@ -37,7 +61,7 @@ const SelectTrigger = React.forwardRef<
     data-slot="select-trigger"
     data-size={size}
     className={cn(
-      "group relative flex w-full items-center justify-between gap-2 rounded-xl border transition-all duration-200 cursor-pointer",
+      "group relative flex w-full items-center justify-between gap-2 rounded-xl border transition-all duration-200 cursor-pointer outline-none",
       "border-(--token-gray-300) bg-(--token-white) text-(--token-gray-900)",
       "focus-visible:border-primary-500 focus-visible:ring-2 focus-visible:ring-primary-500/20",
       "disabled:cursor-not-allowed disabled:opacity-50",
@@ -45,30 +69,28 @@ const SelectTrigger = React.forwardRef<
       "dark:border-(--color-marketing-dark-border) dark:bg-(--color-surface-dark-subtle) dark:text-(--token-white-90)",
       hasError &&
         "border-red-400 focus-visible:border-red-500 focus-visible:ring-red-500/20 dark:border-red-500/50",
-      {
-        "h-10 px-3 text-sm": size === "sm",
-        "h-12 px-4 text-sm": size === "default",
-        "h-14 px-5 text-base": size === "lg",
-      },
+      size === "sm" && "h-10 px-3 text-sm",
+      size === "default" && "h-12 px-4 text-sm",
+      size === "lg" && "h-14 px-5 text-base",
       className,
     )}
     {...props}
   >
     {children}
     <SelectPrimitive.Icon asChild>
-      <ChevronDownIcon className="size-4 shrink-0 text-(--token-gray-400) transition-transform group-data-[state=open]:rotate-180 dark:text-(--token-gray-500)" />
+      <ChevronDownIcon
+        className={cn(
+          "size-4 shrink-0 text-(--token-gray-400) transition-transform duration-200",
+          "group-data-[state=open]:rotate-180",
+          "dark:text-(--token-gray-500)",
+        )}
+      />
     </SelectPrimitive.Icon>
   </SelectPrimitive.Trigger>
 ));
 SelectTrigger.displayName = "SelectTrigger";
 
-interface SelectContentProps
-  extends React.ComponentProps<typeof SelectPrimitive.Content> {
-  hasSearch?: boolean;
-  onSearchChange?: (value: string) => void;
-  searchValue?: string;
-  searchPlaceholder?: string;
-}
+
 
 const SelectContent = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Content>,
@@ -91,25 +113,36 @@ const SelectContent = React.forwardRef<
       <SelectPrimitive.Content
         ref={ref}
         data-slot="select-content"
+        position={position}
         className={cn(
-          "border border-(--token-gray-300) bg-(--token-white) text-(--token-gray-900)",
+          "relative z-50 min-w-32 overflow-hidden rounded-xl shadow-lg border",
+          "border-(--token-gray-300) bg-(--token-white) text-(--token-gray-900)",
+          "dark:border-(--color-marketing-dark-border) dark:bg-(--color-surface-dark-subtle) dark:text-(--token-white-90)",
           "data-[state=open]:animate-in data-[state=closed]:animate-out",
           "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
           "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
           "data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2",
           "data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
-          "relative z-50 min-w-32 overflow-hidden rounded-xl shadow-lg dark:border-(--color-marketing-dark-border) dark:bg-(--color-surface-dark-subtle) dark:text-(--token-white-90)",
           position === "popper" &&
             "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
           className,
         )}
-        position={position}
+        style={
+          position === "popper"
+            ? { width: "var(--radix-select-trigger-width)" }
+            : undefined
+        }
         {...props}
       >
+        {/* Search input — sticky above scroll area */}
         {hasSearch && (
           <div
             data-slot="select-input-wrapper"
-            className="sticky top-0 z-10 border-b border-(--token-gray-200) bg-(--token-white) dark:border-(--color-marketing-dark-border) dark:bg-(--color-surface-dark-subtle)"
+            className={cn(
+              "sticky top-0 z-10 border-b",
+              "border-(--token-gray-200) bg-(--token-white)",
+              "dark:border-(--color-marketing-dark-border) dark:bg-(--color-surface-dark-subtle)",
+            )}
           >
             <div className="flex items-center gap-2 px-3 py-2">
               <SearchIcon className="size-4 shrink-0 text-(--token-gray-400) dark:text-(--token-gray-500)" />
@@ -117,8 +150,11 @@ const SelectContent = React.forwardRef<
                 placeholder={searchPlaceholder}
                 value={searchValue}
                 onChange={(e) => onSearchChange?.(e.target.value)}
+                // Prevent Radix from closing on key presses inside the input
+                onKeyDown={(e) => e.stopPropagation()}
                 className={cn(
-                  "flex h-8 w-full bg-transparent text-sm text-(--token-gray-900) outline-none dark:text-(--token-white-90)",
+                  "flex h-8 w-full bg-transparent text-sm outline-none",
+                  "text-(--token-gray-900) dark:text-(--token-white-90)",
                   "placeholder:text-(--token-gray-400) dark:placeholder:text-(--token-gray-500)",
                   "disabled:cursor-not-allowed disabled:opacity-50",
                 )}
@@ -136,12 +172,28 @@ const SelectContent = React.forwardRef<
             </div>
           </div>
         )}
+
+        {/*
+          Viewport: native scrollbar, fixed height.
+          - overflow-y-auto  → real scroll, not fake
+          - max-h-56         → fixed cap, no Radix CSS var that recalculates
+          - [&::-webkit-scrollbar]:w-1.5 etc → styled thin scrollbar
+          - [touch-action:pan-y] → smooth on mobile
+        */}
         <SelectPrimitive.Viewport
           className={cn(
-            "p-1 overflow-x-hidden overflow-y-auto",
-            hasSearch ? "max-h-75" : "max-h-100",
-            position === "popper" &&
-              "h-(--radix-select-trigger-height) w-full min-w-(--radix-select-trigger-width) scroll-my-1",
+            "p-1 overflow-y-auto overscroll-contain [touch-action:pan-y]",
+            "max-h-56",
+            "[&::-webkit-scrollbar]:w-1.5",
+            "[&::-webkit-scrollbar]:block",
+            "[&::-webkit-scrollbar-track]:my-1 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-(--token-gray-100)",
+            "[&::-webkit-scrollbar-thumb]:rounded-full",
+            "[&::-webkit-scrollbar-thumb]:bg-(--token-gray-300)",
+            "[&::-webkit-scrollbar-thumb:hover]:bg-(--token-gray-400)",
+            "dark:[&::-webkit-scrollbar-track]:bg-(--token-white-5)",
+            "dark:[&::-webkit-scrollbar-thumb]:bg-(--token-white-20)",
+            "dark:[&::-webkit-scrollbar-thumb:hover]:bg-(--token-white-30)",
+            "pr-3",
           )}
         >
           {children}
@@ -151,6 +203,7 @@ const SelectContent = React.forwardRef<
   ),
 );
 SelectContent.displayName = "SelectContent";
+
 
 const SelectGroup = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Group>,
@@ -165,6 +218,7 @@ const SelectGroup = React.forwardRef<
 ));
 SelectGroup.displayName = "SelectGroup";
 
+
 const SelectLabel = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Label>,
   React.ComponentProps<typeof SelectPrimitive.Label>
@@ -173,7 +227,8 @@ const SelectLabel = React.forwardRef<
     ref={ref}
     data-slot="select-label"
     className={cn(
-      "px-3 py-2 text-xs font-semibold uppercase tracking-wide text-(--token-gray-400) dark:text-(--token-gray-500)",
+      "px-3 py-2 text-xs font-semibold uppercase tracking-wide",
+      "text-(--token-gray-400) dark:text-(--token-gray-500)",
       className,
     )}
     {...props}
@@ -181,10 +236,6 @@ const SelectLabel = React.forwardRef<
 ));
 SelectLabel.displayName = "SelectLabel";
 
-interface SelectItemProps extends React.ComponentProps<typeof SelectPrimitive.Item> {
-  icon?: React.ReactNode;
-  badge?: React.ReactNode;
-}
 
 const SelectItem = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Item>,
@@ -194,26 +245,33 @@ const SelectItem = React.forwardRef<
     ref={ref}
     data-slot="select-item"
     className={cn(
-      "relative flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm outline-none select-none",
-      "text-(--token-gray-800) focus:bg-(--token-gray-100) focus:text-(--token-gray-900) dark:text-(--token-gray-200) dark:focus:bg-(--token-white-8) dark:focus:text-(--token-white)",
+      "relative flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 pr-8 text-sm outline-none select-none",
+      "text-(--token-gray-800) transition-colors",
+      "focus:bg-(--token-gray-100) focus:text-(--token-gray-900)",
+      "hover:bg-(--token-gray-100)",
       "data-disabled:pointer-events-none data-disabled:opacity-50",
-      "hover:bg-(--token-gray-100) dark:hover:bg-(--token-white-8) transition-colors",
-      "data-[state=checked]:bg-(--token-gray-100) data-[state=checked]:text-(--token-gray-900) dark:data-[state=checked]:bg-(--token-white-8) dark:data-[state=checked]:text-(--token-white)",
+      "data-[state=checked]:bg-(--token-gray-100) data-[state=checked]:text-(--token-gray-900)",
+      "dark:text-(--token-gray-200) dark:focus:bg-(--token-white-8) dark:focus:text-(--token-white)",
+      "dark:hover:bg-(--token-white-8)",
+      "dark:data-[state=checked]:bg-(--token-white-8) dark:data-[state=checked]:text-(--token-white)",
       className,
     )}
     {...props}
   >
     {icon && <div className="shrink-0">{icon}</div>}
-    <SelectPrimitive.ItemText className="flex-1">{children}</SelectPrimitive.ItemText>
+    <SelectPrimitive.ItemText className="flex-1 truncate">
+      {children}
+    </SelectPrimitive.ItemText>
     {badge && <div className="shrink-0 text-xs">{badge}</div>}
-    <div className="absolute right-2 flex size-4 items-center justify-center">
+    <span className="absolute right-2 flex size-4 items-center justify-center">
       <SelectPrimitive.ItemIndicator>
         <CheckIcon className="size-4 text-primary-500" />
       </SelectPrimitive.ItemIndicator>
-    </div>
+    </span>
   </SelectPrimitive.Item>
 ));
 SelectItem.displayName = "SelectItem";
+
 
 const SelectValue = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Value>,
@@ -228,6 +286,7 @@ const SelectValue = React.forwardRef<
 ));
 SelectValue.displayName = "SelectValue";
 
+
 const SelectSeparator = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Separator>,
   React.ComponentProps<typeof SelectPrimitive.Separator>
@@ -236,7 +295,7 @@ const SelectSeparator = React.forwardRef<
     ref={ref}
     data-slot="select-separator"
     className={cn(
-      "-mx-1 my-2 h-px bg-(--token-gray-200) dark:bg-(--color-marketing-dark-border)",
+      "-mx-1 my-1 h-px bg-(--token-gray-200) dark:bg-(--color-marketing-dark-border)",
       className,
     )}
     {...props}
@@ -244,14 +303,16 @@ const SelectSeparator = React.forwardRef<
 ));
 SelectSeparator.displayName = "SelectSeparator";
 
+
 const SelectEmpty = ({ children }: { children?: React.ReactNode }) => (
   <div
     data-slot="select-empty"
     className="py-6 text-center text-sm text-(--token-gray-500) dark:text-(--token-gray-400)"
   >
-    {children || "Tidak ada hasil ditemukan"}
+    {children ?? "Tidak ada hasil ditemukan"}
   </div>
 );
+
 
 export default function UiSelect({
   value,
@@ -260,22 +321,53 @@ export default function UiSelect({
   className,
   placeholder = "Pilih opsi",
   disabled,
+  hasSearch = false,
+  searchPlaceholder = "Cari...",
 }: SimpleSelectProps) {
+  const [search, setSearch] = React.useState("");
+
+  const filtered = React.useMemo(() => {
+    if (!hasSearch || !search.trim()) return options;
+    const q = search.toLowerCase();
+    return options.filter((o) => o.label.toLowerCase().includes(q));
+  }, [options, search, hasSearch]);
+
   return (
-    <Select value={value} onValueChange={onChange} disabled={disabled}>
+    <Select
+      value={value}
+      onValueChange={onChange}
+      disabled={disabled}
+      onOpenChange={(open) => {
+        if (!open) setSearch("");
+      }}
+    >
       <SelectTrigger className={className}>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
-      <SelectContent>
-        {options.map((option) => (
-          <SelectItem key={option.value} value={option.value} disabled={option.disabled}>
-            {option.label}
-          </SelectItem>
-        ))}
+      <SelectContent
+        hasSearch={hasSearch}
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchPlaceholder={searchPlaceholder}
+      >
+        {filtered.length > 0 ? (
+          filtered.map((option) => (
+            <SelectItem
+              key={option.value}
+              value={option.value}
+              disabled={option.disabled}
+            >
+              {option.label}
+            </SelectItem>
+          ))
+        ) : (
+          <SelectEmpty />
+        )}
       </SelectContent>
     </Select>
   );
 }
+
 
 export {
   Select,

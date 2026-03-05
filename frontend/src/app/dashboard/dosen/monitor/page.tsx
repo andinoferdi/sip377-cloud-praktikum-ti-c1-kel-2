@@ -9,6 +9,7 @@ import Select from "@/components/ui/select";
 import TablePagination from "@/components/ui/table-pagination";
 import { getErrorMessage } from "@/lib/errors";
 import { attendanceGasService } from "@/services/attendance-gas-service";
+import { parseMeetingNoFromSessionId } from "@/utils/home/attendance-qr";
 import { readLecturerQrSessionState } from "@/utils/home/lecturer-qr-session";
 import { Search, Users, BarChart3, RefreshCw, QrCode, CloudOff } from "lucide-react";
 
@@ -70,10 +71,18 @@ function buildLocalSessionOptions(
       course_id: courseId,
       session_id: sessionId,
       meeting_key: meetingKey ?? null,
-      label: `${courseId} - ${sessionId}`,
+      label: `${courseId} - ${formatMeetingLabel(sessionId)}`,
       source: "local",
     },
   ];
+}
+
+function formatMeetingLabel(sessionId: string) {
+  const meetingNo = parseMeetingNoFromSessionId(sessionId);
+  if (!meetingNo) {
+    return sessionId;
+  }
+  return `Pertemuan ${meetingNo}`;
 }
 
 export default function DosenMonitorPage() {
@@ -143,7 +152,7 @@ export default function DosenMonitorPage() {
       course_id: item.course_id,
       session_id: item.session_id,
       meeting_key: item.meeting_key,
-      label: `${item.course_id} - ${item.session_id}`,
+      label: `${item.course_id} - ${formatMeetingLabel(item.session_id)}`,
       source: "api",
     }));
   }, [activeSessionsQuery.data]);

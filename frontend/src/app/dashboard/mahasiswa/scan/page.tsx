@@ -10,7 +10,11 @@ import { useAuthSession } from "@/lib/auth/use-auth-session";
 import { attendanceGasService } from "@/services/attendance-gas-service";
 import { getOrCreateAttendanceDeviceId } from "@/utils/home/attendance-device-id";
 import { appendAttendanceHistory } from "@/utils/home/attendance-history";
-import { isExpiredTimestamp, parseAttendanceQrPayload } from "@/utils/home/attendance-qr";
+import {
+  isExpiredTimestamp,
+  parseAttendanceQrPayload,
+  parseMeetingNoFromSessionId,
+} from "@/utils/home/attendance-qr";
 import { Camera, CameraOff, CheckCircle2, AlertCircle, RefreshCw } from "lucide-react";
 
 const checkinSchema = z.object({
@@ -178,6 +182,7 @@ export default function MahasiswaScanPage() {
     resolver: zodResolver(checkinSchema),
     defaultValues: { course_id: "", session_id: "", qr_token: "" },
   });
+  const meetingNoFromFormSession = parseMeetingNoFromSessionId(form.watch("session_id") ?? "");
 
   const checkinMutation = useMutation({
     mutationFn: async (values: CheckinForm) => {
@@ -661,6 +666,11 @@ export default function MahasiswaScanPage() {
                   {form.formState.errors[field]?.message && (
                     <p className="mt-1 text-xs text-red-500">
                       {form.formState.errors[field]!.message}
+                    </p>
+                  )}
+                  {field === "session_id" && meetingNoFromFormSession && (
+                    <p className="mt-1 text-xs text-(--token-gray-500) dark:text-(--token-gray-400)">
+                      Terdeteksi sesi pertemuan: Pertemuan {meetingNoFromFormSession}
                     </p>
                   )}
                 </div>

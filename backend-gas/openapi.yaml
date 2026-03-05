@@ -26,7 +26,7 @@ servers:
     description: Google Apps Script Web App
     variables:
       deploymentId:
-        default: AKfycbwH1quz-8p7qLl5MIjzD3tCTWbIQxHgqVHqPt_zWoxI-O7wBFYyYCbxEAn1SSvNRddDhw
+        default: AKfycbyEwneCUhX6ml2dU8hJQB806ST4I4mTQMgtRhIu2ccoUFvPikbL7yspZsw2tma1WtYDHQ
         description: Web App deployment ID
 
 security: []
@@ -46,6 +46,7 @@ paths:
               - presence/status
               - presence/list
               - presence/sessions/active
+              - presence/course/config
               - telemetry/accel/latest
               - telemetry/gps/latest
               - telemetry/gps/history
@@ -66,7 +67,7 @@ paths:
           in: query
           schema:
             type: string
-          description: Required when path=presence/status or path=presence/list. Optional filter when path=presence/sessions/active. Matching is case-insensitive.
+          description: Required when path=presence/status, path=presence/list, or path=presence/course/config. Optional filter when path=presence/sessions/active. Matching is case-insensitive.
         - name: session_id
           in: query
           schema:
@@ -147,12 +148,19 @@ paths:
                       total: 1
                       items:
                         - course_id: "cloud-101"
-                          session_id: "cloud-101-senin-02-202602281626"
-                          meeting_key: "MTG-A1B2C3D4"
+                          session_id: "cloud-101-p01"
+                          meeting_key: "MTG-CLOUD-101-P01"
                           owner_identifier: "198701012020011001"
                           status: "active"
                           started_at: "2026-02-28T09:26:00.000Z"
                           updated_at: "2026-02-28T09:28:00.000Z"
+                courseConfig:
+                  summary: path=presence/course/config
+                  value:
+                    ok: true
+                    data:
+                      course_id: "cloud-101"
+                      total_meetings: 14
                 accelLatest:
                   summary: path=telemetry/accel/latest
                   value:
@@ -205,6 +213,7 @@ paths:
               - presence/qr/generate
               - presence/checkin
               - presence/qr/stop
+              - presence/course/config
               - telemetry/accel
               - telemetry/gps
       requestBody:
@@ -216,6 +225,7 @@ paths:
                 - $ref: '#/components/schemas/GenerateQRRequest'
                 - $ref: '#/components/schemas/CheckinRequest'
                 - $ref: '#/components/schemas/StopSessionRequest'
+                - $ref: '#/components/schemas/CourseMeetingConfigUpdateRequest'
                 - $ref: '#/components/schemas/BatchAccelRequest'
                 - $ref: '#/components/schemas/LogGPSRequest'
       responses:
@@ -231,7 +241,7 @@ paths:
                     data:
                       qr_token: "TKN-8F2A19"
                       expires_at: "2026-02-18T10:02:00Z"
-                      meeting_key: "MTG-A1B2C3D4"
+                      meeting_key: "MTG-CLOUD-101-P01"
                 checkinSuccess:
                   summary: path=presence/checkin
                   value:
@@ -250,10 +260,18 @@ paths:
                     ok: true
                     data:
                       course_id: "cloud-101"
-                      session_id: "cloud-101-senin-02-202602281626"
-                      meeting_key: "MTG-A1B2C3D4"
+                      session_id: "cloud-101-p01"
+                      meeting_key: "MTG-CLOUD-101-P01"
                       status: "stopped"
                       stopped_at: "2026-02-28T09:30:00.000Z"
+                courseConfigUpdate:
+                  summary: path=presence/course/config
+                  value:
+                    ok: true
+                    data:
+                      course_id: "cloud-101"
+                      total_meetings: 14
+                      updated_at: "2026-02-28T09:30:00.000Z"
                 accelBatch:
                   summary: path=telemetry/accel
                   value:
@@ -278,7 +296,7 @@ components:
   schemas:
     GenerateQRRequest:
       type: object
-      required: [course_id, session_id]
+      required: [course_id, session_id, meeting_no]
       properties:
         course_id:
           type: string
@@ -286,16 +304,21 @@ components:
           description: Stored and matched in lowercase form.
         session_id:
           type: string
-          example: sesi-02
-          description: Stored and matched in lowercase form.
+          example: cloud-101-p01
+          description: Must match deterministic format `<course_id>-pNN` for the selected meeting number.
+        meeting_no:
+          type: integer
+          minimum: 1
+          maximum: 20
+          example: 1
         owner_identifier:
           type: string
           example: "198701012020011001"
           description: Optional owner identifier of the lecturer who starts the meeting.
         meeting_key:
           type: string
-          example: MTG-A1B2C3D4
-          description: Optional stable meeting identity. If omitted, backend generates one.
+          example: MTG-CLOUD-101-P01
+          description: Optional field for backward compatibility. Backend uses deterministic meeting key.
         ts:
           type: string
           format: date-time
@@ -344,8 +367,24 @@ components:
           description: Optional owner identifier for consistent stop across meeting state.
         meeting_key:
           type: string
-          example: MTG-A1B2C3D4
+          example: MTG-CLOUD-101-P01
           description: Optional meeting key. If provided, stop is applied to this meeting identity.
+        ts:
+          type: string
+          format: date-time
+
+    CourseMeetingConfigUpdateRequest:
+      type: object
+      required: [course_id, total_meetings]
+      properties:
+        course_id:
+          type: string
+          example: cloud-101
+        total_meetings:
+          type: integer
+          minimum: 1
+          maximum: 20
+          example: 14
         ts:
           type: string
           format: date-time

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   buildAttendanceSessionId,
+  buildAttendanceSessionIdByMeeting,
+  parseMeetingNoFromSessionId,
   parseAttendanceQrPayload,
   serializeAttendanceQrPayload,
 } from "@/utils/home/attendance-qr";
@@ -13,6 +15,16 @@ describe("attendance-qr-utils", () => {
     });
 
     expect(sessionId).toBe("cloud-101-202602271015");
+  });
+
+  it("builds deterministic meeting-based session id format", () => {
+    const sessionId = buildAttendanceSessionIdByMeeting({
+      courseId: "cloud-101",
+      meetingNo: 1,
+    });
+
+    expect(sessionId).toBe("cloud-101-p01");
+    expect(parseMeetingNoFromSessionId(sessionId)).toBe(1);
   });
 
   it("serializes and parses compact qr payload", () => {

@@ -11,6 +11,10 @@ import type {
   AttendanceStatusRequest,
   CheckInData,
   CheckInRequest,
+  CourseMeetingConfigData,
+  CourseMeetingConfigRequest,
+  CourseMeetingConfigUpsertData,
+  CourseMeetingConfigUpsertRequest,
   StopSessionData,
   StopSessionRequest,
 } from "@/utils/home/attendance-types";
@@ -22,6 +26,7 @@ const ATTENDANCE_API_PATHS = {
   status: "/presence/status",
   list: "/presence/list",
   activeSessions: "/presence/sessions/active",
+  courseConfig: "/presence/course/config",
 } as const;
 
 export const attendanceGasService = {
@@ -66,6 +71,26 @@ export const attendanceGasService = {
       {
         method: "GET",
         query: params,
+      },
+    );
+  },
+
+  getCourseMeetingConfig(params: CourseMeetingConfigRequest) {
+    return requestGas<ApiResponse<CourseMeetingConfigData>>(
+      ATTENDANCE_API_PATHS.courseConfig,
+      {
+        method: "GET",
+        query: params,
+      },
+    );
+  },
+
+  setCourseMeetingConfig(payload: CourseMeetingConfigUpsertRequest) {
+    return requestGas<ApiResponse<CourseMeetingConfigUpsertData>>(
+      ATTENDANCE_API_PATHS.courseConfig,
+      {
+        method: "POST",
+        json: payload,
       },
     );
   },

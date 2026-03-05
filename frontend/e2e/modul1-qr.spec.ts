@@ -63,7 +63,6 @@ test("modul 1 qr: dosen generate, mahasiswa checkin, duplicate, stop session", a
 
   await bootstrapDosenSession(page);
   await page.goto("/dashboard/dosen/buat-qr");
-  await page.getByRole("button", { name: "Waktu Sekarang" }).click();
   await page.getByRole("button", { name: "Generate QR" }).click();
 
   await expect(page.getByText("Active")).toBeVisible({ timeout: 20_000 });
