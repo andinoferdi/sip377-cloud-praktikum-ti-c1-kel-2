@@ -270,8 +270,11 @@ export default function DosenCreateQrPage() {
   );
   const [isStopped, setIsStopped] = useState<boolean>(persistedQrState?.is_stopped ?? false);
   const [rotationError, setRotationError] = useState<string | null>(null);
+  const [restoreInfo, setRestoreInfo] = useState<string | null>(null);
 
   const rotationTimerRef = useRef<number | null>(null);
+  const restoredSessionKeyRef = useRef<string | null>(null);
+  const suppressAutoRestoreRef = useRef<boolean>(persistedQrState?.is_stopped ?? false);
   const watchedCourseId = useWatch({ control: form.control, name: "course_id" });
   const watchedMeetingNo = useWatch({ control: form.control, name: "meeting_no" });
   const normalizedWatchedCourseId = normalizeCourseId(watchedCourseId ?? "");
@@ -374,6 +377,28 @@ export default function DosenCreateQrPage() {
     },
   });
 
+  const activeSessionsQuery = useQuery({
+    queryKey: ["create-qr-active-sessions", sessionIdentifier],
+    enabled: Boolean(sessionIdentifier),
+    refetchInterval: 10_000,
+    refetchIntervalInBackground: true,
+    refetchOnWindowFocus: true,
+    queryFn: async () => {
+      if (!sessionIdentifier) {
+        return null;
+      }
+      const response = await attendanceGasService.listActiveSessions({
+        owner_identifier: sessionIdentifier,
+        limit: 5,
+        meeting_only: true,
+      });
+      if (!response.ok) {
+        throw new Error(response.error);
+      }
+      return response.data;
+    },
+  });
+
   function clearRotationTimer() {
     if (rotationTimerRef.current !== null) {
       window.clearTimeout(rotationTimerRef.current);
@@ -387,6 +412,7 @@ export default function DosenCreateQrPage() {
     setActivePayload(null);
     setNextRotationAt(null);
     setRotationError(null);
+    suppressAutoRestoreRef.current = true;
     saveLecturerQrSessionState({
       ownerIdentifier: sessionIdentifier,
       activePayload: null,
@@ -425,6 +451,55 @@ export default function DosenCreateQrPage() {
       },
     );
   }
+
+  useEffect(() => {
+    if (suppressAutoRestoreRef.current) {
+      return;
+    }
+
+    if (activePayload || (!isStopped && persistedQrState?.active_payload)) {
+      return;
+    }
+
+    const latestSession = activeSessionsQuery.data?.items?.[0];
+    if (!latestSession) {
+      return;
+    }
+
+    const sessionKey = `${latestSession.course_id}::${latestSession.session_id}`;
+    if (restoredSessionKeyRef.current === sessionKey || generateMutation.isPending) {
+      return;
+    }
+
+    const derivedMeetingNo =
+      parseMeetingNoFromSessionId(latestSession.session_id) ?? DEFAULT_VALUES.meeting_no;
+    const normalizedValues: NormalizedCreateQrForm = {
+      course_id: normalizeCourseId(latestSession.course_id),
+      meeting_no: Number(derivedMeetingNo),
+    };
+
+    restoredSessionKeyRef.current = sessionKey;
+    setRestoreInfo("Sesi aktif dipulihkan dari backend.");
+    setIsStopped(false);
+    setRotationError(null);
+    form.setValue("course_id", normalizedValues.course_id, { shouldValidate: true });
+    form.setValue("meeting_no", String(normalizedValues.meeting_no), {
+      shouldValidate: true,
+    });
+
+    generateMutation.mutate({
+      values: normalizedValues,
+      fixedSessionId: latestSession.session_id,
+      meetingKey: latestSession.meeting_key ?? undefined,
+    });
+  }, [
+    activePayload,
+    activeSessionsQuery.data,
+    form,
+    generateMutation,
+    isStopped,
+    persistedQrState?.active_payload,
+  ]);
 
   useEffect(() => {
     if (!activePayload || isStopped) {
@@ -527,10 +602,17 @@ export default function DosenCreateQrPage() {
               form.setValue("meeting_no", String(normalizedValues.meeting_no), {
                 shouldValidate: true,
               });
+              suppressAutoRestoreRef.current = false;
               setIsStopped(false);
+              setRestoreInfo(null);
               generateMutation.mutate({ values: normalizedValues });
             })}
           >
+            {restoreInfo && (
+              <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700 dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-300">
+                {restoreInfo}
+              </div>
+            )}
             <div>
               <label className={LABEL_CLASS}>Course ID</label>
               <input

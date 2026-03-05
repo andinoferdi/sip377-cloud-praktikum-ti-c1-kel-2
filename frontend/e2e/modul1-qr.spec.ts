@@ -60,9 +60,11 @@ test("modul 1 qr: mahasiswa login via form", async ({ page }) => {
 
 test("modul 1 qr: dosen generate, mahasiswa checkin, duplicate, stop session", async ({ page }) => {
   test.setTimeout(120_000);
+  const uniqueCourseId = `qa-e2e-${Date.now()}`;
 
   await bootstrapDosenSession(page);
   await page.goto("/dashboard/dosen/buat-qr");
+  await page.locator('input[name="course_id"]').fill(uniqueCourseId);
   await page.getByRole("button", { name: "Generate QR" }).click();
 
   await expect(page.getByText("Active")).toBeVisible({ timeout: 20_000 });
@@ -89,6 +91,7 @@ test("modul 1 qr: dosen generate, mahasiswa checkin, duplicate, stop session", a
 
   await bootstrapDosenSession(page);
   await page.goto("/dashboard/dosen/buat-qr");
+  await expect(page.getByText("Active")).toBeVisible({ timeout: 20_000 });
   await page.getByRole("button", { name: "Stop QR" }).click();
   await expect(page.getByText("Stopped")).toBeVisible({ timeout: 20_000 });
 

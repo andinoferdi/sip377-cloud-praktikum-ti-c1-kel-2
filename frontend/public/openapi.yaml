@@ -26,7 +26,7 @@ servers:
     description: Google Apps Script Web App
     variables:
       deploymentId:
-        default: AKfycbyEwneCUhX6ml2dU8hJQB806ST4I4mTQMgtRhIu2ccoUFvPikbL7yspZsw2tma1WtYDHQ
+        default: AKfycbw-OzcS0UaAOpibOC5UStGWjdw0ux2DNI8XVGeNux1A0njV0dDjkE1f8CpQhedfDcZpqQ
         description: Web App deployment ID
 
 security: []

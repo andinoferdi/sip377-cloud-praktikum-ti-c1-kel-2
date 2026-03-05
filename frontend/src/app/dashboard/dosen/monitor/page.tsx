@@ -64,10 +64,13 @@ function buildLocalSessionOptions(
 
   const { course_id: courseId, session_id: sessionId, meeting_key: meetingKey } =
     snapshot.active_payload;
+  if (!isMeetingSessionId(sessionId)) {
+    return [];
+  }
 
   return [
     {
-      key: `${courseId}::${sessionId}::${meetingKey ?? ""}`,
+      key: `${courseId}::${sessionId}`,
       course_id: courseId,
       session_id: sessionId,
       meeting_key: meetingKey ?? null,
@@ -83,6 +86,10 @@ function formatMeetingLabel(sessionId: string) {
     return sessionId;
   }
   return `Pertemuan ${meetingNo}`;
+}
+
+function isMeetingSessionId(sessionId: string) {
+  return /-p\d{2}$/i.test(String(sessionId || "").trim());
 }
 
 export default function DosenMonitorPage() {
@@ -135,6 +142,7 @@ export default function DosenMonitorPage() {
       const response = await attendanceGasService.listActiveSessions({
         owner_identifier: sessionIdentifier,
         limit: ACTIVE_SESSION_LIMIT,
+        meeting_only: true,
       });
 
       if (!response.ok) {
@@ -147,14 +155,29 @@ export default function DosenMonitorPage() {
 
   const apiSessionOptions = useMemo<ActiveSessionOption[]>(() => {
     const items = activeSessionsQuery.data?.items ?? [];
-    return items.map((item) => ({
-      key: `${item.course_id}::${item.session_id}::${item.meeting_key ?? ""}`,
-      course_id: item.course_id,
-      session_id: item.session_id,
-      meeting_key: item.meeting_key,
-      label: `${item.course_id} - ${formatMeetingLabel(item.session_id)}`,
-      source: "api",
-    }));
+    const dedupMap = new Map<string, ActiveSessionOption>();
+
+    for (const item of items) {
+      if (!isMeetingSessionId(item.session_id)) {
+        continue;
+      }
+
+      const key = `${item.course_id}::${item.session_id}`;
+      if (dedupMap.has(key)) {
+        continue;
+      }
+
+      dedupMap.set(key, {
+        key,
+        course_id: item.course_id,
+        session_id: item.session_id,
+        meeting_key: item.meeting_key,
+        label: `${item.course_id} - ${formatMeetingLabel(item.session_id)}`,
+        source: "api",
+      });
+    }
+
+    return Array.from(dedupMap.values());
   }, [activeSessionsQuery.data]);
 
   const localSessionOptions = useMemo(
@@ -163,6 +186,11 @@ export default function DosenMonitorPage() {
   );
 
   const useLocalFallback = activeSessionsQuery.isError;
+  const hasOnlyLegacySessions = useMemo(() => {
+    const items = activeSessionsQuery.data?.items ?? [];
+    return !useLocalFallback && items.length > 0 && apiSessionOptions.length === 0;
+  }, [activeSessionsQuery.data, apiSessionOptions.length, useLocalFallback]);
+
   const sessionOptions = useMemo(
     () => (useLocalFallback ? localSessionOptions : apiSessionOptions),
     [apiSessionOptions, localSessionOptions, useLocalFallback],
@@ -276,6 +304,12 @@ export default function DosenMonitorPage() {
                 <p className="font-semibold">Gagal mengambil sesi aktif dari backend.</p>
                 <p className="mt-0.5">Menggunakan fallback sesi aktif dari browser ini.</p>
               </div>
+            </div>
+          )}
+
+          {hasOnlyLegacySessions && (
+            <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700 dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-300">
+              Sesi legacy disembunyikan. Gunakan sesi format pertemuan (`course-pNN`).
             </div>
           )}
 

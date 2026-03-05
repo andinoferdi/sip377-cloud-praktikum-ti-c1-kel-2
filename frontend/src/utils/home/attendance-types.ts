@@ -103,6 +103,7 @@ export type ActiveSessionsRequest = {
   owner_identifier: string;
   limit?: number;
   course_id?: string;
+  meeting_only?: boolean;
 };
 
 export type ActiveSessionItem = {

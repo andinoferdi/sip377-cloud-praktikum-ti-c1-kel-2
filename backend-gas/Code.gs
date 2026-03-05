@@ -31,6 +31,7 @@ const HEADER_ALIASES = {
 };
 
 const QR_TOKEN_TTL_MS = 120 * 1000;
+const SESSION_IDLE_TIMEOUT_MS = 5 * 60 * 1000;
 const DEFAULT_TOTAL_MEETINGS = 14;
 const MAX_TOTAL_MEETINGS = 20;
 
@@ -47,7 +48,12 @@ function doGet(e) {
         return sendSuccess(getPresenceList(params.course_id, params.session_id, params.limit));
 
       case 'presence/sessions/active':
-        return sendSuccess(getActiveSessions(params.owner_identifier, params.limit, params.course_id));
+        return sendSuccess(getActiveSessions(
+          params.owner_identifier,
+          params.limit,
+          params.course_id,
+          params.meeting_only,
+        ));
       case 'presence/course/config':
         return sendSuccess(getCourseMeetingConfig(params.course_id));
 
@@ -246,6 +252,74 @@ function buildMeetingKey(courseId, meetingNo) {
     .replace(/[^A-Z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
   return 'MTG-' + normalizedCourseUpper + '-P' + padMeetingNo(meetingNo);
+}
+
+function isMeetingSessionId(value) {
+  return /-p\d{2}$/i.test(String(value || '').trim());
+}
+
+function parseBooleanParam(value) {
+  if (value === true || value === false) {
+    return value;
+  }
+  var normalized = String(value || '').trim().toLowerCase();
+  return normalized === 'true' || normalized === '1' || normalized === 'yes';
+}
+
+function parseDateSafe(value) {
+  if (!value) {
+    return null;
+  }
+
+  var parsed = new Date(value);
+  if (isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  return parsed;
+}
+
+function isSessionIdleExpired(updatedAtValue, nowDate) {
+  var updatedAt = parseDateSafe(updatedAtValue);
+  if (!updatedAt) {
+    return false;
+  }
+
+  var now = nowDate || new Date();
+  return now.getTime() - updatedAt.getTime() > SESSION_IDLE_TIMEOUT_MS;
+}
+
+function markSessionStateStoppedAtRow(sessionMeta, rowNumber, stopAtISO) {
+  if (!sessionMeta || !rowNumber) {
+    return null;
+  }
+
+  var row = sessionMeta.sheet
+    .getRange(rowNumber, 1, 1, sessionMeta.columnCount)
+    .getValues()[0];
+
+  setValueByHeader(row, sessionMeta.headerMap, 'is_stopped', true);
+  setValueByHeader(row, sessionMeta.headerMap, 'stopped_at', stopAtISO);
+  setValueByHeader(row, sessionMeta.headerMap, 'updated_at', stopAtISO);
+
+  sessionMeta.sheet
+    .getRange(rowNumber, 1, 1, sessionMeta.columnCount)
+    .setValues([row]);
+
+  return {
+    course_id: normalizeCourseId(getValueByHeader(row, sessionMeta.headerMap, 'course_id') || ''),
+    session_id: normalizeSessionId(getValueByHeader(row, sessionMeta.headerMap, 'session_id') || ''),
+    meeting_key: normalizeMeetingKey(getValueByHeader(row, sessionMeta.headerMap, 'meeting_key') || '') || null,
+    owner_identifier: normalizeOwnerIdentifier(
+      getValueByHeader(row, sessionMeta.headerMap, 'owner_identifier') || '',
+    ) || null,
+    is_stopped: true,
+    started_at: getValueByHeader(row, sessionMeta.headerMap, 'started_at')
+      ? String(getValueByHeader(row, sessionMeta.headerMap, 'started_at'))
+      : null,
+    stopped_at: stopAtISO,
+    updated_at: stopAtISO,
+  };
 }
 
 function toHeaderKey(value) {
@@ -753,17 +827,25 @@ function checkin(body) {
     throw new Error('token_invalid');
   }
 
+  var hasValidExpiry = tokenRowExpiresAt && !isNaN(tokenRowExpiresAt.getTime());
+  if (hasValidExpiry && checkTime > tokenRowExpiresAt) {
+    throw new Error('token_expired');
+  }
+
   var sessionState = getSessionState({
     meetingKey: tokenRowMeetingKey || null,
     courseId: tokenRowCourseId,
     sessionId: tokenRowSessionId,
   });
   if (sessionState) {
+    if (isSessionIdleExpired(sessionState.updated_at, checkTime)) {
+      var sessionMeta = getSheetMeta(SHEET.SESSION_STATE);
+      markSessionStateStoppedAtRow(sessionMeta, sessionState.row, checkTime.toISOString());
+      throw new Error('session_closed');
+    }
     if (sessionState.is_stopped) {
       throw new Error('session_closed');
     }
-  } else if (tokenRowExpiresAt && checkTime > tokenRowExpiresAt) {
-    throw new Error('token_expired');
   }
 
   var presenceMeta = getSheetMeta(SHEET.PRESENCE);
@@ -820,11 +902,12 @@ function checkin(body) {
   };
 }
 
-function getActiveSessions(ownerIdentifier, limit, courseId) {
+function getActiveSessions(ownerIdentifier, limit, courseId, meetingOnly) {
   requireField({ owner_identifier: ownerIdentifier }, 'owner_identifier');
 
   var normalizedOwnerIdentifier = normalizeOwnerIdentifier(ownerIdentifier);
   var normalizedCourseId = courseId ? normalizeCourseId(courseId) : '';
+  var shouldFilterMeetingOnly = parseBooleanParam(meetingOnly);
   var maxItems = limit ? parseInt(limit, 10) : 20;
   if (isNaN(maxItems) || maxItems <= 0) {
     maxItems = 20;
@@ -833,8 +916,9 @@ function getActiveSessions(ownerIdentifier, limit, courseId) {
   var sessionMeta = getSheetMeta(SHEET.SESSION_STATE);
   var data = sessionMeta.sheet.getDataRange().getValues();
   var items = [];
+  var dedupMap = {};
 
-  for (var i = 1; i < data.length; i++) {
+  for (var i = data.length - 1; i >= 1; i--) {
     var rowOwnerIdentifier = normalizeOwnerIdentifier(
       getValueByHeader(data[i], sessionMeta.headerMap, 'owner_identifier') || '',
     );
@@ -849,8 +933,15 @@ function getActiveSessions(ownerIdentifier, limit, courseId) {
     );
     var isStopped = getValueByHeader(data[i], sessionMeta.headerMap, 'is_stopped') === true ||
       String(getValueByHeader(data[i], sessionMeta.headerMap, 'is_stopped')).toLowerCase() === 'true';
+    var rowUpdatedAt = getValueByHeader(data[i], sessionMeta.headerMap, 'updated_at')
+      ? String(getValueByHeader(data[i], sessionMeta.headerMap, 'updated_at'))
+      : '';
 
     if (isStopped) {
+      continue;
+    }
+    if (isSessionIdleExpired(rowUpdatedAt, new Date())) {
+      markSessionStateStoppedAtRow(sessionMeta, i + 1, nowISO());
       continue;
     }
     if (rowOwnerIdentifier !== normalizedOwnerIdentifier) {
@@ -859,6 +950,15 @@ function getActiveSessions(ownerIdentifier, limit, courseId) {
     if (normalizedCourseId && rowCourseId !== normalizedCourseId) {
       continue;
     }
+    if (shouldFilterMeetingOnly && !isMeetingSessionId(rowSessionId)) {
+      continue;
+    }
+
+    var dedupKey = rowCourseId + '::' + rowSessionId;
+    if (dedupMap[dedupKey]) {
+      continue;
+    }
+    dedupMap[dedupKey] = true;
 
     items.push({
       course_id: rowCourseId,
