@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Accelerometer - GAS Backend</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        .section { margin-bottom: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .data { font-family: monospace; background: #f5f5f5; padding: 10px; margin: 10px 0; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        input { padding: 8px; margin: 5px; }
+        .status { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Test Modul Accelerometer</h1>
+
+        <div class="section">
+            <h2>Konfigurasi</h2>
+            <label>Device ID: <input type="text" id="deviceId" value="dev-test-001"></label><br>
+            <label>Batch Interval (detik): <input type="number" id="batchInterval" value="5" min="1"></label>
+        </div>
+
+        <div class="section">
+            <h2>Data Accelerometer Saat Ini</h2>
+            <div id="currentData" class="data">Belum ada data</div>
+            <button id="startBtn">Mulai Pengumpulan</button>
+            <button id="stopBtn" disabled>Stop Pengumpulan</button>
+            <button id="sendBatchBtn" disabled>Kirim Batch</button>
+        </div>
+
+        <div class="section">
+            <h2>Data Terbaru dari Server</h2>
+            <div id="latestData" class="data">Belum diambil</div>
+            <button id="getLatestBtn">Ambil Data Terbaru</button>
+        </div>
+
+        <div class="section">
+            <h2>Log</h2>
+            <div id="log" class="data"></div>
+        </div>
+    </div>
+
+    <script>
+        let isCollecting = false;
+        let samples = [];
+        let batchTimer = null;
+        let deviceId = document.getElementById('deviceId').value;
+        let batchInterval = parseInt(document.getElementById('batchInterval').value) * 1000;
+
+        const currentDataEl = document.getElementById('currentData');
+        const latestDataEl = document.getElementById('latestData');
+        const logEl = document.getElementById('log');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const sendBatchBtn = document.getElementById('sendBatchBtn');
+        const getLatestBtn = document.getElementById('getLatestBtn');
+
+        // Update device ID on change
+        document.getElementById('deviceId').addEventListener('change', (e) => {
+            deviceId = e.target.value;
+        });
+
+        // Update batch interval on change
+        document.getElementById('batchInterval').addEventListener('change', (e) => {
+            batchInterval = parseInt(e.target.value) * 1000;
+            if (isCollecting) {
+                clearInterval(batchTimer);
+                batchTimer = setInterval(sendBatch, batchInterval);
+            }
+        });
+
+        // Start collecting
+        startBtn.addEventListener('click', () => {
+            if (!isCollecting) {
+                startCollecting();
+            }
+        });
+
+        // Stop collecting
+        stopBtn.addEventListener('click', () => {
+            if (isCollecting) {
+                stopCollecting();
+            }
+        });
+
+        // Send batch manually
+        sendBatchBtn.addEventListener('click', () => {
+            sendBatch();
+        });
+
+        // Get latest data
+        getLatestBtn.addEventListener('click', () => {
+            getLatest();
+        });
+
+        function startCollecting() {
+            if (typeof DeviceMotionEvent !== 'undefined') {
+                window.addEventListener('devicemotion', handleMotion);
+                isCollecting = true;
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+                sendBatchBtn.disabled = false;
+                batchTimer = setInterval(sendBatch, batchInterval);
+                log('Pengumpulan data dimulai');
+            } else {
+                log('Accelerometer tidak didukung di browser ini', 'error');
+            }
+        }
+
+        function stopCollecting() {
+            window.removeEventListener('devicemotion', handleMotion);
+            isCollecting = false;
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            sendBatchBtn.disabled = true;
+            clearInterval(batchTimer);
+            log('Pengumpulan data dihentikan');
+        }
+
+        function handleMotion(event) {
+            const x = event.accelerationIncludingGravity.x || 0;
+            const y = event.accelerationIncludingGravity.y || 0;
+            const z = event.accelerationIncludingGravity.z || 0;
+            const t = new Date().toISOString();
+
+            currentDataEl.textContent = `x: ${x.toFixed(2)}, y: ${y.toFixed(2)}, z: ${z.toFixed(2)}`;
+
+            samples.push({ t, x, y, z });
+        }
+
+        async function sendBatch() {
+            if (samples.length === 0) {
+                log('Tidak ada sample untuk dikirim');
+                return;
+            }
+
+            const payload = {
+                device_id: deviceId,
+                ts: new Date().toISOString(),
+                samples: [...samples]
+            };
+
+            try {
+                const response = await fetch('/exec?path=telemetry/accel', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                if (result.ok) {
+                    log(`Batch dikirim: ${result.data.accepted} sample diterima`);
+                    samples = []; // Clear samples after successful send
+                } else {
+                    log(`Error: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                log(`Network error: ${error.message}`, 'error');
+            }
+        }
+
+        async function getLatest() {
+            try {
+                const response = await fetch(`/exec?path=telemetry/accel/latest&device_id=${encodeURIComponent(deviceId)}`);
+                const result = await response.json();
+                if (result.ok && result.data.t) {
+                    latestDataEl.textContent = `t: ${result.data.t}, x: ${result.data.x}, y: ${result.data.y}, z: ${result.data.z}`;
+                    log('Data terbaru diambil');
+                } else {
+                    latestDataEl.textContent = 'Tidak ada data';
+                    log('Tidak ada data terbaru');
+                }
+            } catch (error) {
+                log(`Network error: ${error.message}`, 'error');
+            }
+        }
+
+        function log(message, type = 'status') {
+            const time = new Date().toLocaleTimeString();
+            const className = type === 'error' ? 'error' : 'status';
+            logEl.innerHTML += `<div class="${className}">[${time}] ${message}</div>`;
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        // Initial log
+        log('Halaman test accelerometer siap');
+    </script>
+</body>
+</html>
