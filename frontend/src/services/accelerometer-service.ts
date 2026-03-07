@@ -1,57 +1,57 @@
-import { requestGas } from '@/services/gas-client';
+import { requestGas } from "@/services/gas-client";
 
-export interface AccelSample {
-  t: string; // timestamp sensor membaca
-  x: number;
-  y: number;
-  z: number;
-}
+const ACCELEROMETER_PATHS = {
+  batch: "/telemetry/accel",
+  latest: "/telemetry/accel/latest",
+} as const;
 
-export interface AccelBatchPayload {
-  device_id: string;
-  ts: string; // batch timestamp (waktu dikirim)
-  samples: AccelSample[];
-}
-
-export interface AccelLatestResponse {
+export type AccelSample = {
   t: string;
   x: number;
   y: number;
   z: number;
+};
+
+export type AccelBatchPayload = {
+  device_id: string;
+  ts: string;
+  samples: AccelSample[];
+};
+
+export type AccelLatestData = {
+  t: string;
+  x: number;
+  y: number;
+  z: number;
+};
+
+export type ApiSuccess<T> = {
+  ok: true;
+  data: T;
+};
+
+export type ApiFailure = {
+  ok: false;
+  error: string;
+};
+
+export type ApiResponse<T> = ApiSuccess<T> | ApiFailure;
+
+export function sendAccelBatch(payload: AccelBatchPayload, signal?: AbortSignal) {
+  return requestGas<ApiResponse<{ accepted: number }>>(ACCELEROMETER_PATHS.batch, {
+    method: "POST",
+    json: payload,
+    signal,
+  });
 }
 
-export interface ApiResponse<T> {
-  ok: boolean;
-  data?: T;
-  error?: string;
-}
-
-/**
- * Mengirim batch data accelerometer ke backend
- */
-export async function sendAccelBatch(payload: AccelBatchPayload, signal?: AbortSignal) {
-  const response = await requestGas<ApiResponse<{ accepted: number }>>(
-    'telemetry/accel',
+export function getAccelLatest(deviceId: string, signal?: AbortSignal) {
+  return requestGas<ApiResponse<AccelLatestData | Record<string, never>>>(
+    ACCELEROMETER_PATHS.latest,
     {
-      method: 'POST',
-      json: payload,
-      signal,
-    }
-  );
-  return response;
-}
-
-/**
- * Mengambil data accelerometer terbaru untuk device
- */
-export async function getAccelLatest(deviceId: string, signal?: AbortSignal) {
-  const response = await requestGas<ApiResponse<AccelLatestResponse>>(
-    'telemetry/accel/latest',
-    {
-      method: 'GET',
+      method: "GET",
       query: { device_id: deviceId },
       signal,
-    }
+    },
   );
-  return response;
 }

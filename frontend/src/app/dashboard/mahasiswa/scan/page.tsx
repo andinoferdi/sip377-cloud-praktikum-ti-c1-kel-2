@@ -16,8 +16,6 @@ import {
   parseMeetingNoFromSessionId,
 } from "@/utils/home/attendance-qr";
 import { Camera, CameraOff, CheckCircle2, AlertCircle, RefreshCw } from "lucide-react";
-import { AccelSidebar } from "@/app/dashboard/components/accel-sidebar";
-import { AccelTestComp } from "@/app/dashboard/components/accel-test-comp";
 
 const checkinSchema = z.object({
   course_id: z.string().trim().min(1, "course_id wajib diisi"),
@@ -712,19 +710,6 @@ export default function MahasiswaScanPage() {
               )}
             </form>
           </div>
-        </div>
-
-        {/* Accelerometer Sidebar */}
-        <div className="space-y-5">
-          <AccelSidebar 
-            deviceId={typeof window === "undefined" ? "" : getOrCreateAttendanceDeviceId()}
-            title="Accelerometer Monitor"
-            pollingIntervalMs={2000}
-          />
-          <AccelTestComp
-            deviceId={typeof window === "undefined" ? "" : getOrCreateAttendanceDeviceId()}
-            durationSeconds={5}
-          />
         </div>
       </div>
     </div>

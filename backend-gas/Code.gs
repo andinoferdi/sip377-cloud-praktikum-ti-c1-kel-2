@@ -370,6 +370,28 @@ function parseDateSafe(value) {
   return parsed;
 }
 
+function normalizeTimestampOrThrow(value, fieldName) {
+  if (value === undefined || value === null || value === '') {
+    throw new Error('missing_field: ' + fieldName);
+  }
+
+  var parsed = parseDateSafe(value);
+  if (!parsed) {
+    throw new Error('invalid_timestamp: ' + fieldName);
+  }
+
+  return parsed.toISOString();
+}
+
+function normalizeNumberOrThrow(value, fieldName) {
+  var parsed = typeof value === 'number' ? value : parseFloat(value);
+  if (!isFinite(parsed)) {
+    throw new Error('invalid_number: ' + fieldName);
+  }
+
+  return parsed;
+}
+
 function isSessionIdleExpired(updatedAtValue, nowDate) {
   var updatedAt = parseDateSafe(updatedAtValue);
   if (!updatedAt) {
@@ -1169,24 +1191,58 @@ function batchAccel(body) {
     throw new Error('missing_field: samples');
   }
 
-  var sheet = getOrCreateSheet(SHEET.ACCEL);
-  var batchTs = body.ts || nowISO();
+  var accelMeta = getSheetMeta(SHEET.ACCEL);
+  var normalizedDeviceId = String(body.device_id).trim();
+  if (!normalizedDeviceId) {
+    throw new Error('missing_field: device_id');
+  }
+  var batchTs = body.ts ? normalizeTimestampOrThrow(body.ts, 'ts') : nowISO();
   var recordedAt = nowISO();
+  var rows = body.samples.map(function (sample, index) {
+    if (!sample || typeof sample !== 'object') {
+      throw new Error('invalid_accel_sample: ' + index);
+    }
 
-  var rows = body.samples.map(function (sample) {
-    return [
-      String(body.device_id),
-      sample && sample.x !== undefined ? sample.x : 0,
-      sample && sample.y !== undefined ? sample.y : 0,
-      sample && sample.z !== undefined ? sample.z : 0,
-      sample && sample.t ? sample.t : nowISO(),
-      batchTs,
-      recordedAt,
-    ];
+    var row = new Array(accelMeta.columnCount);
+    for (var columnIndex = 0; columnIndex < row.length; columnIndex++) {
+      row[columnIndex] = '';
+    }
+
+    setValueByHeader(row, accelMeta.headerMap, 'device_id', normalizedDeviceId);
+    setValueByHeader(
+      row,
+      accelMeta.headerMap,
+      'x',
+      normalizeNumberOrThrow(sample.x, 'samples[' + index + '].x'),
+    );
+    setValueByHeader(
+      row,
+      accelMeta.headerMap,
+      'y',
+      normalizeNumberOrThrow(sample.y, 'samples[' + index + '].y'),
+    );
+    setValueByHeader(
+      row,
+      accelMeta.headerMap,
+      'z',
+      normalizeNumberOrThrow(sample.z, 'samples[' + index + '].z'),
+    );
+    setValueByHeader(
+      row,
+      accelMeta.headerMap,
+      'sample_ts',
+      normalizeTimestampOrThrow(sample.t, 'samples[' + index + '].t'),
+    );
+    setValueByHeader(row, accelMeta.headerMap, 'batch_ts', batchTs);
+    setValueByHeader(row, accelMeta.headerMap, 'recorded_at', recordedAt);
+
+    return row;
   });
 
-  var lastRow = sheet.getLastRow();
-  sheet.getRange(lastRow + 1, 1, rows.length, rows[0].length).setValues(rows);
+  var lastRow = accelMeta.sheet.getLastRow();
+  accelMeta.sheet
+    .getRange(lastRow + 1, 1, rows.length, accelMeta.columnCount)
+    .setValues(rows);
 
   return {
     accepted: rows.length,
@@ -1194,20 +1250,22 @@ function batchAccel(body) {
 }
 
 function getAccelLatest(deviceId) {
-  if (!deviceId) {
+  requireField({ device_id: deviceId }, 'device_id');
+
+  var normalizedDeviceId = String(deviceId).trim();
+  if (!normalizedDeviceId) {
     throw new Error('missing_field: device_id');
   }
-
-  var sheet = getOrCreateSheet(SHEET.ACCEL);
-  var data = sheet.getDataRange().getValues();
+  var accelMeta = getSheetMeta(SHEET.ACCEL);
+  var data = accelMeta.sheet.getDataRange().getValues();
 
   for (var i = data.length - 1; i >= 1; i--) {
-    if (String(data[i][0]) === String(deviceId)) {
+    if (String(getValueByHeader(data[i], accelMeta.headerMap, 'device_id')).trim() === normalizedDeviceId) {
       return {
-        t: data[i][4],
-        x: data[i][1],
-        y: data[i][2],
-        z: data[i][3],
+        t: String(getValueByHeader(data[i], accelMeta.headerMap, 'sample_ts') || ''),
+        x: Number(getValueByHeader(data[i], accelMeta.headerMap, 'x')),
+        y: Number(getValueByHeader(data[i], accelMeta.headerMap, 'y')),
+        z: Number(getValueByHeader(data[i], accelMeta.headerMap, 'z')),
       };
     }
   }

@@ -17,7 +17,6 @@ export default function HeroSection() {
     <section className="pt-24 pb-14 md:pt-28 md:pb-18">
       <div className="wrapper">
         <div className="relative overflow-hidden rounded-3xl border border-soft surface-elevated">
-          {/* Subtle dot grid background */}
           <div
             className="pointer-events-none absolute inset-0 opacity-[0.035] dark:opacity-[0.06]"
             style={{
@@ -27,7 +26,6 @@ export default function HeroSection() {
             }}
           />
 
-          {/* Top accent bar */}
           <div className="relative flex items-center gap-3 border-b border-soft px-7 py-4 md:px-10 lg:px-14">
             <span className="h-2 w-2 rounded-full bg-primary-500" />
             <p className="text-xs font-semibold uppercase tracking-widest text-primary-600 dark:text-primary-400">
@@ -36,7 +34,6 @@ export default function HeroSection() {
           </div>
 
           <div className="relative grid gap-0 lg:grid-cols-[1fr_auto]">
-            {/* Left: main content */}
             <div className="border-b border-soft p-7 md:p-10 lg:border-b-0 lg:border-r lg:p-14">
               <h1 className="text-[clamp(2.4rem,6vw,4rem)] font-bold leading-[1.08] tracking-tight text-(--token-gray-900) dark:text-(--token-white)">
                 CloudTrack
@@ -68,7 +65,28 @@ export default function HeroSection() {
                 ))}
               </div>
 
-              <div className="mt-8">
+              <div className="mt-8 flex flex-wrap gap-3">
+                <Link
+                  href="/accelerometer"
+                  className="inline-flex items-center gap-2.5 rounded-xl border border-soft px-6 py-3 text-sm font-semibold text-(--token-gray-800) transition-colors hover:bg-(--token-gray-100) dark:text-(--token-white) dark:hover:bg-(--token-white-5)"
+                >
+                  Buka Modul 2
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 14 14"
+                    fill="none"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M3 7h8M7 3l4 4-4 4"
+                      stroke="currentColor"
+                      strokeWidth="1.75"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </Link>
                 <Link
                   href="/login"
                   className="inline-flex items-center gap-2.5 rounded-xl bg-primary-600 px-6 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-80 dark:hover:opacity-90"
@@ -93,7 +111,6 @@ export default function HeroSection() {
               </div>
             </div>
 
-            {/* Right: stats panel */}
             <div className="grid grid-cols-3 divide-x divide-soft lg:grid-cols-1 lg:divide-x-0 lg:divide-y lg:w-52">
               {STATS.map((stat) => (
                 <div

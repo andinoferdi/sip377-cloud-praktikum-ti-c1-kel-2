@@ -19,6 +19,7 @@
     "docs:check-swagger-ui-assets": "node ../scripts/check-swagger-ui-assets.mjs",
     "repo:check-protected-files": "node ../scripts/check-protected-files.mjs",
     "qa:modul1:api-smoke": "node ../scripts/qa-modul1-smoke.mjs",
+    "qa:modul2:api-smoke": "node ../scripts/qa-modul2-smoke.mjs",
     "qa:modul1:prepr": "npm run typecheck && npm run lint && npm run test:unit && npm run qa:modul1:api-smoke && npm run test:e2e:qr && npm run build && npm run repo:check-protected-files"
   },
   "dependencies": {

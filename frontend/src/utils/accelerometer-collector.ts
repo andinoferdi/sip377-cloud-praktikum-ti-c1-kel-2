@@ -1,164 +1,147 @@
-import { sendAccelBatch, AccelBatchPayload, AccelSample } from '@/services/accelerometer-service';
+import type { AccelSample } from "@/services/accelerometer-service";
 
-/**
- * Mengumpulkan data accelerometer dari device sensor
- * @param onSampleCollected - callback ketika data terkumpul
- * @param intervalMs - interval sampling dalam milliseconds
- * @returns function untuk stop collecting
- */
-export async function startAccelCollector(
-  messageCallback?: (msg: string) => void,
-): Promise<() => void> {
-  const samples: AccelSample[] = [];
-  let isCollecting = true;
+type DeviceMotionEventWithPermission = typeof DeviceMotionEvent & {
+  requestPermission?: () => Promise<"granted" | "denied">;
+};
 
-  // Check if device supports accelerometer
-  if (typeof window === 'undefined' || !window.DeviceMotionEvent) {
-    messageCallback?.('Device tidak mendukung accelerometer');
-    return () => {
-      isCollecting = false;
+export type AccelerometerSupport = {
+  supported: boolean;
+  reason: string | null;
+  requiresPermission: boolean;
+};
+
+type WindowLike = {
+  isSecureContext?: boolean;
+  DeviceMotionEvent?: DeviceMotionEventWithPermission;
+};
+
+type CollectAccelerometerSamplesOptions = {
+  durationMs?: number;
+  onMessage?: (message: string) => void;
+};
+
+function getWindowLike() {
+  if (typeof window === "undefined") {
+    return undefined;
+  }
+
+  return window as WindowLike;
+}
+
+export function getAccelerometerSupport(targetWindow = getWindowLike()): AccelerometerSupport {
+  if (!targetWindow) {
+    return {
+      supported: false,
+      reason: "Sensor hanya bisa diakses dari browser.",
+      requiresPermission: false,
     };
   }
 
-  const handler = (event: DeviceMotionEvent) => {
-    if (!isCollecting || !event.acceleration) return;
-
-    const timestamp = new Date().toISOString();
-    samples.push({
-      t: timestamp,
-      x: event.acceleration.x ?? 0,
-      y: event.acceleration.y ?? 0,
-      z: event.acceleration.z ?? 0,
-    });
-  };
-
-  // Request permission untuk iOS 13+
-  if (typeof window !== 'undefined' && typeof (DeviceMotionEvent as any)?.requestPermission === 'function') {
-    try {
-      const result = await (DeviceMotionEvent as any).requestPermission();
-      if (result !== 'granted') {
-        messageCallback?.('Izin accelerometer ditolak');
-        return () => {
-          isCollecting = false;
-        };
-      }
-      messageCallback?.('Izin accelerometer diberikan');
-    } catch (error) {
-      messageCallback?.(`Error requesting permission: ${error}`);
-    }
+  if (!targetWindow.isSecureContext) {
+    return {
+      supported: false,
+      reason: "Sensor memerlukan secure context seperti HTTPS atau localhost.",
+      requiresPermission: false,
+    };
   }
 
-  // Add listener
-  window.addEventListener('devicemotion', handler);
+  if (typeof targetWindow.DeviceMotionEvent === "undefined") {
+    return {
+      supported: false,
+      reason: "Browser atau perangkat ini tidak mengekspos Device Motion API.",
+      requiresPermission: false,
+    };
+  }
 
-  messageCallback?.('Mulai mengumpulkan data accelerometer...');
-
-  // Return stop function
-  return () => {
-    isCollecting = false;
-    window.removeEventListener('devicemotion', handler);
-    messageCallback?.(`Berhenti. Total sampel terkumpul: ${samples.length}`);
+  return {
+    supported: true,
+    reason: null,
+    requiresPermission:
+      typeof targetWindow.DeviceMotionEvent.requestPermission === "function",
   };
 }
 
-/**
- * Mengirim batch data accelerometer yang sudah dikumpulkan
- */
-export async function sendCollectedAccelBatch(
-  deviceId: string,
-  samples: AccelSample[],
-  signal?: AbortSignal,
+async function ensureMotionPermission(
+  targetWindow: WindowLike,
+  onMessage?: (message: string) => void,
 ) {
-  if (!deviceId || samples.length === 0) {
-    throw new Error('Device ID dan samples harus tidak kosong');
+  const support = getAccelerometerSupport(targetWindow);
+  if (!support.supported) {
+    throw new Error(support.reason ?? "Sensor accelerometer tidak tersedia.");
   }
 
-  const payload: AccelBatchPayload = {
-    device_id: deviceId,
-    ts: new Date().toISOString(),
-    samples,
-  };
+  const deviceMotion = targetWindow.DeviceMotionEvent;
+  if (!deviceMotion || typeof deviceMotion.requestPermission !== "function") {
+    return;
+  }
 
-  return sendAccelBatch(payload, signal);
+  onMessage?.("Meminta izin akses sensor gerak...");
+  const permission = await deviceMotion.requestPermission();
+  if (permission !== "granted") {
+    throw new Error("Izin sensor ditolak.");
+  }
 }
 
-/**
- * Contoh: Collect for N seconds then send
- */
-export async function collectAndSendAccelFor(
-  deviceId: string,
-  durationMs: number = 5000,
-  messageCallback?: (msg: string) => void,
+export async function collectAccelerometerSamples(
+  options: CollectAccelerometerSamplesOptions = {},
 ) {
-  messageCallback?.('Memulai pengumpulan data selama ' + durationMs + 'ms...');
+  const targetWindow = getWindowLike();
+  const support = getAccelerometerSupport(targetWindow);
+  if (!support.supported || !targetWindow) {
+    throw new Error(support.reason ?? "Sensor accelerometer tidak tersedia.");
+  }
 
-  const stopCollector = await startAccelCollector(messageCallback);
-  
-  // We need to store samples internally, so let's use a different approach
+  const durationMs = Math.max(1000, options.durationMs ?? 5000);
+  await ensureMotionPermission(targetWindow, options.onMessage);
+
   const samples: AccelSample[] = [];
-  let isCollecting = true;
+  const onMessage = options.onMessage;
 
-  if (typeof window === 'undefined' || !window.DeviceMotionEvent) {
-    messageCallback?.('Device tidak mendukung accelerometer');
-    return { ok: false, error: 'Device tidak mendukung accelerometer' };
-  }
+  onMessage?.("Mulai mengumpulkan data accelerometer...");
 
-  const handler = (event: DeviceMotionEvent) => {
-    if (!isCollecting || !event.acceleration) return;
-
-    const timestamp = new Date().toISOString();
-    samples.push({
-      t: timestamp,
-      x: event.acceleration.x ?? 0,
-      y: event.acceleration.y ?? 0,
-      z: event.acceleration.z ?? 0,
-    });
-  };
-
-  // Request permission untuk iOS 13+
-  if (typeof (DeviceMotionEvent as any)?.requestPermission === 'function') {
-    try {
-      const result = await (DeviceMotionEvent as any).requestPermission();
-      if (result !== 'granted') {
-        messageCallback?.('Izin accelerometer ditolak');
-        return { ok: false, error: 'Permission denied' };
+  return new Promise<AccelSample[]>((resolve, reject) => {
+    const handler = (event: DeviceMotionEvent) => {
+      const reading = event.acceleration ?? event.accelerationIncludingGravity;
+      if (!reading) {
+        return;
       }
-    } catch (error) {
-      messageCallback?.(`Error requesting permission: ${error}`);
-      return { ok: false, error: String(error) };
-    }
-  }
 
-  window.addEventListener('devicemotion', handler);
+      const x = reading.x;
+      const y = reading.y;
+      const z = reading.z;
+      if (x === null || y === null || z === null) {
+        return;
+      }
 
-  // Wait for duration
-  await new Promise(resolve => setTimeout(resolve, durationMs));
+      samples.push({
+        t: new Date().toISOString(),
+        x,
+        y,
+        z,
+      });
+    };
 
-  isCollecting = false;
-  window.removeEventListener('devicemotion', handler);
+    const cleanup = () => {
+      window.removeEventListener("devicemotion", handler);
+      window.clearTimeout(timeoutId);
+    };
 
-  messageCallback?.(`Pengumpulan selesai. Total: ${samples.length} sampel`);
+    const timeoutId = window.setTimeout(() => {
+      cleanup();
 
-  // Send to server
-  if (samples.length === 0) {
-    messageCallback?.('Tidak ada data accelerometer yang dikumpulkan');
-    return { ok: false, error: 'No samples collected' };
-  }
+      if (samples.length === 0) {
+        reject(
+          new Error(
+            "Tidak ada data gerak yang terbaca. Coba gerakkan perangkat lalu ulangi.",
+          ),
+        );
+        return;
+      }
 
-  try {
-    messageCallback?.('Mengirim data ke server...');
-    const response = await sendCollectedAccelBatch(deviceId, samples);
-    
-    if (response.ok) {
-      messageCallback?.(`✓ Berhasil mengirim ${response.data?.accepted || 0} sampel`);
-    } else {
-      messageCallback?.(`✗ Error: ${response.error}`);
-    }
+      onMessage?.(`Pengumpulan selesai. Total ${samples.length} sampel.`);
+      resolve(samples);
+    }, durationMs);
 
-    return response;
-  } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
-    messageCallback?.(`✗ Error mengirim: ${errorMsg}`);
-    return { ok: false, error: errorMsg };
-  }
+    window.addEventListener("devicemotion", handler);
+  });
 }
