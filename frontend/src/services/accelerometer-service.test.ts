@@ -1,48 +1,56 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-const requestGasMock = vi.fn();
+const requestGasMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/services/gas-client", () => ({
   requestGas: requestGasMock,
 }));
 
+import { accelerometerService } from "@/services/accelerometer-service";
+
 describe("accelerometer-service", () => {
-  beforeEach(() => {
+  afterEach(() => {
     requestGasMock.mockReset();
   });
 
-  it("sends telemetry batch through the active GAS contract", async () => {
-    requestGasMock.mockResolvedValue({ ok: true, data: { accepted: 2 } });
+  it("flushes telemetry samples to the accel batch endpoint", async () => {
+    requestGasMock.mockResolvedValueOnce({ ok: true, data: { accepted: 2 } });
 
-    const { sendAccelBatch } = await import("@/services/accelerometer-service");
-    const payload = {
-      device_id: "dev-001",
-      ts: "2026-03-07T10:15:30.000Z",
+    await accelerometerService.flushTelemetrySamples({
+      device_id: "telemetry-1",
+      ts: "2026-03-07T16:00:00.000Z",
       samples: [
-        { t: "2026-03-07T10:15:29.000Z", x: 0.1, y: 0.2, z: 9.7 },
-        { t: "2026-03-07T10:15:29.300Z", x: 0.2, y: 0.1, z: 9.6 },
+        { t: "2026-03-07T16:00:00.000Z", x: 0.1, y: 0.2, z: 9.7 },
+        { t: "2026-03-07T16:00:00.200Z", x: 0.3, y: 0.4, z: 9.6 },
       ],
-    };
-
-    await sendAccelBatch(payload);
+    });
 
     expect(requestGasMock).toHaveBeenCalledWith("/telemetry/accel", {
       method: "POST",
-      json: payload,
-      signal: undefined,
+      json: {
+        device_id: "telemetry-1",
+        ts: "2026-03-07T16:00:00.000Z",
+        samples: [
+          { t: "2026-03-07T16:00:00.000Z", x: 0.1, y: 0.2, z: 9.7 },
+          { t: "2026-03-07T16:00:00.200Z", x: 0.3, y: 0.4, z: 9.6 },
+        ],
+      },
     });
   });
 
-  it("requests latest telemetry using device_id query param", async () => {
-    requestGasMock.mockResolvedValue({ ok: true, data: {} });
+  it("requests latest telemetry by device id", async () => {
+    requestGasMock.mockResolvedValueOnce({
+      ok: true,
+      data: { t: "2026-03-07T16:00:00.200Z", x: 0.3, y: 0.4, z: 9.6 },
+    });
 
-    const { getAccelLatest } = await import("@/services/accelerometer-service");
-    await getAccelLatest("dev-123");
+    await accelerometerService.getLatestTelemetry("telemetry-1");
 
     expect(requestGasMock).toHaveBeenCalledWith("/telemetry/accel/latest", {
       method: "GET",
-      query: { device_id: "dev-123" },
-      signal: undefined,
+      query: {
+        device_id: "telemetry-1",
+      },
     });
   });
 });

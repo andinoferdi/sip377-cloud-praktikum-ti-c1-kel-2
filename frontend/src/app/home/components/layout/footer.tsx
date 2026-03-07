@@ -4,6 +4,7 @@ import Link from "next/link";
 
 const FOOTER_LINKS = [
   { href: "/#modul", label: "Modul" },
+  { href: "/accelerometer", label: "Accelerometer" },
   { href: "/#kontrak", label: "Kontrak API" },
   { href: "/login", label: "Login" },
   { href: "/dashboard", label: "Dashboard" },

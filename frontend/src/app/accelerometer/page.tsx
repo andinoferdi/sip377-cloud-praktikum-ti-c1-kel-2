@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import AccelerometerClient from "@/app/accelerometer/accelerometer-client";
 import SiteShell from "@/components/layout/site-shell";
+import AccelerometerClient from "./telemetry-client";
 
 export const metadata: Metadata = {
   title: "Accelerometer",
   description:
-    "Halaman publik Modul 2 untuk mengirim telemetry accelerometer ke backend GAS.",
+    "Modul 2 telemetry accelerometer realtime dengan sesi start dan stop.",
 };
 
 export default function AccelerometerPage() {

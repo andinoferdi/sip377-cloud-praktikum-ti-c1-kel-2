@@ -97,6 +97,10 @@ Swagger UI frontend tersedia di:
 
 `http://localhost:3000/docs`
 
+Route publik Modul 2 realtime tersedia di:
+
+`http://localhost:3000/accelerometer`
+
 ### 4.3 Quality gate frontend
 
 Wajib jalan sebelum PR:

@@ -32,16 +32,16 @@ const MODULES: {
     title: "Accelerometer Telemetry",
     accent: "blue",
     description:
-      "Kirim data sensor accelerometer dari smartphone secara batch ke cloud. Ambil pembacaan terbaru kapan saja untuk monitoring aktivitas.",
+      "Jalankan sesi telemetry realtime dari smartphone, lihat nilai x, y, z bergerak live, lalu flush sample secara buffered ke cloud selama sesi aktif.",
     endpoints: [
       "POST /telemetry/accel",
       "GET  /telemetry/accel/latest",
     ],
     features: [
-      "Batch upload (samples[])",
-      "Simpan x, y, z per sample",
-      "Latest per device_id",
-      "Insert batch efisien dengan setValues()",
+      "Sesi start/stop realtime",
+      "Live x, y, z mengikuti gerakan perangkat",
+      "Buffered flush ke backend selama sesi aktif",
+      "Latest per device_id untuk status tersimpan",
     ],
   },
   {

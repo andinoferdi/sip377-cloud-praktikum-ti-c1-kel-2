@@ -68,24 +68,9 @@ export default function HeroSection() {
               <div className="mt-8 flex flex-wrap gap-3">
                 <Link
                   href="/accelerometer"
-                  className="inline-flex items-center gap-2.5 rounded-xl border border-soft px-6 py-3 text-sm font-semibold text-(--token-gray-800) transition-colors hover:bg-(--token-gray-100) dark:text-(--token-white) dark:hover:bg-(--token-white-5)"
+                  className="inline-flex items-center gap-2.5 rounded-xl border border-soft px-6 py-3 text-sm font-semibold text-(--token-gray-800) transition-colors hover:bg-(--token-gray-100) dark:text-(--token-gray-100) dark:hover:bg-(--token-white-5)"
                 >
-                  Buka Modul 2
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 14 14"
-                    fill="none"
-                    aria-hidden="true"
-                  >
-                    <path
-                      d="M3 7h8M7 3l4 4-4 4"
-                      stroke="currentColor"
-                      strokeWidth="1.75"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
+                  Buka Telemetry Live
                 </Link>
                 <Link
                   href="/login"

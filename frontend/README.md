@@ -31,7 +31,7 @@ npm run dev
 
 Buka `http://localhost:3000`.
 Dokumentasi API interaktif tersedia di `http://localhost:3000/docs`.
-Halaman publik Modul 2 tersedia di `http://localhost:3000/accelerometer`.
+Halaman publik Modul 2 realtime tersedia di `http://localhost:3000/accelerometer`.
 
 ## Swagger Docs (`/docs`)
 
@@ -71,7 +71,7 @@ Smoke test kontrak Modul 1 (langsung ke GAS):
 npm run qa:modul1:api-smoke
 ```
 
-Smoke test kontrak Modul 2 Accelerometer:
+Smoke test kontrak Modul 2 realtime:
 
 ```bash
 npm run qa:modul2:api-smoke
@@ -131,7 +131,7 @@ Gunakan akun berikut untuk pengujian lokal:
 ## Arsitektur Singkat
 
 1. UI aktif fokus pada Modul 1 Presensi QR Dinamis.
-2. Modul 2 Accelerometer berjalan di route publik `/accelerometer` tanpa login dashboard.
+2. Modul 2 Accelerometer tersedia sebagai route publik realtime dengan sesi start/stop dan buffered flush ke GAS.
 3. Tidak ada ORM Prisma, auth internal DB, atau API internal Next.js.
 4. Integrasi backend menggunakan direct REST call ke GAS dari client.
 
