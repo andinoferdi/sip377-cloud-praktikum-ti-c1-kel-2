@@ -6,6 +6,7 @@ import { startTransition, useEffect, useRef, useState } from "react";
 import {
   Activity,
   ArrowLeft,
+  CheckCircle2,
   Database,
   Play,
   Radio,
@@ -21,12 +22,17 @@ import {
 } from "@/services/accelerometer-service";
 import { hasGasBaseUrl } from "@/services/gas-client";
 import {
+  appendSampleToHistory,
+  TELEMETRY_CHART_MAX_POINTS,
+} from "@/utils/accelerometer-chart";
+import {
   createAccelerometerSessionController,
   createInitialTelemetrySessionState,
   detectAccelerometerSupport,
   type TelemetrySessionState,
 } from "@/utils/accelerometer-session";
 import { getOrCreateTelemetryDeviceId } from "@/utils/telemetry-device-id";
+import TelemetryChart from "./telemetry-chart";
 
 const CARD_CLASS = "overflow-hidden rounded-2xl border border-soft surface-elevated";
 const LABEL_CLASS =
@@ -92,6 +98,11 @@ function SessionBadge({ status }: { status: TelemetrySessionState["status"] }) {
       className:
         "border-emerald-200 text-emerald-700 dark:border-emerald-500/30 dark:text-emerald-300",
     },
+    stopping: {
+      label: "Stopping",
+      className:
+        "border-amber-200 text-amber-700 dark:border-amber-500/30 dark:text-amber-300",
+    },
     flushing: {
       label: "Flushing",
       className:
@@ -100,7 +111,7 @@ function SessionBadge({ status }: { status: TelemetrySessionState["status"] }) {
     stopped: {
       label: "Stopped",
       className:
-        "border-(--token-gray-200) text-(--token-gray-500) dark:border-(--token-white-10) dark:text-(--token-gray-400)",
+        "border-emerald-200 text-emerald-700 dark:border-emerald-500/30 dark:text-emerald-300",
     },
     unsupported: {
       label: "Unsupported",
@@ -155,10 +166,16 @@ export default function AccelerometerClient() {
     "Menyiapkan diagnosis sensor browser.",
   );
   const [supportHint, setSupportHint] = useState<string | null>(null);
+  const [liveHistory, setLiveHistory] = useState<AccelerometerSample[]>([]);
+  const [stoppedSnapshot, setStoppedSnapshot] = useState<AccelerometerSample[]>(
+    [],
+  );
+  const [showStoppedFeedback, setShowStoppedFeedback] = useState(false);
   const controllerRef = useRef<ReturnType<
     typeof createAccelerometerSessionController
   > | null>(null);
   const latestRefetchRef = useRef<() => Promise<unknown>>(async () => undefined);
+  const liveHistoryRef = useRef<AccelerometerSample[]>([]);
 
   useEffect(() => {
     const nextDeviceId = getOrCreateTelemetryDeviceId();
@@ -194,6 +211,10 @@ export default function AccelerometerClient() {
     setSupportMessage(support.message);
     setSupportHint(support.browserHint);
   }, []);
+
+  useEffect(() => {
+    liveHistoryRef.current = liveHistory;
+  }, [liveHistory]);
 
   useEffect(() => {
     if (deviceId === "telemetry-loading") {
@@ -244,6 +265,10 @@ export default function AccelerometerClient() {
     if (!controllerRef.current || typeof window === "undefined") {
       return;
     }
+    setShowStoppedFeedback(false);
+    setStoppedSnapshot([]);
+    setLiveHistory([]);
+    liveHistoryRef.current = [];
     try {
       await controllerRef.current.start(window);
     } catch (error) {
@@ -264,16 +289,59 @@ export default function AccelerometerClient() {
     await controllerRef.current.stop(window);
   }
 
+  useEffect(() => {
+    if (!sessionState.liveSample) {
+      return;
+    }
+
+    setLiveHistory((currentHistory) =>
+      appendSampleToHistory(
+        currentHistory,
+        sessionState.liveSample!,
+        TELEMETRY_CHART_MAX_POINTS,
+      ),
+    );
+  }, [sessionState.liveSample]);
+
+  useEffect(() => {
+    if (!sessionState.lastStoppedAt || typeof window === "undefined") {
+      return;
+    }
+
+    setStoppedSnapshot(liveHistoryRef.current);
+    setShowStoppedFeedback(true);
+
+    const timeoutId = window.setTimeout(() => {
+      setShowStoppedFeedback(false);
+    }, 1800);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [sessionState.lastStoppedAt]);
+
   const liveSample = sessionState.liveSample;
   const savedSample = sessionState.savedSample;
   const savedLatest = latestQuery.data;
   const backendSample: Partial<AccelerometerSample> | null =
     savedSample ?? savedLatest ?? null;
+  const chartHistory =
+    sessionState.status === "stopped" && stoppedSnapshot.length > 0
+      ? stoppedSnapshot
+      : liveHistory;
   const isSessionRunning =
     sessionState.status === "starting" ||
     sessionState.status === "live" ||
     sessionState.status === "flushing" ||
-    sessionState.status === "blocked";
+    sessionState.status === "blocked" ||
+    sessionState.status === "stopping";
+  const isStopping = sessionState.status === "stopping";
+  const startButtonLabel = showStoppedFeedback
+    ? "Stopped"
+    : sessionState.status === "starting"
+      ? "Starting..."
+      : "Start Telemetry";
+  const stopButtonLabel = isStopping ? "Stopping..." : "Stop Telemetry";
 
   return (
     <section className="py-10 md:py-14">
@@ -382,19 +450,35 @@ export default function AccelerometerClient() {
                   type="button"
                   onClick={handleStart}
                   disabled={isSessionRunning}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary-600 px-5 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-50"
+                  className={`inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-white transition-all disabled:cursor-not-allowed disabled:opacity-50 ${
+                    showStoppedFeedback
+                      ? "bg-emerald-600 shadow-[0_0_0_3px_rgba(34,197,94,0.15)]"
+                      : "bg-primary-600 hover:opacity-85"
+                  }`}
                 >
-                  <Play size={16} />
-                  Start Telemetry
+                  {showStoppedFeedback ? (
+                    <CheckCircle2 size={16} />
+                  ) : (
+                    <Play size={16} />
+                  )}
+                  {startButtonLabel}
                 </button>
                 <button
                   type="button"
                   onClick={handleStop}
                   disabled={!isSessionRunning}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-soft px-5 py-3 text-sm font-semibold text-(--token-gray-700) transition-colors hover:bg-(--token-gray-100) disabled:cursor-not-allowed disabled:opacity-50 dark:text-(--token-gray-200) dark:hover:bg-(--token-white-5)"
+                  className={`inline-flex items-center justify-center gap-2 rounded-xl border border-soft px-5 py-3 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                    isStopping
+                      ? "bg-amber-500/10 text-amber-600 dark:text-amber-300"
+                      : "text-(--token-gray-700) hover:bg-(--token-gray-100) dark:text-(--token-gray-200) dark:hover:bg-(--token-white-5)"
+                  }`}
                 >
-                  <Square size={16} />
-                  Stop Telemetry
+                  {isStopping ? (
+                    <RefreshCw size={16} className="animate-spin" />
+                  ) : (
+                    <Square size={16} />
+                  )}
+                  {stopButtonLabel}
                 </button>
               </div>
 
@@ -411,8 +495,36 @@ export default function AccelerometerClient() {
                     <p className="mt-1 text-sm leading-6 text-(--token-gray-600) dark:text-(--token-gray-300)">
                       {sessionState.statusMessage}
                     </p>
+                    {sessionState.lastStoppedAt ? (
+                      <p className="mt-2 text-xs font-medium text-emerald-600 dark:text-emerald-300">
+                        Telemetry berhenti pada {formatTime(sessionState.lastStoppedAt)}.
+                        Flush terakhir menerima {sessionState.lastAcceptedCount} sampel.
+                      </p>
+                    ) : null}
                   </div>
                 </div>
+              </div>
+
+              <div className="mt-5">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-(--token-gray-900) dark:text-(--token-white)">
+                      Grafik Telemetry Realtime
+                    </p>
+                    <p className="mt-1 text-sm text-(--token-gray-500) dark:text-(--token-gray-400)">
+                      Tiga garis menampilkan perubahan sumbu X, Y, dan Z selama sesi aktif.
+                      Saat stop, grafik dibekukan pada snapshot terakhir.
+                    </p>
+                  </div>
+                  <span className="rounded-full border border-soft px-2.5 py-1 text-[11px] font-semibold text-(--token-gray-500) dark:text-(--token-gray-400)">
+                    {sessionState.status === "stopped" ? "Frozen" : "Live"}
+                  </span>
+                </div>
+
+                <TelemetryChart
+                  history={chartHistory}
+                  isLive={sessionState.status !== "stopped"}
+                />
               </div>
 
               <div className="mt-5 grid gap-3 sm:grid-cols-3">

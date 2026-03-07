@@ -124,6 +124,9 @@ describe("accelerometer-session controller", () => {
     expect(flushSamples).toHaveBeenCalledTimes(1);
     expect(flushSamples.mock.calls[0]?.[0].samples).toHaveLength(2);
     expect(states.at(-1)?.status).toBe("stopped");
+    expect(states.some((state) => state.status === "stopping")).toBe(true);
+    expect(states.at(-1)?.lastStoppedAt).toBeTruthy();
+    expect(states.at(-1)?.lastAcceptedCount).toBe(2);
     expect(states.some((state) => state.liveSampleCount >= 2)).toBe(true);
   });
 

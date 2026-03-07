@@ -6,6 +6,7 @@ export type TelemetrySessionStatus =
   | "idle"
   | "starting"
   | "live"
+  | "stopping"
   | "flushing"
   | "stopped"
   | "unsupported"
@@ -40,9 +41,11 @@ export type TelemetrySessionState = {
   savedSample: AccelerometerSample | null;
   queueSize: number;
   acceptedSamples: number;
+  lastAcceptedCount: number;
   liveSampleCount: number;
   lastEventAt: string | null;
   lastFlushAt: string | null;
+  lastStoppedAt: string | null;
   lastFlushError: string | null;
   statusMessage: string;
 };
@@ -142,9 +145,11 @@ export function createInitialTelemetrySessionState(
     savedSample: null,
     queueSize: 0,
     acceptedSamples: 0,
+    lastAcceptedCount: 0,
     liveSampleCount: 0,
     lastEventAt: null,
     lastFlushAt: null,
+    lastStoppedAt: null,
     lastFlushError: null,
     statusMessage: "Siap memulai sesi telemetry realtime.",
   };
@@ -457,10 +462,15 @@ export function createAccelerometerSessionController(options: ControllerOptions)
     const previousStatus = state.status;
 
     setState({
-      status: previousStatus === "stopped" ? "stopped" : "flushing",
+      status:
+        previousStatus === "stopping"
+          ? "stopping"
+          : previousStatus === "stopped"
+            ? "stopped"
+            : "flushing",
       statusMessage:
         reason === "stop"
-          ? "Mengirim sisa sample terakhir ke backend."
+          ? "Menghentikan telemetry dan menyimpan sisa sample terakhir."
           : "Mengirim sample buffered ke backend.",
     });
 
@@ -474,7 +484,7 @@ export function createAccelerometerSessionController(options: ControllerOptions)
         });
 
         setState({
-          status: runtime ? "live" : "stopped",
+          status: runtime ? "live" : previousStatus === "stopping" ? "stopping" : "stopped",
           acceptedSamples: state.acceptedSamples + result.accepted,
           lastFlushAt: new Date(now()).toISOString(),
           savedSample: batch[batch.length - 1] ?? state.savedSample,
@@ -506,7 +516,8 @@ export function createAccelerometerSessionController(options: ControllerOptions)
     if (
       state.status === "starting" ||
       state.status === "live" ||
-      state.status === "flushing"
+      state.status === "flushing" ||
+      state.status === "stopping"
     ) {
       return state;
     }
@@ -522,6 +533,8 @@ export function createAccelerometerSessionController(options: ControllerOptions)
 
     setState({
       status: "starting",
+      lastAcceptedCount: 0,
+      lastStoppedAt: null,
       lastFlushError: null,
       statusMessage: "Memulai sesi telemetry dan menunggu event sensor pertama.",
     });
@@ -581,6 +594,23 @@ export function createAccelerometerSessionController(options: ControllerOptions)
   }
 
   async function stop(targetWindow: WindowLike) {
+    if (
+      state.status === "idle" ||
+      state.status === "stopped" ||
+      state.status === "unsupported" ||
+      state.status === "denied"
+    ) {
+      return state;
+    }
+
+    const acceptedBeforeStop = state.acceptedSamples;
+
+    setState({
+      status: "stopping",
+      statusMessage: "Stopping telemetry... menyimpan sisa sample terakhir.",
+      lastFlushError: null,
+    });
+
     if (runtime) {
       await runtime.stop();
       runtime = null;
@@ -591,9 +621,11 @@ export function createAccelerometerSessionController(options: ControllerOptions)
 
     setState({
       status: "stopped",
+      lastAcceptedCount: Math.max(0, state.acceptedSamples - acceptedBeforeStop),
+      lastStoppedAt: new Date(now()).toISOString(),
       statusMessage:
         state.acceptedSamples > 0
-          ? "Sesi realtime dihentikan. Ringkasan sample terakhir telah disimpan."
+          ? "Sesi realtime berhenti. Sample terakhir sudah dibekukan dan tersimpan."
           : "Sesi realtime dihentikan.",
     });
 
