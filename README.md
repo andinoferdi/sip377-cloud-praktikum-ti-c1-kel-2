@@ -13,7 +13,7 @@ CloudTrack Campus menggunakan arsitektur monorepo:
 
 Base URL deployment aktif saat ini:
 
-`https://script.google.com/macros/s/AKfycbyefwSDX8kZeQ1wSrSuoa8-FGzxhj8mpcqt-WDacmnNa6zazx6Us1qVzQJimyHTnDg2Og/exec`
+`https://script.google.com/macros/s/AKfycbzVJ1--9eMNpaPC7JcyPQsdbkOPkkKMq3PdUuFeHJKSQ5fTw7OahhjbXy1f4V0XMMeTtA/exec`
 
 ## 2. Struktur Repo
 
@@ -60,7 +60,7 @@ cp .env.example .env
 Isi `frontend/.env`:
 
 ```env
-NEXT_PUBLIC_GAS_BASE_URL="https://script.google.com/macros/s/AKfycbyefwSDX8kZeQ1wSrSuoa8-FGzxhj8mpcqt-WDacmnNa6zazx6Us1qVzQJimyHTnDg2Og/exec"
+NEXT_PUBLIC_GAS_BASE_URL="https://script.google.com/macros/s/AKfycbzVJ1--9eMNpaPC7JcyPQsdbkOPkkKMq3PdUuFeHJKSQ5fTw7OahhjbXy1f4V0XMMeTtA/exec"
 ```
 
 Jalankan aplikasi:
@@ -69,6 +69,10 @@ Jalankan aplikasi:
 npm run docs:prepare
 npm run dev
 ```
+
+Route publik Modul 2 tersedia di:
+
+`http://localhost:3000/accelerometer`
 
 Sinkronkan spesifikasi OpenAPI untuk halaman docs frontend:
 
@@ -109,6 +113,7 @@ npm run lint
 npm run test:unit
 npm run test:e2e:qr
 npm run qa:modul1:api-smoke
+npm run qa:modul2:api-smoke
 npm run build
 npm run repo:check-protected-files
 ```
@@ -142,8 +147,10 @@ Validator-nya:
    1. `src/services/fetcher.ts`
    2. `src/services/gas-client.ts`
    3. `src/services/attendance-gas-service.ts`
+   4. `src/services/accelerometer-service.ts`
 3. Jangan hardcode URL GAS di source code.
-4. Jika menambah atau mengubah endpoint yang dipakai UI, koordinasi dengan backend dan update dokumentasi.
+4. Modul 2 Accelerometer tersedia sebagai route publik `/accelerometer`, tidak memakai auth dashboard.
+5. Jika menambah atau mengubah endpoint yang dipakai UI, koordinasi dengan backend dan update dokumentasi.
 
 ### 4.7 Checklist PR frontend
 
@@ -247,7 +254,7 @@ Setelah `push`, buat version baru dan update deployment Web App dari Apps Script
 ### 6.1 Scope QA minimum per rilis
 
 1. Flow presensi QR dosen dan mahasiswa.
-2. Telemetry accel dan GPS.
+2. Telemetry accel pada route publik `/accelerometer` dan telemetry GPS.
 3. Regression login/dashboard flow frontend.
 4. Konsistensi data di spreadsheet.
 

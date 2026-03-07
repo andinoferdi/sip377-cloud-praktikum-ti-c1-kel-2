@@ -4,6 +4,10 @@ export const navItems = [
     label: "Modul",
   },
   {
+    href: "/accelerometer",
+    label: "Accelerometer",
+  },
+  {
     href: "/#kontrak",
     label: "Kontrak API",
   },

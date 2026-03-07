@@ -12,7 +12,7 @@ Frontend ini memakai Next.js App Router dan berfungsi sebagai client untuk meman
 Gunakan file `.env` di folder `frontend/`.
 
 ```env
-NEXT_PUBLIC_GAS_BASE_URL="https://script.google.com/macros/s/AKfycbyefwSDX8kZeQ1wSrSuoa8-FGzxhj8mpcqt-WDacmnNa6zazx6Us1qVzQJimyHTnDg2Og/exec"
+NEXT_PUBLIC_GAS_BASE_URL="https://script.google.com/macros/s/AKfycbzVJ1--9eMNpaPC7JcyPQsdbkOPkkKMq3PdUuFeHJKSQ5fTw7OahhjbXy1f4V0XMMeTtA/exec"
 ```
 
 Catatan:
@@ -31,6 +31,7 @@ npm run dev
 
 Buka `http://localhost:3000`.
 Dokumentasi API interaktif tersedia di `http://localhost:3000/docs`.
+Halaman publik Modul 2 tersedia di `http://localhost:3000/accelerometer`.
 
 ## Swagger Docs (`/docs`)
 
@@ -70,6 +71,12 @@ Smoke test kontrak Modul 1 (langsung ke GAS):
 npm run qa:modul1:api-smoke
 ```
 
+Smoke test kontrak Modul 2 Accelerometer:
+
+```bash
+npm run qa:modul2:api-smoke
+```
+
 E2E UI Modul 1 (Playwright):
 
 ```bash
@@ -90,6 +97,7 @@ npm run lint
 npm run test:unit
 npm run test:e2e:qr
 npm run qa:modul1:api-smoke
+npm run qa:modul2:api-smoke
 npm run build
 npm run repo:check-protected-files
 ```
@@ -123,6 +131,7 @@ Gunakan akun berikut untuk pengujian lokal:
 ## Arsitektur Singkat
 
 1. UI aktif fokus pada Modul 1 Presensi QR Dinamis.
-2. Tidak ada ORM Prisma, auth internal DB, atau API internal Next.js.
-3. Integrasi backend menggunakan direct REST call ke GAS dari client.
+2. Modul 2 Accelerometer berjalan di route publik `/accelerometer` tanpa login dashboard.
+3. Tidak ada ORM Prisma, auth internal DB, atau API internal Next.js.
+4. Integrasi backend menggunakan direct REST call ke GAS dari client.
 
