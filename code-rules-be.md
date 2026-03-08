@@ -44,6 +44,7 @@ Base URL:
 
 GET:
 - `?path=presence/status`
+- `?path=presence/list`
 - `?path=telemetry/accel/latest`
 - `?path=telemetry/gps/latest`
 - `?path=telemetry/gps/history`
@@ -52,6 +53,7 @@ GET:
 POST:
 - `?path=presence/qr/generate`
 - `?path=presence/checkin`
+- `?path=presence/qr/stop`
 - `?path=telemetry/accel`
 - `?path=telemetry/gps`
 
@@ -73,7 +75,9 @@ Gagal:
 - `unknown_endpoint: ...`
 - `token_invalid`
 - `token_expired`
-- `token_already_used`
+- `already_checked_in`
+- `session_closed`
+- `token_already_used` (legacy compatibility bila masih muncul di client lama)
 
 6. Routing dan Dispatch
 - Router utama hanya `doGet(e)` dan `doPost(e)`.
@@ -97,6 +101,7 @@ Sheet minimum:
 - `presence`
 - `accel`
 - `gps`
+- `session_state`
 
 Aturan:
 - Header didefinisikan terpusat (`HEADERS`).
@@ -113,7 +118,10 @@ Aturan:
 11. Rule Modul 1 Presence QR
 - TTL token default 2 menit (`QR_TOKEN_TTL_MS = 120000`).
 - Validasi token berdasarkan kombinasi `qr_token + course_id + session_id`.
-- Token hanya boleh digunakan sekali.
+- Token bisa dipakai banyak user selama sesi belum di-stop.
+- User yang sama tidak boleh check-in dua kali pada kombinasi sesi yang sama.
+- Status stop sesi dibaca dari `session_state`, jika stop maka check-in baru gagal `session_closed`.
+- `tokens.used` dipertahankan untuk kompatibilitas struktur lama, bukan blocker utama check-in.
 - Check-in sukses wajib menyimpan row `presence` dan return `status: "checked_in"`.
 - Status harus membaca data terbaru (iterasi dari bawah ke atas).
 
@@ -152,6 +160,13 @@ Aturan:
 17. Sinkronisasi Implementasi dan Kontrak
 - Setiap perubahan endpoint/payload/error di `Code.gs` wajib diikuti update `openapi.yaml` pada commit yang sama.
 - Jangan biarkan drift antara implementasi runtime dan dokumen kontrak.
+- Jika terjadi konflik `A (rules)` vs `A1 (implementasi)`, ikuti standar adjudikasi lintas tim:
+ 1. `Runtime behavior aktual`
+ 2. `Automated tests`
+ 3. `OpenAPI/kontrak aktif`
+ 4. `Code rules`
+ 5. `README/dokumen lain`
+- Konflik `Critical/High` wajib punya Matrix Keputusan dan aksi sinkronisasi dokumen.
 
 18. Aturan `openapi.yaml`
 - Path publik tunggal adalah `/exec` dengan query `path`.
@@ -175,7 +190,8 @@ Aturan:
 - Cek status sinkronisasi:
 - `npx @google/clasp status`
 - Smoke test endpoint GET/POST utama.
-- Validasi data masuk ke sheet `tokens/presence/accel/gps`.
+- Validasi data masuk ke sheet `tokens/presence/accel/gps/session_state`.
+- Jika ada konflik rules vs implementasi, lampirkan Matrix Keputusan di PR.
 
 21. Smoke Test Matrix Minimum
 Presence:
@@ -183,6 +199,8 @@ Presence:
 - Check-in sukses token valid.
 - Check-in gagal `token_invalid`.
 - Check-in gagal `token_expired`.
+- Check-in ulang user yang sama gagal `already_checked_in`.
+- Check-in setelah sesi stop gagal `session_closed`.
 - Status mengembalikan `checked_in` atau `not_checked_in` sesuai data.
 
 Accelerometer:

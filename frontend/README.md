@@ -91,6 +91,14 @@ E2E UI Modul 1 (Playwright):
 npm run test:e2e:qr
 ```
 
+## Governance Konflik Rules vs Implementasi
+
+Jika terjadi konflik antara rules dan implementasi aktif, gunakan standar adjudikasi lintas tim di:
+
+`../docs/rule-conflict-adjudication.md`
+
+Prioritas keputusan: runtime aktual, hasil test, kontrak aktif, code rules, lalu dokumen pendukung.
+
 ## Validasi
 
 ```bash

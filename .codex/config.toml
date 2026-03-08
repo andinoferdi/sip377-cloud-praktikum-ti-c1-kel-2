@@ -1,0 +1,9 @@
+﻿[mcp_servers.filesystem]
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-filesystem", "C:\\Users\\Ferdi\\Downloads\\sip377-cloud-praktikum-ti-c1-kel-2"]
+startup_timeout_sec = 20.0
+
+[mcp_servers.git]
+command = "C:\\Users\\Ferdi\\AppData\\Local\\Microsoft\\WinGet\\Packages\\astral-sh.uv_Microsoft.Winget.Source_8wekyb3d8bbwe\\uvx.exe"
+args = ["mcp-server-git", "--repository", "C:\\Users\\Ferdi\\Downloads\\sip377-cloud-praktikum-ti-c1-kel-2"]
+startup_timeout_sec = 20.0

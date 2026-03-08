@@ -209,10 +209,21 @@ Aturan env
 - Gunakan versi yang kompatibel dengan lockfile repo.
 - Pisahkan `dependencies` dan `devDependencies` dengan benar.
 
-18. Checklist sebelum coding
+18. Adjudikasi Konflik Rules vs Implementasi
+- Jika terjadi konflik `A (rules)` vs `A1 (implementasi)`, gunakan prioritas bukti berikut:
+  1. `Runtime behavior aktual`
+  2. `Automated tests`
+  3. `OpenAPI/kontrak aktif`
+  4. `Code rules`
+  5. `README/dokumen lain`
+- Untuk konflik `Critical/High`, wajib ada Matrix Keputusan sebelum implementasi final.
+- Jika endpoint publik berubah atau perilaku error berubah, sinkronkan service contract frontend, smoke test modul terkait, dan dokumentasi pada perubahan yang sama atau batch terjadwal dengan deadline jelas.
+
+19. Checklist sebelum coding
 1. Baca pola existing di repo, lalu ikuti pola itu dahulu.
 2. Pilih perubahan minimal dengan dampak terkendali.
 3. Pastikan aturan route, auth, dan service layer tetap konsisten.
 4. Jalankan quality gate yang relevan.
-5. Tulis ringkasan singkat: apa yang benar, apa yang diubah, dan alasannya.
+5. Jika ada konflik rules vs implementasi, tautkan Matrix Keputusan dan bukti test pada PR.
+6. Tulis ringkasan singkat: apa yang benar, apa yang diubah, dan alasannya.
 ````
