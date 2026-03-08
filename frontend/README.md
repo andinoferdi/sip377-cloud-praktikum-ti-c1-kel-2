@@ -38,6 +38,7 @@ Halaman publik Modul 2 realtime tersedia di `http://localhost:3000/accelerometer
 Frontend menayangkan Swagger UI di route publik `/docs`.
 Source of truth spesifikasi API adalah `backend-gas/openapi.yaml`.
 File yang dilayani frontend adalah `frontend/public/openapi.yaml` hasil sinkronisasi.
+File `frontend/public/openapi-modul-1.json` dan `frontend/public/openapi-modul-2.json` adalah artefak turunan otomatis dari source of truth backend.
 Asset Swagger UI statis dilayani dari `frontend/public/docs/*`.
 
 Perintah persiapan docs:
@@ -52,6 +53,12 @@ Perintah sinkronisasi spesifikasi OpenAPI:
 npm run docs:sync-openapi
 ```
 
+Perintah generate artefak OpenAPI modul:
+
+```bash
+npm run docs:sync-openapi-modules
+```
+
 Perintah sinkronisasi asset Swagger UI statis:
 
 ```bash
@@ -62,6 +69,7 @@ Perintah verifikasi sinkronisasi:
 
 ```bash
 npm run docs:check-openapi-sync
+npm run docs:check-openapi-modules-sync
 npm run docs:check-swagger-ui-assets
 ```
 

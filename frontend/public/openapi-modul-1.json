@@ -22,21 +22,11 @@
     }
   ],
   "security": [],
-  "tags": [
-    {
-      "name": "Modul 1 - Presensi QR",
-      "description": "Dokumentasi Modul 1 - Presensi QR."
-    }
-  ],
   "paths": {
     "/exec": {
       "get": {
         "summary": "Multi-purpose GET endpoint (routed by `path` query)",
         "operationId": "doGet",
-        "tags": [
-          "Modul 1 - Presensi QR"
-        ],
-        "description": "Dokumentasi GET untuk Modul 1 - Presensi QR.\nRouter tetap memakai query parameter `path`.\nEndpoint pada modul ini:\n- `?path=presence/status`\n- `?path=presence/list`\n- `?path=presence/sessions/active`\n- `?path=presence/course/config`",
         "parameters": [
           {
             "name": "path",
@@ -93,7 +83,7 @@
               "minimum": 1,
               "default": 200
             },
-            "description": "Optional max items for path=presence/list or path=presence/sessions/active."
+            "description": "Optional max items for path=presence/list, path=presence/sessions/active, or path=telemetry/gps/history"
           },
           {
             "name": "include_stopped",
@@ -110,16 +100,6 @@
             "description": "JSON envelope response",
             "content": {
               "application/json": {
-                "schema": {
-                  "anyOf": [
-                    {
-                      "$ref": "#/components/schemas/AccelLatestEnvelope"
-                    },
-                    {
-                      "type": "object"
-                    }
-                  ]
-                },
                 "examples": {
                   "presenceStatus": {
                     "summary": "path=presence/status",
@@ -210,7 +190,12 @@
           "400": {
             "description": "Error envelope",
             "content": {
-              "application/json": {}
+              "application/json": {
+                "example": {
+                  "ok": false,
+                  "error": "missing_field: device_id"
+                }
+              }
             }
           }
         }
@@ -218,10 +203,6 @@
       "post": {
         "summary": "Multi-purpose POST endpoint (routed by `path` query)",
         "operationId": "doPost",
-        "tags": [
-          "Modul 1 - Presensi QR"
-        ],
-        "description": "Dokumentasi POST untuk Modul 1 - Presensi QR.\nRouter tetap memakai query parameter `path`.\nEndpoint pada modul ini:\n- `?path=presence/qr/generate`\n- `?path=presence/checkin`\n- `?path=presence/qr/stop`\n- `?path=presence/course/config`",
         "parameters": [
           {
             "name": "path",
@@ -266,16 +247,6 @@
             "description": "JSON envelope response",
             "content": {
               "application/json": {
-                "schema": {
-                  "anyOf": [
-                    {
-                      "$ref": "#/components/schemas/AccelBatchEnvelope"
-                    },
-                    {
-                      "type": "object"
-                    }
-                  ]
-                },
                 "examples": {
                   "generateQR": {
                     "summary": "path=presence/qr/generate",
@@ -336,7 +307,12 @@
           "400": {
             "description": "Error envelope",
             "content": {
-              "application/json": {}
+              "application/json": {
+                "example": {
+                  "ok": false,
+                  "error": "token_invalid"
+                }
+              }
             }
           }
         }
@@ -345,87 +321,39 @@
   },
   "components": {
     "schemas": {
-      "AccelBatchEnvelope": {
-        "type": "object",
-        "required": [
-          "ok",
-          "data"
-        ],
-        "properties": {
-          "ok": {
-            "type": "boolean",
-            "enum": [
-              true
-            ]
-          },
-          "data": {
-            "$ref": "#/components/schemas/AccelBatchResponseData"
-          }
-        }
-      },
-      "AccelBatchResponseData": {
-        "type": "object",
-        "required": [
-          "accepted"
-        ],
-        "properties": {
-          "accepted": {
-            "type": "integer",
-            "minimum": 0,
-            "description": "Jumlah sample accelerometer yang diterima backend dari request batch.",
-            "example": 2
-          }
-        }
-      },
-      "CourseMeetingConfigUpdateRequest": {
+      "GenerateQRRequest": {
         "type": "object",
         "required": [
           "course_id",
-          "total_meetings"
-        ],
-        "properties": {
-          "course_id": {
-            "type": "string",
-            "example": "cloud-101"
-          },
-          "total_meetings": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 20,
-            "example": 14
-          },
-          "ts": {
-            "type": "string",
-            "format": "date-time"
-          }
-        }
-      },
-      "StopSessionRequest": {
-        "type": "object",
-        "required": [
-          "course_id",
-          "session_id"
+          "session_id",
+          "meeting_no"
         ],
         "properties": {
           "course_id": {
             "type": "string",
             "example": "cloud-101",
-            "description": "Session course ID to mark as closed."
+            "description": "Stored and matched in lowercase form."
           },
           "session_id": {
             "type": "string",
-            "example": "cloud-101-senin-02-202602281626",
-            "description": "Session ID to mark as closed."
+            "example": "cloud-101-p01",
+            "description": "Must match deterministic format `<course_id>-pNN` for the selected meeting number."
+          },
+          "meeting_no": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20,
+            "example": 1
           },
           "owner_identifier": {
             "type": "string",
             "example": "198701012020011001",
-            "description": "Optional owner identifier for consistent stop across meeting state."
+            "description": "Optional owner identifier of the lecturer who starts the meeting."
           },
           "meeting_key": {
             "type": "string",
             "example": "MTG-CLOUD-101-P01",
-            "description": "Optional meeting key. If provided, stop is applied to this meeting identity."
+            "description": "Optional field for backward compatibility. Backend uses deterministic meeting key."
           },
           "ts": {
             "type": "string",
@@ -472,39 +400,32 @@
           }
         }
       },
-      "GenerateQRRequest": {
+      "StopSessionRequest": {
         "type": "object",
         "required": [
           "course_id",
-          "session_id",
-          "meeting_no"
+          "session_id"
         ],
         "properties": {
           "course_id": {
             "type": "string",
             "example": "cloud-101",
-            "description": "Stored and matched in lowercase form."
+            "description": "Session course ID to mark as closed."
           },
           "session_id": {
             "type": "string",
-            "example": "cloud-101-p01",
-            "description": "Must match deterministic format `<course_id>-pNN` for the selected meeting number."
-          },
-          "meeting_no": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 20,
-            "example": 1
+            "example": "cloud-101-senin-02-202602281626",
+            "description": "Session ID to mark as closed."
           },
           "owner_identifier": {
             "type": "string",
             "example": "198701012020011001",
-            "description": "Optional owner identifier of the lecturer who starts the meeting."
+            "description": "Optional owner identifier for consistent stop across meeting state."
           },
           "meeting_key": {
             "type": "string",
             "example": "MTG-CLOUD-101-P01",
-            "description": "Optional field for backward compatibility. Backend uses deterministic meeting key."
+            "description": "Optional meeting key. If provided, stop is applied to this meeting identity."
           },
           "ts": {
             "type": "string",
@@ -512,46 +433,28 @@
           }
         }
       },
-      "AccelLatestEnvelope": {
+      "CourseMeetingConfigUpdateRequest": {
         "type": "object",
         "required": [
-          "ok",
-          "data"
+          "course_id",
+          "total_meetings"
         ],
         "properties": {
-          "ok": {
-            "type": "boolean",
-            "enum": [
-              true
-            ]
+          "course_id": {
+            "type": "string",
+            "example": "cloud-101"
           },
-          "data": {
-            "$ref": "#/components/schemas/AccelLatestResponseData"
+          "total_meetings": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20,
+            "example": 14
+          },
+          "ts": {
+            "type": "string",
+            "format": "date-time"
           }
         }
-      },
-      "AccelLatestResponseData": {
-        "type": "object",
-        "properties": {
-          "t": {
-            "type": "string",
-            "format": "date-time",
-            "example": "2026-02-18T10:15:29.300Z"
-          },
-          "x": {
-            "type": "number",
-            "example": 0.15
-          },
-          "y": {
-            "type": "number",
-            "example": 0.02
-          },
-          "z": {
-            "type": "number",
-            "example": 9.68
-          }
-        },
-        "description": "Sample accelerometer terbaru untuk `device_id`.\nJika device belum punya data, backend mengembalikan object kosong (`{}`).\n"
       }
     }
   }

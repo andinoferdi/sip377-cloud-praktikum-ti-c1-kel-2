@@ -22,21 +22,11 @@
     }
   ],
   "security": [],
-  "tags": [
-    {
-      "name": "Modul 2 - Accelerometer",
-      "description": "Dokumentasi Modul 2 - Accelerometer."
-    }
-  ],
   "paths": {
     "/exec": {
       "get": {
         "summary": "Multi-purpose GET endpoint (routed by `path` query)",
         "operationId": "doGet",
-        "tags": [
-          "Modul 2 - Accelerometer"
-        ],
-        "description": "Dokumentasi GET untuk Modul 2 - Accelerometer.\nRouter tetap memakai query parameter `path`.\nEndpoint pada modul ini:\n- `?path=telemetry/accel/latest`",
         "parameters": [
           {
             "name": "path",
@@ -56,7 +46,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Required for path=telemetry/accel/latest."
+            "description": "Required for telemetry latest/history endpoints"
           }
         ],
         "responses": {
@@ -64,16 +54,6 @@
             "description": "JSON envelope response",
             "content": {
               "application/json": {
-                "schema": {
-                  "anyOf": [
-                    {
-                      "$ref": "#/components/schemas/AccelLatestEnvelope"
-                    },
-                    {
-                      "type": "object"
-                    }
-                  ]
-                },
                 "examples": {
                   "accelLatest": {
                     "summary": "path=telemetry/accel/latest",
@@ -86,13 +66,6 @@
                         "z": 9.68
                       }
                     }
-                  },
-                  "accelLatestEmpty": {
-                    "summary": "path=telemetry/accel/latest (device tanpa data)",
-                    "value": {
-                      "ok": true,
-                      "data": {}
-                    }
                   }
                 }
               }
@@ -102,14 +75,9 @@
             "description": "Error envelope",
             "content": {
               "application/json": {
-                "examples": {
-                  "accelLatestMissingDevice": {
-                    "summary": "path=telemetry/accel/latest tanpa device_id",
-                    "value": {
-                      "ok": false,
-                      "error": "missing_field: device_id"
-                    }
-                  }
+                "example": {
+                  "ok": false,
+                  "error": "missing_field: device_id"
                 }
               }
             }
@@ -119,10 +87,6 @@
       "post": {
         "summary": "Multi-purpose POST endpoint (routed by `path` query)",
         "operationId": "doPost",
-        "tags": [
-          "Modul 2 - Accelerometer"
-        ],
-        "description": "Dokumentasi POST untuk Modul 2 - Accelerometer.\nRouter tetap memakai query parameter `path`.\nEndpoint pada modul ini:\n- `?path=telemetry/accel`",
         "parameters": [
           {
             "name": "path",
@@ -146,29 +110,6 @@
                     "$ref": "#/components/schemas/BatchAccelRequest"
                   }
                 ]
-              },
-              "examples": {
-                "accelBatchRequest": {
-                  "summary": "path=telemetry/accel",
-                  "value": {
-                    "device_id": "dev-001",
-                    "ts": "2026-02-18T10:15:30Z",
-                    "samples": [
-                      {
-                        "t": "2026-02-18T10:15:29.100Z",
-                        "x": 0.12,
-                        "y": 0.01,
-                        "z": 9.7
-                      },
-                      {
-                        "t": "2026-02-18T10:15:29.300Z",
-                        "x": 0.15,
-                        "y": 0.02,
-                        "z": 9.68
-                      }
-                    ]
-                  }
-                }
               }
             }
           }
@@ -178,16 +119,6 @@
             "description": "JSON envelope response",
             "content": {
               "application/json": {
-                "schema": {
-                  "anyOf": [
-                    {
-                      "$ref": "#/components/schemas/AccelBatchEnvelope"
-                    },
-                    {
-                      "type": "object"
-                    }
-                  ]
-                },
                 "examples": {
                   "accelBatch": {
                     "summary": "path=telemetry/accel",
@@ -205,38 +136,7 @@
           "400": {
             "description": "Error envelope",
             "content": {
-              "application/json": {
-                "examples": {
-                  "accelMissingDevice": {
-                    "summary": "path=telemetry/accel tanpa device_id",
-                    "value": {
-                      "ok": false,
-                      "error": "missing_field: device_id"
-                    }
-                  },
-                  "accelMissingSamples": {
-                    "summary": "path=telemetry/accel tanpa samples",
-                    "value": {
-                      "ok": false,
-                      "error": "missing_field: samples"
-                    }
-                  },
-                  "accelInvalidTimestamp": {
-                    "summary": "path=telemetry/accel dengan timestamp sample tidak valid",
-                    "value": {
-                      "ok": false,
-                      "error": "invalid_timestamp: samples[0].t"
-                    }
-                  },
-                  "accelInvalidNumber": {
-                    "summary": "path=telemetry/accel dengan angka sample tidak valid",
-                    "value": {
-                      "ok": false,
-                      "error": "invalid_number: samples[0].x"
-                    }
-                  }
-                }
-              }
+              "application/json": {}
             }
           }
         }
@@ -245,38 +145,6 @@
   },
   "components": {
     "schemas": {
-      "AccelBatchEnvelope": {
-        "type": "object",
-        "required": [
-          "ok",
-          "data"
-        ],
-        "properties": {
-          "ok": {
-            "type": "boolean",
-            "enum": [
-              true
-            ]
-          },
-          "data": {
-            "$ref": "#/components/schemas/AccelBatchResponseData"
-          }
-        }
-      },
-      "AccelBatchResponseData": {
-        "type": "object",
-        "required": [
-          "accepted"
-        ],
-        "properties": {
-          "accepted": {
-            "type": "integer",
-            "minimum": 0,
-            "description": "Jumlah sample accelerometer yang diterima backend dari request batch.",
-            "example": 2
-          }
-        }
-      },
       "BatchAccelRequest": {
         "type": "object",
         "required": [
@@ -286,96 +154,41 @@
         "properties": {
           "device_id": {
             "type": "string",
-            "example": "dev-001",
-            "description": "Identitas perangkat pengirim batch accelerometer."
+            "example": "dev-001"
           },
           "ts": {
             "type": "string",
-            "format": "date-time",
-            "description": "Timestamp batch (ISO-8601). Jika tidak dikirim, backend memakai waktu server."
+            "format": "date-time"
           },
           "samples": {
             "type": "array",
             "minItems": 1,
-            "description": "Daftar sample accelerometer yang akan disimpan dalam satu request.",
             "items": {
-              "$ref": "#/components/schemas/AccelSamplePointRequest"
+              "type": "object",
+              "required": [
+                "t",
+                "x",
+                "y",
+                "z"
+              ],
+              "properties": {
+                "t": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "x": {
+                  "type": "number"
+                },
+                "y": {
+                  "type": "number"
+                },
+                "z": {
+                  "type": "number"
+                }
+              }
             }
           }
         }
-      },
-      "AccelSamplePointRequest": {
-        "type": "object",
-        "required": [
-          "t",
-          "x",
-          "y",
-          "z"
-        ],
-        "properties": {
-          "t": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Timestamp sample accelerometer (ISO-8601).",
-            "example": "2026-02-18T10:15:29.300Z"
-          },
-          "x": {
-            "type": "number",
-            "description": "Nilai sumbu X.",
-            "example": 0.15
-          },
-          "y": {
-            "type": "number",
-            "description": "Nilai sumbu Y.",
-            "example": 0.02
-          },
-          "z": {
-            "type": "number",
-            "description": "Nilai sumbu Z.",
-            "example": 9.68
-          }
-        }
-      },
-      "AccelLatestEnvelope": {
-        "type": "object",
-        "required": [
-          "ok",
-          "data"
-        ],
-        "properties": {
-          "ok": {
-            "type": "boolean",
-            "enum": [
-              true
-            ]
-          },
-          "data": {
-            "$ref": "#/components/schemas/AccelLatestResponseData"
-          }
-        }
-      },
-      "AccelLatestResponseData": {
-        "type": "object",
-        "properties": {
-          "t": {
-            "type": "string",
-            "format": "date-time",
-            "example": "2026-02-18T10:15:29.300Z"
-          },
-          "x": {
-            "type": "number",
-            "example": 0.15
-          },
-          "y": {
-            "type": "number",
-            "example": 0.02
-          },
-          "z": {
-            "type": "number",
-            "example": 9.68
-          }
-        },
-        "description": "Sample accelerometer terbaru untuk `device_id`.\nJika device belum punya data, backend mengembalikan object kosong (`{}`).\n"
       }
     }
   }

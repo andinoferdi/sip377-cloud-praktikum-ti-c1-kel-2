@@ -80,6 +80,12 @@ Sinkronkan spesifikasi OpenAPI untuk halaman docs frontend:
 npm run docs:sync-openapi
 ```
 
+Generate artefak OpenAPI modul frontend dari kontrak utama backend:
+
+```bash
+npm run docs:sync-openapi-modules
+```
+
 Sinkronkan asset Swagger UI statis:
 
 ```bash
@@ -90,6 +96,7 @@ Verifikasi sinkronisasi spec:
 
 ```bash
 npm run docs:check-openapi-sync
+npm run docs:check-openapi-modules-sync
 npm run docs:check-swagger-ui-assets
 ```
 
@@ -323,8 +330,11 @@ Saat membuat bug report, wajib isi:
 2. `frontend/README.md` (setup dan flow frontend).
 3. `backend-gas/openapi.yaml` (kontrak API publik).
 4. `frontend/public/openapi.yaml` (salinan runtime untuk Swagger UI frontend, update via `npm run docs:sync-openapi`).
-5. `frontend/public/docs/*` (asset Swagger UI statis, update via `npm run docs:sync-swagger-ui-assets`).
-6. Standar teknis frontend/backend yang aktif di repository.
+5. `frontend/public/openapi-modul-1.json` dan `frontend/public/openapi-modul-2.json` (artefak turunan otomatis, update via `npm run docs:sync-openapi-modules`).
+6. `frontend/public/docs/*` (asset Swagger UI statis, update via `npm run docs:sync-swagger-ui-assets`).
+7. Standar teknis frontend/backend yang aktif di repository.
+
+Koleksi Postman manual tidak lagi menjadi artefak kontrak. Untuk testing Postman, gunakan fitur import dari OpenAPI modul hasil generator.
 
 ### 7.3 Standar kualitas dokumentasi
 
