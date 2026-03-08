@@ -19,6 +19,13 @@ info:
     Presence matching notes:
     - `course_id` and `session_id` are normalized to lowercase before matching.
     - `qr_token` is normalized to uppercase before matching.
+    Modul 2 Accelerometer notes:
+    - POST route: `?path=telemetry/accel`
+    - GET latest route: `?path=telemetry/accel/latest`
+    - Batch payload requires `device_id` and non-empty `samples[]`.
+    - Each sample requires `t`, `x`, `y`, and `z`.
+    - Batch success response returns accepted sample count in `data.accepted`.
+    - Latest response returns newest sample (`t`, `x`, `y`, `z`) for the requested `device_id`.
     This deployment is API-only and does not serve HTML dashboard.
 
 servers:
@@ -31,11 +38,27 @@ servers:
 
 security: []
 
+tags:
+  - name: Modul 2 - Accelerometer
+    description: |
+      Endpoint virtual untuk modul 2 accelerometer:
+      - `POST ?path=telemetry/accel`
+      - `GET ?path=telemetry/accel/latest`
+      Semua response mengikuti envelope standar:
+      - success: `{ "ok": true, "data": ... }`
+      - error: `{ "ok": false, "error": "..." }`
+
 paths:
   /exec:
     get:
       summary: Multi-purpose GET endpoint (routed by `path` query)
       operationId: doGet
+      tags:
+        - Modul 2 - Accelerometer
+      description: |
+        Router GET tunggal berbasis query `path`.
+        Untuk modul 2 accelerometer gunakan:
+        - `?path=telemetry/accel/latest&device_id=...`
       parameters:
         - name: path
           in: query
@@ -108,6 +131,10 @@ paths:
           description: JSON envelope response
           content:
             application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/AccelLatestEnvelope'
+                  - type: object
               examples:
                 apiInfo:
                   summary: Default / path=ui metadata
@@ -185,6 +212,11 @@ paths:
                       x: 0.15
                       y: 0.02
                       z: 9.68
+                accelLatestEmpty:
+                  summary: path=telemetry/accel/latest (device tanpa data)
+                  value:
+                    ok: true
+                    data: {}
                 gpsLatest:
                   summary: path=telemetry/gps/latest
                   value:
@@ -211,13 +243,23 @@ paths:
           description: Error envelope
           content:
             application/json:
-              example:
-                ok: false
-                error: "missing_field: device_id"
+              examples:
+                accelLatestMissingDevice:
+                  summary: path=telemetry/accel/latest tanpa device_id
+                  value:
+                    ok: false
+                    error: "missing_field: device_id"
 
     post:
       summary: Multi-purpose POST endpoint (routed by `path` query)
       operationId: doPost
+      tags:
+        - Modul 2 - Accelerometer
+      description: |
+        Router POST tunggal berbasis query `path`.
+        Untuk modul 2 accelerometer gunakan:
+        - `?path=telemetry/accel`
+        Body wajib JSON dengan `device_id` dan `samples[]` non-empty.
       parameters:
         - name: path
           in: query
@@ -243,11 +285,30 @@ paths:
                 - $ref: '#/components/schemas/CourseMeetingConfigUpdateRequest'
                 - $ref: '#/components/schemas/BatchAccelRequest'
                 - $ref: '#/components/schemas/LogGPSRequest'
+            examples:
+              accelBatchRequest:
+                summary: path=telemetry/accel
+                value:
+                  device_id: "dev-001"
+                  ts: "2026-02-18T10:15:30Z"
+                  samples:
+                    - t: "2026-02-18T10:15:29.100Z"
+                      x: 0.12
+                      y: 0.01
+                      z: 9.70
+                    - t: "2026-02-18T10:15:29.300Z"
+                      x: 0.15
+                      y: 0.02
+                      z: 9.68
       responses:
         '200':
           description: JSON envelope response
           content:
             application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/AccelBatchEnvelope'
+                  - type: object
               examples:
                 generateQR:
                   summary: path=presence/qr/generate
@@ -303,9 +364,27 @@ paths:
           description: Error envelope
           content:
             application/json:
-              example:
-                ok: false
-                error: "token_invalid"
+              examples:
+                accelMissingDevice:
+                  summary: path=telemetry/accel tanpa device_id
+                  value:
+                    ok: false
+                    error: "missing_field: device_id"
+                accelMissingSamples:
+                  summary: path=telemetry/accel tanpa samples
+                  value:
+                    ok: false
+                    error: "missing_field: samples"
+                accelInvalidTimestamp:
+                  summary: path=telemetry/accel dengan timestamp sample tidak valid
+                  value:
+                    ok: false
+                    error: "invalid_timestamp: samples[0].t"
+                accelInvalidNumber:
+                  summary: path=telemetry/accel dengan angka sample tidak valid
+                  value:
+                    ok: false
+                    error: "invalid_number: samples[0].x"
 
 components:
   schemas:
@@ -411,25 +490,89 @@ components:
         device_id:
           type: string
           example: dev-001
+          description: Identitas perangkat pengirim batch accelerometer.
         ts:
           type: string
           format: date-time
+          description: Timestamp batch (ISO-8601). Jika tidak dikirim, backend memakai waktu server.
         samples:
           type: array
           minItems: 1
+          description: Daftar sample accelerometer yang akan disimpan dalam satu request.
           items:
-            type: object
-            required: [t, x, y, z]
-            properties:
-              t:
-                type: string
-                format: date-time
-              x:
-                type: number
-              y:
-                type: number
-              z:
-                type: number
+            $ref: '#/components/schemas/AccelSamplePointRequest'
+
+    AccelSamplePointRequest:
+      type: object
+      required: [t, x, y, z]
+      properties:
+        t:
+          type: string
+          format: date-time
+          description: Timestamp sample accelerometer (ISO-8601).
+          example: "2026-02-18T10:15:29.300Z"
+        x:
+          type: number
+          description: Nilai sumbu X.
+          example: 0.15
+        y:
+          type: number
+          description: Nilai sumbu Y.
+          example: 0.02
+        z:
+          type: number
+          description: Nilai sumbu Z.
+          example: 9.68
+
+    AccelBatchResponseData:
+      type: object
+      required: [accepted]
+      properties:
+        accepted:
+          type: integer
+          minimum: 0
+          description: Jumlah sample accelerometer yang diterima backend dari request batch.
+          example: 2
+
+    AccelLatestResponseData:
+      type: object
+      properties:
+        t:
+          type: string
+          format: date-time
+          example: "2026-02-18T10:15:29.300Z"
+        x:
+          type: number
+          example: 0.15
+        y:
+          type: number
+          example: 0.02
+        z:
+          type: number
+          example: 9.68
+      description: |
+        Sample accelerometer terbaru untuk `device_id`.
+        Jika device belum punya data, backend mengembalikan object kosong (`{}`).
+
+    AccelBatchEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/AccelBatchResponseData'
+
+    AccelLatestEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/AccelLatestResponseData'
 
     LogGPSRequest:
       type: object

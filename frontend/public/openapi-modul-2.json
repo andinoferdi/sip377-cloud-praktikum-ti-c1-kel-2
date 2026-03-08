@@ -1,0 +1,382 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "GAS Backend API v1 - Presensi QR Dinamis, Telemetry, GPS - Modul 2 - Accelerometer",
+    "version": "1.0.0",
+    "license": {
+      "name": "Academic Use Only",
+      "url": "https://creativecommons.org/licenses/by-nc/4.0/"
+    },
+    "description": "Dokumentasi endpoint untuk Modul 2 - Accelerometer."
+  },
+  "servers": [
+    {
+      "url": "https://script.google.com/macros/s/{deploymentId}/exec",
+      "description": "Google Apps Script Web App",
+      "variables": {
+        "deploymentId": {
+          "default": "AKfycbzVJ1--9eMNpaPC7JcyPQsdbkOPkkKMq3PdUuFeHJKSQ5fTw7OahhjbXy1f4V0XMMeTtA",
+          "description": "Web App deployment ID"
+        }
+      }
+    }
+  ],
+  "security": [],
+  "tags": [
+    {
+      "name": "Modul 2 - Accelerometer",
+      "description": "Dokumentasi Modul 2 - Accelerometer."
+    }
+  ],
+  "paths": {
+    "/exec": {
+      "get": {
+        "summary": "Multi-purpose GET endpoint (routed by `path` query)",
+        "operationId": "doGet",
+        "tags": [
+          "Modul 2 - Accelerometer"
+        ],
+        "description": "Dokumentasi GET untuk Modul 2 - Accelerometer.\nRouter tetap memakai query parameter `path`.\nEndpoint pada modul ini:\n- `?path=telemetry/accel/latest`",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "telemetry/accel/latest"
+              ]
+            },
+            "description": "Virtual route selector. Empty/default and `ui` both return API metadata JSON.\n"
+          },
+          {
+            "name": "device_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Required for path=telemetry/accel/latest."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "JSON envelope response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/AccelLatestEnvelope"
+                    },
+                    {
+                      "type": "object"
+                    }
+                  ]
+                },
+                "examples": {
+                  "accelLatest": {
+                    "summary": "path=telemetry/accel/latest",
+                    "value": {
+                      "ok": true,
+                      "data": {
+                        "t": "2026-02-18T10:15:29.300Z",
+                        "x": 0.15,
+                        "y": 0.02,
+                        "z": 9.68
+                      }
+                    }
+                  },
+                  "accelLatestEmpty": {
+                    "summary": "path=telemetry/accel/latest (device tanpa data)",
+                    "value": {
+                      "ok": true,
+                      "data": {}
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "accelLatestMissingDevice": {
+                    "summary": "path=telemetry/accel/latest tanpa device_id",
+                    "value": {
+                      "ok": false,
+                      "error": "missing_field: device_id"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Multi-purpose POST endpoint (routed by `path` query)",
+        "operationId": "doPost",
+        "tags": [
+          "Modul 2 - Accelerometer"
+        ],
+        "description": "Dokumentasi POST untuk Modul 2 - Accelerometer.\nRouter tetap memakai query parameter `path`.\nEndpoint pada modul ini:\n- `?path=telemetry/accel`",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "telemetry/accel"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/BatchAccelRequest"
+                  }
+                ]
+              },
+              "examples": {
+                "accelBatchRequest": {
+                  "summary": "path=telemetry/accel",
+                  "value": {
+                    "device_id": "dev-001",
+                    "ts": "2026-02-18T10:15:30Z",
+                    "samples": [
+                      {
+                        "t": "2026-02-18T10:15:29.100Z",
+                        "x": 0.12,
+                        "y": 0.01,
+                        "z": 9.7
+                      },
+                      {
+                        "t": "2026-02-18T10:15:29.300Z",
+                        "x": 0.15,
+                        "y": 0.02,
+                        "z": 9.68
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JSON envelope response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/AccelBatchEnvelope"
+                    },
+                    {
+                      "type": "object"
+                    }
+                  ]
+                },
+                "examples": {
+                  "accelBatch": {
+                    "summary": "path=telemetry/accel",
+                    "value": {
+                      "ok": true,
+                      "data": {
+                        "accepted": 2
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "accelMissingDevice": {
+                    "summary": "path=telemetry/accel tanpa device_id",
+                    "value": {
+                      "ok": false,
+                      "error": "missing_field: device_id"
+                    }
+                  },
+                  "accelMissingSamples": {
+                    "summary": "path=telemetry/accel tanpa samples",
+                    "value": {
+                      "ok": false,
+                      "error": "missing_field: samples"
+                    }
+                  },
+                  "accelInvalidTimestamp": {
+                    "summary": "path=telemetry/accel dengan timestamp sample tidak valid",
+                    "value": {
+                      "ok": false,
+                      "error": "invalid_timestamp: samples[0].t"
+                    }
+                  },
+                  "accelInvalidNumber": {
+                    "summary": "path=telemetry/accel dengan angka sample tidak valid",
+                    "value": {
+                      "ok": false,
+                      "error": "invalid_number: samples[0].x"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AccelBatchEnvelope": {
+        "type": "object",
+        "required": [
+          "ok",
+          "data"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "$ref": "#/components/schemas/AccelBatchResponseData"
+          }
+        }
+      },
+      "AccelBatchResponseData": {
+        "type": "object",
+        "required": [
+          "accepted"
+        ],
+        "properties": {
+          "accepted": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Jumlah sample accelerometer yang diterima backend dari request batch.",
+            "example": 2
+          }
+        }
+      },
+      "BatchAccelRequest": {
+        "type": "object",
+        "required": [
+          "device_id",
+          "samples"
+        ],
+        "properties": {
+          "device_id": {
+            "type": "string",
+            "example": "dev-001",
+            "description": "Identitas perangkat pengirim batch accelerometer."
+          },
+          "ts": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp batch (ISO-8601). Jika tidak dikirim, backend memakai waktu server."
+          },
+          "samples": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Daftar sample accelerometer yang akan disimpan dalam satu request.",
+            "items": {
+              "$ref": "#/components/schemas/AccelSamplePointRequest"
+            }
+          }
+        }
+      },
+      "AccelSamplePointRequest": {
+        "type": "object",
+        "required": [
+          "t",
+          "x",
+          "y",
+          "z"
+        ],
+        "properties": {
+          "t": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp sample accelerometer (ISO-8601).",
+            "example": "2026-02-18T10:15:29.300Z"
+          },
+          "x": {
+            "type": "number",
+            "description": "Nilai sumbu X.",
+            "example": 0.15
+          },
+          "y": {
+            "type": "number",
+            "description": "Nilai sumbu Y.",
+            "example": 0.02
+          },
+          "z": {
+            "type": "number",
+            "description": "Nilai sumbu Z.",
+            "example": 9.68
+          }
+        }
+      },
+      "AccelLatestEnvelope": {
+        "type": "object",
+        "required": [
+          "ok",
+          "data"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "$ref": "#/components/schemas/AccelLatestResponseData"
+          }
+        }
+      },
+      "AccelLatestResponseData": {
+        "type": "object",
+        "properties": {
+          "t": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-02-18T10:15:29.300Z"
+          },
+          "x": {
+            "type": "number",
+            "example": 0.15
+          },
+          "y": {
+            "type": "number",
+            "example": 0.02
+          },
+          "z": {
+            "type": "number",
+            "example": 9.68
+          }
+        },
+        "description": "Sample accelerometer terbaru untuk `device_id`.\nJika device belum punya data, backend mengembalikan object kosong (`{}`).\n"
+      }
+    }
+  }
+}

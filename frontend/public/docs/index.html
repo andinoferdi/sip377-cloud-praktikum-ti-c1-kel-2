@@ -3,20 +3,73 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>API Docs | CloudTrack Campus</title>
+    <title>API Docs Modules | CloudTrack Campus</title>
     <link rel="icon" type="image/png" href="/docs/favicon-32x32.png" sizes="32x32" />
     <link rel="icon" type="image/png" href="/docs/favicon-16x16.png" sizes="16x16" />
-    <link rel="stylesheet" href="/docs/swagger-ui.css" />
     <style>
       html { box-sizing: border-box; overflow-y: scroll; }
       *, *:before, *:after { box-sizing: inherit; }
-      body { margin: 0; background: #fafafa; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: Arial, sans-serif;
+        background: #fafafa;
+        color: #111827;
+      }
+      .container {
+        max-width: 780px;
+        margin: 0 auto;
+        padding: 48px 24px;
+      }
+      h1 {
+        margin: 0 0 12px;
+        font-size: 32px;
+      }
+      p {
+        margin: 0 0 24px;
+        line-height: 1.6;
+      }
+      .grid {
+        display: grid;
+        gap: 14px;
+      }
+      .card {
+        display: block;
+        padding: 18px;
+        border-radius: 12px;
+        border: 1px solid #d1d5db;
+        text-decoration: none;
+        color: inherit;
+        background: #ffffff;
+      }
+      .card:hover {
+        border-color: #2563eb;
+      }
+      .title {
+        margin: 0 0 6px;
+        font-weight: 700;
+      }
+      .desc {
+        margin: 0;
+        font-size: 14px;
+        color: #4b5563;
+      }
     </style>
   </head>
   <body>
-    <div id="swagger-ui"></div>
-    <script src="/docs/swagger-ui-bundle.js"></script>
-    <script src="/docs/swagger-ui-standalone-preset.js"></script>
-    <script src="/docs/swagger-initializer.js"></script>
+    <main class="container">
+      <h1>CloudTrack API Docs</h1>
+      <p>Pilih dokumentasi Swagger berdasarkan modul yang ingin Anda lihat.</p>
+      <section class="grid">
+        <a class="card" href="/docs/modul-1">
+          <h2 class="title">Modul 1 - Presensi QR</h2>
+          <p class="desc">Hanya endpoint presensi. Tidak menampilkan endpoint accelerometer.</p>
+        </a>
+        <a class="card" href="/docs/modul-2">
+          <h2 class="title">Modul 2 - Accelerometer</h2>
+          <p class="desc">Hanya endpoint accelerometer. Tidak menampilkan endpoint presensi.</p>
+        </a>
+      </section>
+    </main>
   </body>
 </html>

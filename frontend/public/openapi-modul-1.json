@@ -1,0 +1,558 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "GAS Backend API v1 - Presensi QR Dinamis, Telemetry, GPS - Modul 1 - Presensi QR",
+    "version": "1.0.0",
+    "license": {
+      "name": "Academic Use Only",
+      "url": "https://creativecommons.org/licenses/by-nc/4.0/"
+    },
+    "description": "Dokumentasi endpoint untuk Modul 1 - Presensi QR."
+  },
+  "servers": [
+    {
+      "url": "https://script.google.com/macros/s/{deploymentId}/exec",
+      "description": "Google Apps Script Web App",
+      "variables": {
+        "deploymentId": {
+          "default": "AKfycbzVJ1--9eMNpaPC7JcyPQsdbkOPkkKMq3PdUuFeHJKSQ5fTw7OahhjbXy1f4V0XMMeTtA",
+          "description": "Web App deployment ID"
+        }
+      }
+    }
+  ],
+  "security": [],
+  "tags": [
+    {
+      "name": "Modul 1 - Presensi QR",
+      "description": "Dokumentasi Modul 1 - Presensi QR."
+    }
+  ],
+  "paths": {
+    "/exec": {
+      "get": {
+        "summary": "Multi-purpose GET endpoint (routed by `path` query)",
+        "operationId": "doGet",
+        "tags": [
+          "Modul 1 - Presensi QR"
+        ],
+        "description": "Dokumentasi GET untuk Modul 1 - Presensi QR.\nRouter tetap memakai query parameter `path`.\nEndpoint pada modul ini:\n- `?path=presence/status`\n- `?path=presence/list`\n- `?path=presence/sessions/active`\n- `?path=presence/course/config`",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "presence/status",
+                "presence/list",
+                "presence/sessions/active",
+                "presence/course/config"
+              ]
+            },
+            "description": "Virtual route selector. Empty/default and `ui` both return API metadata JSON.\n"
+          },
+          {
+            "name": "user_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Required when path=presence/status"
+          },
+          {
+            "name": "owner_identifier",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Required when path=presence/sessions/active"
+          },
+          {
+            "name": "course_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Required when path=presence/status, path=presence/list, or path=presence/course/config. Optional filter when path=presence/sessions/active. Matching is case-insensitive."
+          },
+          {
+            "name": "session_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Required when path=presence/status or path=presence/list. Matching is case-insensitive."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 200
+            },
+            "description": "Optional max items for path=presence/list or path=presence/sessions/active."
+          },
+          {
+            "name": "include_stopped",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "description": "Optional for path=presence/sessions/active. If true, response includes both active and stopped sessions."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "JSON envelope response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/AccelLatestEnvelope"
+                    },
+                    {
+                      "type": "object"
+                    }
+                  ]
+                },
+                "examples": {
+                  "presenceStatus": {
+                    "summary": "path=presence/status",
+                    "value": {
+                      "ok": true,
+                      "data": {
+                        "user_id": "2023xxxx",
+                        "course_id": "cloud-101",
+                        "session_id": "sesi-02",
+                        "status": "checked_in",
+                        "last_ts": "2026-02-18T10:01:10Z"
+                      }
+                    }
+                  },
+                  "presenceList": {
+                    "summary": "path=presence/list",
+                    "value": {
+                      "ok": true,
+                      "data": {
+                        "course_id": "cloud-101",
+                        "session_id": "sesi-02",
+                        "total": 2,
+                        "items": [
+                          {
+                            "presence_id": "PR-0002",
+                            "user_id": "20230002",
+                            "device_id": "dev-002",
+                            "ts": "2026-02-18T10:01:20Z",
+                            "recorded_at": "2026-02-18T10:01:20Z"
+                          },
+                          {
+                            "presence_id": "PR-0001",
+                            "user_id": "20230001",
+                            "device_id": "dev-001",
+                            "ts": "2026-02-18T10:01:10Z",
+                            "recorded_at": "2026-02-18T10:01:10Z"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "activeSessions": {
+                    "summary": "path=presence/sessions/active",
+                    "value": {
+                      "ok": true,
+                      "data": {
+                        "owner_identifier": "198701012020011001",
+                        "total": 2,
+                        "items": [
+                          {
+                            "course_id": "cloud-101",
+                            "session_id": "cloud-101-p01",
+                            "meeting_key": "MTG-CLOUD-101-P01",
+                            "owner_identifier": "198701012020011001",
+                            "status": "active",
+                            "started_at": "2026-02-28T09:26:00.000Z",
+                            "updated_at": "2026-02-28T09:28:00.000Z",
+                            "stopped_at": null
+                          },
+                          {
+                            "course_id": "cloud-101",
+                            "session_id": "cloud-101-p00",
+                            "meeting_key": "MTG-CLOUD-101-P00",
+                            "owner_identifier": "198701012020011001",
+                            "status": "stopped",
+                            "started_at": "2026-02-21T09:26:00.000Z",
+                            "updated_at": "2026-02-21T09:40:00.000Z",
+                            "stopped_at": "2026-02-21T09:40:00.000Z"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "courseConfig": {
+                    "summary": "path=presence/course/config",
+                    "value": {
+                      "ok": true,
+                      "data": {
+                        "course_id": "cloud-101",
+                        "total_meetings": 14
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Multi-purpose POST endpoint (routed by `path` query)",
+        "operationId": "doPost",
+        "tags": [
+          "Modul 1 - Presensi QR"
+        ],
+        "description": "Dokumentasi POST untuk Modul 1 - Presensi QR.\nRouter tetap memakai query parameter `path`.\nEndpoint pada modul ini:\n- `?path=presence/qr/generate`\n- `?path=presence/checkin`\n- `?path=presence/qr/stop`\n- `?path=presence/course/config`",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "presence/qr/generate",
+                "presence/checkin",
+                "presence/qr/stop",
+                "presence/course/config"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/GenerateQRRequest"
+                  },
+                  {
+                    "$ref": "#/components/schemas/CheckinRequest"
+                  },
+                  {
+                    "$ref": "#/components/schemas/StopSessionRequest"
+                  },
+                  {
+                    "$ref": "#/components/schemas/CourseMeetingConfigUpdateRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JSON envelope response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/AccelBatchEnvelope"
+                    },
+                    {
+                      "type": "object"
+                    }
+                  ]
+                },
+                "examples": {
+                  "generateQR": {
+                    "summary": "path=presence/qr/generate",
+                    "value": {
+                      "ok": true,
+                      "data": {
+                        "qr_token": "TKN-8F2A19",
+                        "expires_at": "2026-02-18T10:02:00Z",
+                        "meeting_key": "MTG-CLOUD-101-P01"
+                      }
+                    }
+                  },
+                  "checkinSuccess": {
+                    "summary": "path=presence/checkin",
+                    "value": {
+                      "ok": true,
+                      "data": {
+                        "presence_id": "PR-0001",
+                        "status": "checked_in"
+                      }
+                    }
+                  },
+                  "checkinError": {
+                    "summary": "checkin error",
+                    "value": {
+                      "ok": false,
+                      "error": "already_checked_in"
+                    }
+                  },
+                  "stopSession": {
+                    "summary": "path=presence/qr/stop",
+                    "value": {
+                      "ok": true,
+                      "data": {
+                        "course_id": "cloud-101",
+                        "session_id": "cloud-101-p01",
+                        "meeting_key": "MTG-CLOUD-101-P01",
+                        "status": "stopped",
+                        "stopped_at": "2026-02-28T09:30:00.000Z"
+                      }
+                    }
+                  },
+                  "courseConfigUpdate": {
+                    "summary": "path=presence/course/config",
+                    "value": {
+                      "ok": true,
+                      "data": {
+                        "course_id": "cloud-101",
+                        "total_meetings": 14,
+                        "updated_at": "2026-02-28T09:30:00.000Z"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AccelBatchEnvelope": {
+        "type": "object",
+        "required": [
+          "ok",
+          "data"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "$ref": "#/components/schemas/AccelBatchResponseData"
+          }
+        }
+      },
+      "AccelBatchResponseData": {
+        "type": "object",
+        "required": [
+          "accepted"
+        ],
+        "properties": {
+          "accepted": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Jumlah sample accelerometer yang diterima backend dari request batch.",
+            "example": 2
+          }
+        }
+      },
+      "CourseMeetingConfigUpdateRequest": {
+        "type": "object",
+        "required": [
+          "course_id",
+          "total_meetings"
+        ],
+        "properties": {
+          "course_id": {
+            "type": "string",
+            "example": "cloud-101"
+          },
+          "total_meetings": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20,
+            "example": 14
+          },
+          "ts": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "StopSessionRequest": {
+        "type": "object",
+        "required": [
+          "course_id",
+          "session_id"
+        ],
+        "properties": {
+          "course_id": {
+            "type": "string",
+            "example": "cloud-101",
+            "description": "Session course ID to mark as closed."
+          },
+          "session_id": {
+            "type": "string",
+            "example": "cloud-101-senin-02-202602281626",
+            "description": "Session ID to mark as closed."
+          },
+          "owner_identifier": {
+            "type": "string",
+            "example": "198701012020011001",
+            "description": "Optional owner identifier for consistent stop across meeting state."
+          },
+          "meeting_key": {
+            "type": "string",
+            "example": "MTG-CLOUD-101-P01",
+            "description": "Optional meeting key. If provided, stop is applied to this meeting identity."
+          },
+          "ts": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CheckinRequest": {
+        "type": "object",
+        "required": [
+          "user_id",
+          "device_id",
+          "course_id",
+          "session_id",
+          "qr_token"
+        ],
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "example": "2023xxxx"
+          },
+          "device_id": {
+            "type": "string",
+            "example": "dev-001"
+          },
+          "course_id": {
+            "type": "string",
+            "example": "cloud-101",
+            "description": "Matching is case-insensitive (normalized to lowercase)."
+          },
+          "session_id": {
+            "type": "string",
+            "example": "sesi-02",
+            "description": "Matching is case-insensitive (normalized to lowercase)."
+          },
+          "qr_token": {
+            "type": "string",
+            "example": "TKN-8F2A19",
+            "description": "Matching is case-insensitive (normalized to uppercase)."
+          },
+          "ts": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "GenerateQRRequest": {
+        "type": "object",
+        "required": [
+          "course_id",
+          "session_id",
+          "meeting_no"
+        ],
+        "properties": {
+          "course_id": {
+            "type": "string",
+            "example": "cloud-101",
+            "description": "Stored and matched in lowercase form."
+          },
+          "session_id": {
+            "type": "string",
+            "example": "cloud-101-p01",
+            "description": "Must match deterministic format `<course_id>-pNN` for the selected meeting number."
+          },
+          "meeting_no": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20,
+            "example": 1
+          },
+          "owner_identifier": {
+            "type": "string",
+            "example": "198701012020011001",
+            "description": "Optional owner identifier of the lecturer who starts the meeting."
+          },
+          "meeting_key": {
+            "type": "string",
+            "example": "MTG-CLOUD-101-P01",
+            "description": "Optional field for backward compatibility. Backend uses deterministic meeting key."
+          },
+          "ts": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AccelLatestEnvelope": {
+        "type": "object",
+        "required": [
+          "ok",
+          "data"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "$ref": "#/components/schemas/AccelLatestResponseData"
+          }
+        }
+      },
+      "AccelLatestResponseData": {
+        "type": "object",
+        "properties": {
+          "t": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-02-18T10:15:29.300Z"
+          },
+          "x": {
+            "type": "number",
+            "example": 0.15
+          },
+          "y": {
+            "type": "number",
+            "example": 0.02
+          },
+          "z": {
+            "type": "number",
+            "example": 9.68
+          }
+        },
+        "description": "Sample accelerometer terbaru untuk `device_id`.\nJika device belum punya data, backend mengembalikan object kosong (`{}`).\n"
+      }
+    }
+  }
+}
