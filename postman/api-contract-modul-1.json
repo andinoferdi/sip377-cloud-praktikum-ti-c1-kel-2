@@ -1,0 +1,761 @@
+{
+  "info": {
+    "_postman_id": "3f27f1e5-8261-429f-9545-502604b40b73",
+    "name": "API Contract Modul 1 - Presensi QR",
+    "description": "Collection Postman khusus Modul 1.\nHanya memuat endpoint Presensi QR Dinamis dan konfigurasi course yang terkait langsung dengan modul presensi.\n",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "43786463"
+  },
+  "item": [
+    {
+      "name": "presence",
+      "item": [
+        {
+          "name": "qr",
+          "item": [
+            {
+              "name": "generate",
+              "item": [
+                {
+                  "name": "Generate QR Token",
+                  "request": {
+                    "method": "POST",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      },
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
+                    ],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"course_id\": \"cloud-101\",\n  \"session_id\": \"cloud-101-p01\",\n  \"meeting_no\": 1,\n  \"ts\": \"2026-03-03T10:00:00Z\"\n}",
+                      "options": {
+                        "raw": {
+                          "headerFamily": "json",
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "{{baseUrl}}/presence/qr/generate",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "presence",
+                        "qr",
+                        "generate"
+                      ]
+                    },
+                    "description": "Membuat token QR dinamis untuk sesi presensi."
+                  },
+                  "response": [
+                    {
+                      "name": "OK",
+                      "originalRequest": {
+                        "method": "POST",
+                        "header": [
+                          {
+                            "key": "Content-Type",
+                            "value": "application/json"
+                          },
+                          {
+                            "key": "Accept",
+                            "value": "application/json"
+                          }
+                        ],
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"course_id\": \"cloud-101\",\n  \"session_id\": \"cloud-101-p01\",\n  \"meeting_no\": 1,\n  \"ts\": \"2026-03-03T10:00:00Z\"\n}",
+                          "options": {
+                            "raw": {
+                              "headerFamily": "json",
+                              "language": "json"
+                            }
+                          }
+                        },
+                        "url": {
+                          "raw": "{{baseUrl}}/presence/qr/generate",
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "path": [
+                            "presence",
+                            "qr",
+                            "generate"
+                          ]
+                        }
+                      },
+                      "status": "OK",
+                      "code": 200,
+                      "_postman_previewlanguage": "json",
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json"
+                        }
+                      ],
+                      "cookie": [],
+                      "body": "{\n  \"ok\": true,\n  \"data\": {\n    \"qr_token\": \"TKN-8F2A19\",\n    \"expires_at\": \"2026-03-03T10:02:00Z\",\n    \"meeting_key\": \"MTG-CLOUD-101-P01\"\n  }\n}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "stop",
+              "item": [
+                {
+                  "name": "Stop QR Session",
+                  "request": {
+                    "method": "POST",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      },
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
+                    ],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"course_id\": \"cloud-101\",\n  \"session_id\": \"cloud-101-p01\",\n  \"ts\": \"2026-03-03T10:06:00Z\"\n}",
+                      "options": {
+                        "raw": {
+                          "headerFamily": "json",
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "{{baseUrl}}/presence/qr/stop",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "presence",
+                        "qr",
+                        "stop"
+                      ]
+                    },
+                    "description": "Menghentikan sesi QR aktif agar token tidak bisa dipakai check-in lagi."
+                  },
+                  "response": [
+                    {
+                      "name": "OK",
+                      "originalRequest": {
+                        "method": "POST",
+                        "header": [
+                          {
+                            "key": "Content-Type",
+                            "value": "application/json"
+                          },
+                          {
+                            "key": "Accept",
+                            "value": "application/json"
+                          }
+                        ],
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"course_id\": \"cloud-101\",\n  \"session_id\": \"cloud-101-p01\",\n  \"ts\": \"2026-03-03T10:06:00Z\"\n}",
+                          "options": {
+                            "raw": {
+                              "headerFamily": "json",
+                              "language": "json"
+                            }
+                          }
+                        },
+                        "url": {
+                          "raw": "{{baseUrl}}/presence/qr/stop",
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "path": [
+                            "presence",
+                            "qr",
+                            "stop"
+                          ]
+                        }
+                      },
+                      "status": "OK",
+                      "code": 200,
+                      "_postman_previewlanguage": "json",
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json"
+                        }
+                      ],
+                      "cookie": [],
+                      "body": "{\n  \"ok\": true,\n  \"data\": {\n    \"course_id\": \"cloud-101\",\n    \"session_id\": \"cloud-101-p01\",\n    \"meeting_key\": \"MTG-CLOUD-101-P01\",\n    \"status\": \"stopped\",\n    \"stopped_at\": \"2026-03-03T10:06:00Z\"\n  }\n}"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "checkin",
+          "item": [
+            {
+              "name": "Check-in Presensi",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"user_id\": \"434231026\",\n  \"device_id\": \"dev-web-etax0aol\",\n  \"course_id\": \"cloud-101\",\n  \"session_id\": \"cloud-101-p01\",\n  \"qr_token\": \"TKN-8F2A19\",\n  \"ts\": \"2026-03-03T10:05:00Z\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/presence/checkin",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "presence",
+                    "checkin"
+                  ]
+                },
+                "description": "Mahasiswa melakukan check-in menggunakan token hasil scan QR."
+              },
+              "response": [
+                {
+                  "name": "OK",
+                  "originalRequest": {
+                    "method": "POST",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      },
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
+                    ],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"user_id\": \"434231026\",\n  \"device_id\": \"dev-web-etax0aol\",\n  \"course_id\": \"cloud-101\",\n  \"session_id\": \"cloud-101-p01\",\n  \"qr_token\": \"TKN-8F2A19\",\n  \"ts\": \"2026-03-03T10:05:00Z\"\n}",
+                      "options": {
+                        "raw": {
+                          "headerFamily": "json",
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "{{baseUrl}}/presence/checkin",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "presence",
+                        "checkin"
+                      ]
+                    }
+                  },
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": "json",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n  \"ok\": true,\n  \"data\": {\n    \"presence_id\": \"PR-0001\",\n    \"status\": \"checked_in\"\n  }\n}"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "status",
+          "item": [
+            {
+              "name": "Cek Status Presensi",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/presence/status?user_id=434231026&course_id=cloud-101&session_id=cloud-101-p01",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "presence",
+                    "status"
+                  ],
+                  "query": [
+                    {
+                      "key": "user_id",
+                      "value": "434231026"
+                    },
+                    {
+                      "key": "course_id",
+                      "value": "cloud-101"
+                    },
+                    {
+                      "key": "session_id",
+                      "value": "cloud-101-p01"
+                    }
+                  ]
+                },
+                "description": "Dosen mengecek status presensi mahasiswa secara spesifik."
+              },
+              "response": [
+                {
+                  "name": "OK",
+                  "originalRequest": {
+                    "method": "GET",
+                    "header": [
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
+                    ],
+                    "url": {
+                      "raw": "{{baseUrl}}/presence/status?user_id=434231026&course_id=cloud-101&session_id=cloud-101-p01",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "presence",
+                        "status"
+                      ],
+                      "query": [
+                        {
+                          "key": "user_id",
+                          "value": "434231026"
+                        },
+                        {
+                          "key": "course_id",
+                          "value": "cloud-101"
+                        },
+                        {
+                          "key": "session_id",
+                          "value": "cloud-101-p01"
+                        }
+                      ]
+                    }
+                  },
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": "json",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n  \"ok\": true,\n  \"data\": {\n    \"user_id\": \"434231026\",\n    \"course_id\": \"cloud-101\",\n    \"session_id\": \"cloud-101-p01\",\n    \"status\": \"checked_in\",\n    \"last_ts\": \"2026-03-03T10:01:10Z\"\n  }\n}"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "list",
+          "item": [
+            {
+              "name": "Daftar Presensi Sesi",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/presence/list?course_id=cloud-101&session_id=cloud-101-p01&limit=200",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "presence",
+                    "list"
+                  ],
+                  "query": [
+                    {
+                      "key": "course_id",
+                      "value": "cloud-101"
+                    },
+                    {
+                      "key": "session_id",
+                      "value": "cloud-101-p01"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "200"
+                    }
+                  ]
+                },
+                "description": "Mengambil seluruh item presensi untuk satu sesi kuliah."
+              },
+              "response": [
+                {
+                  "name": "OK",
+                  "originalRequest": {
+                    "method": "GET",
+                    "header": [
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
+                    ],
+                    "url": {
+                      "raw": "{{baseUrl}}/presence/list?course_id=cloud-101&session_id=cloud-101-p01&limit=200",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "presence",
+                        "list"
+                      ],
+                      "query": [
+                        {
+                          "key": "course_id",
+                          "value": "cloud-101"
+                        },
+                        {
+                          "key": "session_id",
+                          "value": "cloud-101-p01"
+                        },
+                        {
+                          "key": "limit",
+                          "value": "200"
+                        }
+                      ]
+                    }
+                  },
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": "json",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n  \"ok\": true,\n  \"data\": {\n    \"course_id\": \"cloud-101\",\n    \"session_id\": \"cloud-101-p01\",\n    \"total\": 2,\n    \"items\": [\n      {\n        \"presence_id\": \"PR-0002\",\n        \"user_id\": \"20230002\",\n        \"device_id\": \"dev-002\",\n        \"ts\": \"2026-02-18T10:01:20Z\",\n        \"recorded_at\": \"2026-02-18T10:01:20Z\"\n      },\n      {\n        \"presence_id\": \"PR-0001\",\n        \"user_id\": \"20230001\",\n        \"device_id\": \"dev-001\",\n        \"ts\": \"2026-02-18T10:01:10Z\",\n        \"recorded_at\": \"2026-02-18T10:01:10Z\"\n      }\n    ]\n  }\n}"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "sessions",
+          "item": [
+            {
+              "name": "active",
+              "item": [
+                {
+                  "name": "Daftar Session Aktif",
+                  "request": {
+                    "method": "GET",
+                    "header": [
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
+                    ],
+                    "url": {
+                      "raw": "{{baseUrl}}/presence/sessions/active?owner_identifier=198701012020011001&course_id=cloud-101&include_stopped=false&limit=200",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "presence",
+                        "sessions",
+                        "active"
+                      ],
+                      "query": [
+                        {
+                          "key": "owner_identifier",
+                          "value": "198701012020011001"
+                        },
+                        {
+                          "key": "course_id",
+                          "value": "cloud-101"
+                        },
+                        {
+                          "key": "include_stopped",
+                          "value": "false"
+                        },
+                        {
+                          "key": "limit",
+                          "value": "200"
+                        }
+                      ]
+                    },
+                    "description": "Mengambil daftar sesi presensi aktif milik dosen tertentu, dengan opsi menyertakan sesi stopped."
+                  },
+                  "response": [
+                    {
+                      "name": "OK",
+                      "originalRequest": {
+                        "method": "GET",
+                        "header": [
+                          {
+                            "key": "Accept",
+                            "value": "application/json"
+                          }
+                        ],
+                        "url": {
+                          "raw": "{{baseUrl}}/presence/sessions/active?owner_identifier=198701012020011001&course_id=cloud-101&include_stopped=false&limit=200",
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "path": [
+                            "presence",
+                            "sessions",
+                            "active"
+                          ],
+                          "query": [
+                            {
+                              "key": "owner_identifier",
+                              "value": "198701012020011001"
+                            },
+                            {
+                              "key": "course_id",
+                              "value": "cloud-101"
+                            },
+                            {
+                              "key": "include_stopped",
+                              "value": "false"
+                            },
+                            {
+                              "key": "limit",
+                              "value": "200"
+                            }
+                          ]
+                        }
+                      },
+                      "status": "OK",
+                      "code": 200,
+                      "_postman_previewlanguage": "json",
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json"
+                        }
+                      ],
+                      "cookie": [],
+                      "body": "{\n  \"ok\": true,\n  \"data\": {\n    \"owner_identifier\": \"198701012020011001\",\n    \"total\": 2,\n    \"items\": [\n      {\n        \"course_id\": \"cloud-101\",\n        \"session_id\": \"cloud-101-p01\",\n        \"meeting_key\": \"MTG-CLOUD-101-P01\",\n        \"owner_identifier\": \"198701012020011001\",\n        \"status\": \"active\",\n        \"started_at\": \"2026-02-28T09:26:00.000Z\",\n        \"updated_at\": \"2026-02-28T09:28:00.000Z\",\n        \"stopped_at\": null\n      },\n      {\n        \"course_id\": \"cloud-101\",\n        \"session_id\": \"cloud-101-p00\",\n        \"meeting_key\": \"MTG-CLOUD-101-P00\",\n        \"owner_identifier\": \"198701012020011001\",\n        \"status\": \"stopped\",\n        \"started_at\": \"2026-02-21T09:26:00.000Z\",\n        \"updated_at\": \"2026-02-21T09:40:00.000Z\",\n        \"stopped_at\": \"2026-02-21T09:40:00.000Z\"\n      }\n    ]\n  }\n}"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "course config",
+          "item": [
+            {
+              "name": "Get Course Config",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/presence/course/config?course_id=cloud-101",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "presence",
+                    "course",
+                    "config"
+                  ],
+                  "query": [
+                    {
+                      "key": "course_id",
+                      "value": "cloud-101"
+                    }
+                  ]
+                },
+                "description": "Ambil total pertemuan untuk course tertentu."
+              },
+              "response": [
+                {
+                  "name": "OK",
+                  "originalRequest": {
+                    "method": "GET",
+                    "header": [
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
+                    ],
+                    "url": {
+                      "raw": "{{baseUrl}}/presence/course/config?course_id=cloud-101",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "presence",
+                        "course",
+                        "config"
+                      ],
+                      "query": [
+                        {
+                          "key": "course_id",
+                          "value": "cloud-101"
+                        }
+                      ]
+                    }
+                  },
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": "json",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n  \"ok\": true,\n  \"data\": {\n    \"course_id\": \"cloud-101\",\n    \"total_meetings\": 14\n  }\n}"
+                }
+              ]
+            },
+            {
+              "name": "Set Course Config",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"course_id\": \"cloud-101\",\n  \"total_meetings\": 14,\n  \"ts\": \"2026-03-03T10:00:00Z\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/presence/course/config",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "presence",
+                    "course",
+                    "config"
+                  ]
+                },
+                "description": "Atur total pertemuan untuk course tertentu."
+              },
+              "response": [
+                {
+                  "name": "OK",
+                  "originalRequest": {
+                    "method": "POST",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      },
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
+                    ],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"course_id\": \"cloud-101\",\n  \"total_meetings\": 14,\n  \"ts\": \"2026-03-03T10:00:00Z\"\n}",
+                      "options": {
+                        "raw": {
+                          "headerFamily": "json",
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "{{baseUrl}}/presence/course/config",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "presence",
+                        "course",
+                        "config"
+                      ]
+                    }
+                  },
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": "json",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n  \"ok\": true,\n  \"data\": {\n    \"course_id\": \"cloud-101\",\n    \"total_meetings\": 14,\n    \"updated_at\": \"2026-03-03T10:00:00Z\"\n  }\n}"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "deployment-id",
+      "value": "AKfycbzVJ1--9eMNpaPC7JcyPQsdbkOPkkKMq3PdUuFeHJKSQ5fTw7OahhjbXy1f4V0XMMeTtA"
+    },
+    {
+      "key": "baseUrl",
+      "value": "https://script.google.com/macros/s/{{deployment-id}}/exec"
+    }
+  ]
+}
