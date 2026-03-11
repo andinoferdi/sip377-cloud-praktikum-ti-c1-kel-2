@@ -23,10 +23,12 @@ import {
 import { hasGasBaseUrl } from "@/services/gas-client";
 import {
   appendSampleToHistory,
+  createInitialTelemetryChartGovernor,
   shouldCommitTelemetryChartFrame,
   TELEMETRY_CHART_MAX_POINTS,
-  TELEMETRY_CHART_MOBILE_COMMIT_INTERVAL_MS,
+  TELEMETRY_CHART_FRAME_INTERVAL_STEPS,
   TELEMETRY_CHART_MOBILE_MAX_POINTS,
+  updateTelemetryChartGovernor,
 } from "@/utils/accelerometer-chart";
 import {
   createAccelerometerSessionController,
@@ -187,14 +189,18 @@ export default function AccelerometerClient() {
   );
   const [showStoppedFeedback, setShowStoppedFeedback] = useState(false);
   const [isMobileOptimized, setIsMobileOptimized] = useState(false);
+  const [mobileFrameIntervalMs, setMobileFrameIntervalMs] = useState<number>(
+    TELEMETRY_CHART_FRAME_INTERVAL_STEPS[0],
+  );
   const controllerRef = useRef<ReturnType<
     typeof createAccelerometerSessionController
   > | null>(null);
   const latestRefetchRef = useRef<() => Promise<unknown>>(async () => undefined);
   const liveHistoryRef = useRef<AccelerometerSample[]>([]);
   const pendingChartSampleRef = useRef<AccelerometerSample | null>(null);
-  const chartCommitTimerRef = useRef<number | null>(null);
+  const chartFrameRequestRef = useRef<number | null>(null);
   const lastChartCommitMsRef = useRef<number | null>(null);
+  const chartGovernorRef = useRef(createInitialTelemetryChartGovernor());
 
   useEffect(() => {
     const nextDeviceId = getOrCreateTelemetryDeviceId();
@@ -291,9 +297,11 @@ export default function AccelerometerClient() {
     liveHistoryRef.current = [];
     pendingChartSampleRef.current = null;
     lastChartCommitMsRef.current = null;
-    if (chartCommitTimerRef.current !== null) {
-      window.clearTimeout(chartCommitTimerRef.current);
-      chartCommitTimerRef.current = null;
+    chartGovernorRef.current = createInitialTelemetryChartGovernor();
+    setMobileFrameIntervalMs(TELEMETRY_CHART_FRAME_INTERVAL_STEPS[0]);
+    if (chartFrameRequestRef.current !== null) {
+      window.cancelAnimationFrame(chartFrameRequestRef.current);
+      chartFrameRequestRef.current = null;
     }
     try {
       await controllerRef.current.start(window);
@@ -333,47 +341,51 @@ export default function AccelerometerClient() {
     }
 
     pendingChartSampleRef.current = nextSample;
+  }, [isMobileOptimized, sessionState.liveSample]);
 
-    if (typeof window === "undefined" || chartCommitTimerRef.current !== null) {
+  useEffect(() => {
+    if (typeof window === "undefined" || !isMobileOptimized) {
       return;
     }
 
-    const nowMs = Date.now();
-    const shouldCommitNow = shouldCommitTelemetryChartFrame(
-      nowMs,
-      lastChartCommitMsRef.current,
-      TELEMETRY_CHART_MOBILE_COMMIT_INTERVAL_MS,
-    );
+    const status = sessionState.status;
+    const shouldRunFrameLoop =
+      status === "starting" ||
+      status === "live" ||
+      status === "flushing" ||
+      status === "blocked" ||
+      status === "stopping";
 
-    const delayMs =
-      shouldCommitNow || lastChartCommitMsRef.current === null
-        ? 0
-        : Math.max(
-            0,
-            TELEMETRY_CHART_MOBILE_COMMIT_INTERVAL_MS -
-              (nowMs - lastChartCommitMsRef.current),
-          );
+    if (!shouldRunFrameLoop) {
+      if (chartFrameRequestRef.current !== null) {
+        window.cancelAnimationFrame(chartFrameRequestRef.current);
+        chartFrameRequestRef.current = null;
+      }
+      return;
+    }
 
-    chartCommitTimerRef.current = window.setTimeout(() => {
-      chartCommitTimerRef.current = null;
+    const loop = (timestamp: number) => {
       const pendingSample = pendingChartSampleRef.current;
       if (!pendingSample) {
+        chartFrameRequestRef.current = window.requestAnimationFrame(loop);
         return;
       }
 
-      const commitAt = Date.now();
+      const governorBefore = chartGovernorRef.current;
       if (
         !shouldCommitTelemetryChartFrame(
-          commitAt,
+          timestamp,
           lastChartCommitMsRef.current,
-          TELEMETRY_CHART_MOBILE_COMMIT_INTERVAL_MS,
+          governorBefore.intervalMs,
         )
       ) {
+        chartFrameRequestRef.current = window.requestAnimationFrame(loop);
         return;
       }
 
+      const commitStart = performance.now();
       pendingChartSampleRef.current = null;
-      lastChartCommitMsRef.current = commitAt;
+      lastChartCommitMsRef.current = timestamp;
       const nextHistory = appendSampleToHistory(
         liveHistoryRef.current,
         pendingSample,
@@ -381,17 +393,36 @@ export default function AccelerometerClient() {
       );
       liveHistoryRef.current = nextHistory;
       setLiveHistory(nextHistory);
-    }, delayMs);
-  }, [isMobileOptimized, sessionState.liveSample]);
+
+      const nextGovernor = updateTelemetryChartGovernor(
+        governorBefore,
+        performance.now() - commitStart,
+      );
+      chartGovernorRef.current = nextGovernor;
+      if (nextGovernor.intervalMs !== governorBefore.intervalMs) {
+        setMobileFrameIntervalMs(nextGovernor.intervalMs);
+      }
+
+      chartFrameRequestRef.current = window.requestAnimationFrame(loop);
+    };
+
+    chartFrameRequestRef.current = window.requestAnimationFrame(loop);
+    return () => {
+      if (chartFrameRequestRef.current !== null) {
+        window.cancelAnimationFrame(chartFrameRequestRef.current);
+        chartFrameRequestRef.current = null;
+      }
+    };
+  }, [isMobileOptimized, sessionState.status]);
 
   useEffect(() => {
     if (!sessionState.lastStoppedAt || typeof window === "undefined") {
       return;
     }
 
-    if (chartCommitTimerRef.current !== null) {
-      window.clearTimeout(chartCommitTimerRef.current);
-      chartCommitTimerRef.current = null;
+    if (chartFrameRequestRef.current !== null) {
+      window.cancelAnimationFrame(chartFrameRequestRef.current);
+      chartFrameRequestRef.current = null;
     }
 
     const pendingSample = pendingChartSampleRef.current;
@@ -426,9 +457,9 @@ export default function AccelerometerClient() {
       if (typeof window === "undefined") {
         return;
       }
-      if (chartCommitTimerRef.current !== null) {
-        window.clearTimeout(chartCommitTimerRef.current);
-        chartCommitTimerRef.current = null;
+      if (chartFrameRequestRef.current !== null) {
+        window.cancelAnimationFrame(chartFrameRequestRef.current);
+        chartFrameRequestRef.current = null;
       }
     };
   }, []);
@@ -455,6 +486,9 @@ export default function AccelerometerClient() {
       ? "Starting..."
       : "Start Telemetry";
   const stopButtonLabel = isStopping ? "Stopping..." : "Stop Telemetry";
+  const isMobileGovernorActive =
+    isMobileOptimized &&
+    mobileFrameIntervalMs > TELEMETRY_CHART_FRAME_INTERVAL_STEPS[0];
 
   return (
     <section className="py-10 md:py-14">
@@ -638,6 +672,7 @@ export default function AccelerometerClient() {
                   history={chartHistory}
                   isLive={sessionState.status !== "stopped"}
                   isMobileOptimized={isMobileOptimized}
+                  isPerformanceCapped={isMobileGovernorActive}
                 />
               </div>
 

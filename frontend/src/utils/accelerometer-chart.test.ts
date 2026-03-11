@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  createInitialTelemetryChartGovernor,
   TELEMETRY_CHART_MAX_POINTS,
+  TELEMETRY_CHART_FRAME_INTERVAL_STEPS,
   appendSampleToHistory,
   appendSamplesToHistory,
   buildTelemetryChartSeries,
   shouldCommitTelemetryChartFrame,
+  updateTelemetryChartGovernor,
 } from "@/utils/accelerometer-chart";
 
 describe("accelerometer-chart", () => {
@@ -76,5 +79,28 @@ describe("accelerometer-chart", () => {
     expect(shouldCommitTelemetryChartFrame(1100, 1000, 200)).toBe(false);
     expect(shouldCommitTelemetryChartFrame(1200, 1000, 200)).toBe(true);
     expect(shouldCommitTelemetryChartFrame(1300, 1000, 0)).toBe(true);
+  });
+
+  it("governor upshifts interval when rendering overload persists", () => {
+    let governor = createInitialTelemetryChartGovernor();
+
+    governor = updateTelemetryChartGovernor(governor, 15);
+    governor = updateTelemetryChartGovernor(governor, 15);
+
+    expect(governor.intervalMs).toBe(TELEMETRY_CHART_FRAME_INTERVAL_STEPS[1]);
+  });
+
+  it("governor downshifts interval when rendering recovers", () => {
+    let governor = createInitialTelemetryChartGovernor();
+
+    for (let index = 0; index < 6; index += 1) {
+      governor = updateTelemetryChartGovernor(governor, 20);
+    }
+    expect(governor.intervalMs).toBe(TELEMETRY_CHART_FRAME_INTERVAL_STEPS[2]);
+
+    for (let index = 0; index < 9; index += 1) {
+      governor = updateTelemetryChartGovernor(governor, 2);
+    }
+    expect(governor.intervalMs).toBe(TELEMETRY_CHART_FRAME_INTERVAL_STEPS[1]);
   });
 });
