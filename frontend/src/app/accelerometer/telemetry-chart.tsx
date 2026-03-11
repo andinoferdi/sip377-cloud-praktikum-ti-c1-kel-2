@@ -14,6 +14,7 @@ type TelemetryChartProps = {
   history: AccelerometerSample[];
   isLive: boolean;
   isMobileOptimized: boolean;
+  isPerformanceCapped: boolean;
 };
 
 const SERIES_COLORS = ["#2ea8ff", "#22c55e", "#f59e0b"] as const;
@@ -22,6 +23,7 @@ export default function TelemetryChart({
   history,
   isLive,
   isMobileOptimized,
+  isPerformanceCapped,
 }: TelemetryChartProps) {
   const series = useMemo(() => buildTelemetryChartSeries(history), [history]);
   const isMobileLive = isMobileOptimized && isLive;
@@ -54,7 +56,7 @@ export default function TelemetryChart({
         },
       },
       legend: {
-        show: !isMobileLive,
+        show: !isMobileLive || !isPerformanceCapped,
         position: "top",
         horizontalAlign: "left",
       },
@@ -76,7 +78,7 @@ export default function TelemetryChart({
         strokeDashArray: isMobileLive ? 0 : 4,
       },
       tooltip: {
-        enabled: !isMobileLive,
+        enabled: !isMobileLive || !isPerformanceCapped,
         theme: "light",
         x: {
           format: "HH:mm:ss",
@@ -90,7 +92,7 @@ export default function TelemetryChart({
         verticalAlign: "middle",
       },
     }),
-    [isLive, isMobileLive],
+    [isLive, isMobileLive, isPerformanceCapped],
   );
 
   return (
