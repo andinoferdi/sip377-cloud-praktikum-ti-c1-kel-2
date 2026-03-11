@@ -13,6 +13,7 @@ const ReactApexChart = dynamic(() => import("react-apexcharts"), {
 type TelemetryChartProps = {
   history: AccelerometerSample[];
   isLive: boolean;
+  isMobileOptimized: boolean;
 };
 
 const SERIES_COLORS = ["#2ea8ff", "#22c55e", "#f59e0b"] as const;
@@ -20,8 +21,10 @@ const SERIES_COLORS = ["#2ea8ff", "#22c55e", "#f59e0b"] as const;
 export default function TelemetryChart({
   history,
   isLive,
+  isMobileOptimized,
 }: TelemetryChartProps) {
   const series = useMemo(() => buildTelemetryChartSeries(history), [history]);
+  const isMobileLive = isMobileOptimized && isLive;
 
   const options = useMemo<ApexOptions>(
     () => ({
@@ -31,27 +34,27 @@ export default function TelemetryChart({
         toolbar: { show: false },
         zoom: { enabled: false },
         animations: {
-          enabled: true,
+          enabled: !isMobileLive,
           easing: "linear",
           dynamicAnimation: {
-            speed: 260,
+            speed: isMobileLive ? 1 : 260,
           },
         },
       },
       colors: [...SERIES_COLORS],
       dataLabels: { enabled: false },
       stroke: {
-        curve: "smooth",
-        width: 2.5,
+        curve: isMobileLive ? "straight" : "smooth",
+        width: isMobileLive ? 2 : 2.5,
       },
       markers: {
         size: 0,
         hover: {
-          sizeOffset: 3,
+          sizeOffset: isMobileLive ? 0 : 3,
         },
       },
       legend: {
-        show: true,
+        show: !isMobileLive,
         position: "top",
         horizontalAlign: "left",
       },
@@ -70,9 +73,10 @@ export default function TelemetryChart({
         },
       },
       grid: {
-        strokeDashArray: 4,
+        strokeDashArray: isMobileLive ? 0 : 4,
       },
       tooltip: {
+        enabled: !isMobileLive,
         theme: "light",
         x: {
           format: "HH:mm:ss",
@@ -86,7 +90,7 @@ export default function TelemetryChart({
         verticalAlign: "middle",
       },
     }),
-    [isLive],
+    [isLive, isMobileLive],
   );
 
   return (

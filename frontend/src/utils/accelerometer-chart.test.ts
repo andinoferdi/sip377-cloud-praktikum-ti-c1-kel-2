@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   TELEMETRY_CHART_MAX_POINTS,
   appendSampleToHistory,
+  appendSamplesToHistory,
   buildTelemetryChartSeries,
+  shouldCommitTelemetryChartFrame,
 } from "@/utils/accelerometer-chart";
 
 describe("accelerometer-chart", () => {
@@ -37,5 +39,42 @@ describe("accelerometer-chart", () => {
     expect(series[0]?.name).toBe("X");
     expect(series[1]?.data[1]?.y).toBe(5);
     expect(series[2]?.data[0]?.y).toBe(3);
+  });
+
+  it("appends batched samples in order and keeps rolling window", () => {
+    const baseTs = 1700000000000;
+    const history = Array.from({ length: 4 }, (_, index) => ({
+      t: new Date(baseTs + index * 1000).toISOString(),
+      x: index,
+      y: index + 10,
+      z: index + 20,
+    }));
+
+    const next = appendSamplesToHistory(
+      history,
+      [
+        { t: new Date(baseTs + 4000).toISOString(), x: 4, y: 14, z: 24 },
+        { t: new Date(baseTs + 5000).toISOString(), x: 5, y: 15, z: 25 },
+      ],
+      5,
+    );
+
+    expect(next).toHaveLength(5);
+    expect(next[0]?.x).toBe(1);
+    expect(next[4]?.x).toBe(5);
+    expect(next.map((item) => item.t)).toEqual([
+      new Date(baseTs + 1000).toISOString(),
+      new Date(baseTs + 2000).toISOString(),
+      new Date(baseTs + 3000).toISOString(),
+      new Date(baseTs + 4000).toISOString(),
+      new Date(baseTs + 5000).toISOString(),
+    ]);
+  });
+
+  it("commits chart frames by cadence interval instead of each sample", () => {
+    expect(shouldCommitTelemetryChartFrame(1000, null, 200)).toBe(true);
+    expect(shouldCommitTelemetryChartFrame(1100, 1000, 200)).toBe(false);
+    expect(shouldCommitTelemetryChartFrame(1200, 1000, 200)).toBe(true);
+    expect(shouldCommitTelemetryChartFrame(1300, 1000, 0)).toBe(true);
   });
 });
