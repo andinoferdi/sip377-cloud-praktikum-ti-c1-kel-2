@@ -80,6 +80,12 @@ Sinkronkan spesifikasi OpenAPI untuk halaman docs frontend:
 npm run docs:sync-openapi
 ```
 
+Generate artefak OpenAPI modul frontend dari kontrak utama backend:
+
+```bash
+npm run docs:sync-openapi-modules
+```
+
 Sinkronkan asset Swagger UI statis:
 
 ```bash
@@ -90,6 +96,7 @@ Verifikasi sinkronisasi spec:
 
 ```bash
 npm run docs:check-openapi-sync
+npm run docs:check-openapi-modules-sync
 npm run docs:check-swagger-ui-assets
 ```
 
@@ -162,7 +169,11 @@ Validator-nya:
 2. Scope PR jelas dan kecil.
 3. Tidak ada `.env` atau secret ter-commit.
 4. Semua quality gate lulus.
-5. Jika mengubah flow API, update README atau dokumen terkait.
+5. Jawab pertanyaan governance: apakah ada konflik `A (rules)` vs `A1 (implementasi)`?
+6. Jika ada konflik, lampirkan link Matrix Keputusan pada deskripsi PR.
+7. Lampirkan bukti test/regresi yang relevan.
+8. Jika menyentuh endpoint publik modul tertentu, lampirkan hasil smoke test modul terkait.
+9. Jika mengubah flow API, update README atau dokumen terkait.
 
 ## 5. Panduan Backend Developer (GAS)
 
@@ -251,7 +262,10 @@ Setelah `push`, buat version baru dan update deployment Web App dari Apps Script
 2. `Code.gs` dan `openapi.yaml` sinkron.
 3. Error code konsisten dengan frontend.
 4. Smoke test endpoint utama lulus.
-5. Tidak ada perubahan breaking tanpa koordinasi lintas tim.
+5. Jawab pertanyaan governance: apakah ada konflik `A (rules)` vs `A1 (implementasi)`?
+6. Jika ada konflik, lampirkan link Matrix Keputusan pada deskripsi PR.
+7. Lampirkan bukti test/regresi dan kontrak aktif yang dipakai sebagai dasar keputusan.
+8. Tidak ada perubahan breaking tanpa koordinasi lintas tim.
 
 ## 6. Panduan QA
 
@@ -323,8 +337,11 @@ Saat membuat bug report, wajib isi:
 2. `frontend/README.md` (setup dan flow frontend).
 3. `backend-gas/openapi.yaml` (kontrak API publik).
 4. `frontend/public/openapi.yaml` (salinan runtime untuk Swagger UI frontend, update via `npm run docs:sync-openapi`).
-5. `frontend/public/docs/*` (asset Swagger UI statis, update via `npm run docs:sync-swagger-ui-assets`).
-6. Standar teknis frontend/backend yang aktif di repository.
+5. `frontend/public/openapi-modul-1.json` dan `frontend/public/openapi-modul-2.json` (artefak turunan otomatis, update via `npm run docs:sync-openapi-modules`).
+6. `frontend/public/docs/*` (asset Swagger UI statis, update via `npm run docs:sync-swagger-ui-assets`).
+7. Standar teknis frontend/backend yang aktif di repository.
+
+Koleksi Postman manual tidak lagi menjadi artefak kontrak. Untuk testing Postman, gunakan fitur import dari OpenAPI modul hasil generator.
 
 ### 7.3 Standar kualitas dokumentasi
 
@@ -333,7 +350,15 @@ Saat membuat bug report, wajib isi:
 3. Hindari kontradiksi antar dokumen.
 4. Sertakan tanggal/perubahan penting pada PR description.
 
-## 8. Runbook Ganti URL GAS Deployment
+## 8. Standar Adjudikasi Konflik Rules vs Implementasi
+
+Standar adjudikasi konflik lintas tim didokumentasikan di:
+
+`docs/rule-conflict-adjudication.md`
+
+Aturan ini wajib dipakai ketika ada konflik antara rules, runtime aktual, test, dan kontrak endpoint publik.
+
+## 9. Runbook Ganti URL GAS Deployment
 
 Saat backend deploy ke URL baru:
 
@@ -344,7 +369,7 @@ Saat backend deploy ke URL baru:
 5. Update `servers.variables.deploymentId.default` di `backend-gas/openapi.yaml`.
 6. Jalankan smoke test presensi end-to-end.
 
-## 9. Troubleshooting Singkat
+## 10. Troubleshooting Singkat
 
 1. Scan kamera aktif tapi check-in gagal:
    1. Cek payload QR hasil scan.
@@ -357,7 +382,7 @@ Saat backend deploy ke URL baru:
    1. Pastikan env Vercel sudah update.
    2. Lakukan redeploy setelah update env.
 
-## 10. Definition of Done Lintas Tim
+## 11. Definition of Done Lintas Tim
 
 Perubahan dianggap selesai jika:
 

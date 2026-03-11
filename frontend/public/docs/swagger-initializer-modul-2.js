@@ -18,7 +18,7 @@ function normalizeGasTryItOutRequest(request) {
 
 window.onload = function () {
   window.ui = SwaggerUIBundle({
-    url: "/openapi.yaml",
+    url: "/openapi-modul-2.json",
     dom_id: "#swagger-ui",
     deepLinking: true,
     docExpansion: "list",

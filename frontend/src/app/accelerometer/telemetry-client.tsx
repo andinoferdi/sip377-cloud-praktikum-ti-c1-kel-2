@@ -23,7 +23,10 @@ import {
 import { hasGasBaseUrl } from "@/services/gas-client";
 import {
   appendSampleToHistory,
+  shouldCommitTelemetryChartFrame,
   TELEMETRY_CHART_MAX_POINTS,
+  TELEMETRY_CHART_MOBILE_COMMIT_INTERVAL_MS,
+  TELEMETRY_CHART_MOBILE_MAX_POINTS,
 } from "@/utils/accelerometer-chart";
 import {
   createAccelerometerSessionController,
@@ -60,6 +63,18 @@ function formatTime(value: string | null) {
     minute: "2-digit",
     second: "2-digit",
   });
+}
+
+function detectMobileTelemetryMode(win: Window) {
+  if ("matchMedia" in win) {
+    if (win.matchMedia("(max-width: 768px)").matches) {
+      return true;
+    }
+    if (win.matchMedia("(pointer: coarse)").matches) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function buildSavedStatusText(state: TelemetrySessionState) {
@@ -171,11 +186,15 @@ export default function AccelerometerClient() {
     [],
   );
   const [showStoppedFeedback, setShowStoppedFeedback] = useState(false);
+  const [isMobileOptimized, setIsMobileOptimized] = useState(false);
   const controllerRef = useRef<ReturnType<
     typeof createAccelerometerSessionController
   > | null>(null);
   const latestRefetchRef = useRef<() => Promise<unknown>>(async () => undefined);
   const liveHistoryRef = useRef<AccelerometerSample[]>([]);
+  const pendingChartSampleRef = useRef<AccelerometerSample | null>(null);
+  const chartCommitTimerRef = useRef<number | null>(null);
+  const lastChartCommitMsRef = useRef<number | null>(null);
 
   useEffect(() => {
     const nextDeviceId = getOrCreateTelemetryDeviceId();
@@ -210,6 +229,7 @@ export default function AccelerometerClient() {
     const support = detectAccelerometerSupport(window);
     setSupportMessage(support.message);
     setSupportHint(support.browserHint);
+    setIsMobileOptimized(detectMobileTelemetryMode(window));
   }, []);
 
   useEffect(() => {
@@ -269,6 +289,12 @@ export default function AccelerometerClient() {
     setStoppedSnapshot([]);
     setLiveHistory([]);
     liveHistoryRef.current = [];
+    pendingChartSampleRef.current = null;
+    lastChartCommitMsRef.current = null;
+    if (chartCommitTimerRef.current !== null) {
+      window.clearTimeout(chartCommitTimerRef.current);
+      chartCommitTimerRef.current = null;
+    }
     try {
       await controllerRef.current.start(window);
     } catch (error) {
@@ -294,18 +320,93 @@ export default function AccelerometerClient() {
       return;
     }
 
-    setLiveHistory((currentHistory) =>
-      appendSampleToHistory(
-        currentHistory,
-        sessionState.liveSample!,
+    const nextSample = sessionState.liveSample;
+    if (!isMobileOptimized) {
+      const nextHistory = appendSampleToHistory(
+        liveHistoryRef.current,
+        nextSample,
         TELEMETRY_CHART_MAX_POINTS,
-      ),
+      );
+      liveHistoryRef.current = nextHistory;
+      setLiveHistory(nextHistory);
+      return;
+    }
+
+    pendingChartSampleRef.current = nextSample;
+
+    if (typeof window === "undefined" || chartCommitTimerRef.current !== null) {
+      return;
+    }
+
+    const nowMs = Date.now();
+    const shouldCommitNow = shouldCommitTelemetryChartFrame(
+      nowMs,
+      lastChartCommitMsRef.current,
+      TELEMETRY_CHART_MOBILE_COMMIT_INTERVAL_MS,
     );
-  }, [sessionState.liveSample]);
+
+    const delayMs =
+      shouldCommitNow || lastChartCommitMsRef.current === null
+        ? 0
+        : Math.max(
+            0,
+            TELEMETRY_CHART_MOBILE_COMMIT_INTERVAL_MS -
+              (nowMs - lastChartCommitMsRef.current),
+          );
+
+    chartCommitTimerRef.current = window.setTimeout(() => {
+      chartCommitTimerRef.current = null;
+      const pendingSample = pendingChartSampleRef.current;
+      if (!pendingSample) {
+        return;
+      }
+
+      const commitAt = Date.now();
+      if (
+        !shouldCommitTelemetryChartFrame(
+          commitAt,
+          lastChartCommitMsRef.current,
+          TELEMETRY_CHART_MOBILE_COMMIT_INTERVAL_MS,
+        )
+      ) {
+        return;
+      }
+
+      pendingChartSampleRef.current = null;
+      lastChartCommitMsRef.current = commitAt;
+      const nextHistory = appendSampleToHistory(
+        liveHistoryRef.current,
+        pendingSample,
+        TELEMETRY_CHART_MOBILE_MAX_POINTS,
+      );
+      liveHistoryRef.current = nextHistory;
+      setLiveHistory(nextHistory);
+    }, delayMs);
+  }, [isMobileOptimized, sessionState.liveSample]);
 
   useEffect(() => {
     if (!sessionState.lastStoppedAt || typeof window === "undefined") {
       return;
+    }
+
+    if (chartCommitTimerRef.current !== null) {
+      window.clearTimeout(chartCommitTimerRef.current);
+      chartCommitTimerRef.current = null;
+    }
+
+    const pendingSample = pendingChartSampleRef.current;
+    if (pendingSample) {
+      pendingChartSampleRef.current = null;
+      const maxPoints = isMobileOptimized
+        ? TELEMETRY_CHART_MOBILE_MAX_POINTS
+        : TELEMETRY_CHART_MAX_POINTS;
+      const nextHistory = appendSampleToHistory(
+        liveHistoryRef.current,
+        pendingSample,
+        maxPoints,
+      );
+      liveHistoryRef.current = nextHistory;
+      setLiveHistory(nextHistory);
     }
 
     setStoppedSnapshot(liveHistoryRef.current);
@@ -318,7 +419,19 @@ export default function AccelerometerClient() {
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [sessionState.lastStoppedAt]);
+  }, [isMobileOptimized, sessionState.lastStoppedAt]);
+
+  useEffect(() => {
+    return () => {
+      if (typeof window === "undefined") {
+        return;
+      }
+      if (chartCommitTimerRef.current !== null) {
+        window.clearTimeout(chartCommitTimerRef.current);
+        chartCommitTimerRef.current = null;
+      }
+    };
+  }, []);
 
   const liveSample = sessionState.liveSample;
   const savedSample = sessionState.savedSample;
@@ -524,6 +637,7 @@ export default function AccelerometerClient() {
                 <TelemetryChart
                   history={chartHistory}
                   isLive={sessionState.status !== "stopped"}
+                  isMobileOptimized={isMobileOptimized}
                 />
               </div>
 

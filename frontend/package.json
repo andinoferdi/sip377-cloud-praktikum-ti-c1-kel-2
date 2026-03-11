@@ -12,15 +12,18 @@
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
     "test:e2e:qr": "playwright test e2e/modul1-qr.spec.ts",
-    "docs:prepare": "npm run docs:sync-openapi && npm run docs:sync-swagger-ui-assets",
+    "docs:prepare": "npm run docs:sync-openapi && npm run docs:sync-openapi-modules && npm run docs:sync-swagger-ui-assets",
     "docs:sync-openapi": "node ../scripts/sync-openapi-to-frontend.mjs",
     "docs:check-openapi-sync": "node ../scripts/check-openapi-sync.mjs",
+    "docs:sync-openapi-modules": "node ../scripts/sync-openapi-modules.mjs",
+    "docs:check-openapi-modules-sync": "node ../scripts/sync-openapi-modules.mjs --check",
+    "docs:check": "npm run docs:check-openapi-sync && npm run docs:check-openapi-modules-sync && npm run docs:check-swagger-ui-assets",
     "docs:sync-swagger-ui-assets": "node ../scripts/sync-swagger-ui-assets.mjs",
     "docs:check-swagger-ui-assets": "node ../scripts/check-swagger-ui-assets.mjs",
     "repo:check-protected-files": "node ../scripts/check-protected-files.mjs",
     "qa:modul1:api-smoke": "node ../scripts/qa-modul1-smoke.mjs",
     "qa:modul2:api-smoke": "node ../scripts/qa-modul2-smoke.mjs",
-    "qa:modul1:prepr": "npm run typecheck && npm run lint && npm run test:unit && npm run qa:modul1:api-smoke && npm run test:e2e:qr && npm run build && npm run repo:check-protected-files"
+    "qa:modul1:prepr": "npm run typecheck && npm run lint && npm run test:unit && npm run qa:modul1:api-smoke && npm run test:e2e:qr && npm run docs:check && npm run build && npm run repo:check-protected-files"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.26",

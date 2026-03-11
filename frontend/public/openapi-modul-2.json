@@ -1,0 +1,195 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "GAS Backend API v1 - Presensi QR Dinamis, Telemetry, GPS - Modul 2 - Accelerometer",
+    "version": "1.0.0",
+    "license": {
+      "name": "Academic Use Only",
+      "url": "https://creativecommons.org/licenses/by-nc/4.0/"
+    },
+    "description": "Dokumentasi endpoint untuk Modul 2 - Accelerometer."
+  },
+  "servers": [
+    {
+      "url": "https://script.google.com/macros/s/{deploymentId}",
+      "description": "Google Apps Script Web App",
+      "variables": {
+        "deploymentId": {
+          "default": "AKfycbzVJ1--9eMNpaPC7JcyPQsdbkOPkkKMq3PdUuFeHJKSQ5fTw7OahhjbXy1f4V0XMMeTtA",
+          "description": "Web App deployment ID"
+        }
+      }
+    }
+  ],
+  "security": [],
+  "paths": {
+    "/exec": {
+      "get": {
+        "summary": "Multi-purpose GET endpoint (routed by `path` query)",
+        "operationId": "doGet",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "telemetry/accel/latest"
+              ]
+            },
+            "description": "Virtual route selector. Empty/default and `ui` both return API metadata JSON.\n"
+          },
+          {
+            "name": "device_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Required for telemetry latest/history endpoints"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "JSON envelope response",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "accelLatest": {
+                    "summary": "path=telemetry/accel/latest",
+                    "value": {
+                      "ok": true,
+                      "data": {
+                        "t": "2026-02-18T10:15:29.300Z",
+                        "x": 0.15,
+                        "y": 0.02,
+                        "z": 9.68
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "example": {
+                  "ok": false,
+                  "error": "missing_field: device_id"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Multi-purpose POST endpoint (routed by `path` query)",
+        "operationId": "doPost",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "telemetry/accel"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/BatchAccelRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JSON envelope response",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "accelBatch": {
+                    "summary": "path=telemetry/accel",
+                    "value": {
+                      "ok": true,
+                      "data": {
+                        "accepted": 2
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "BatchAccelRequest": {
+        "type": "object",
+        "required": [
+          "device_id",
+          "samples"
+        ],
+        "properties": {
+          "device_id": {
+            "type": "string",
+            "example": "dev-001"
+          },
+          "ts": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "samples": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": [
+                "t",
+                "x",
+                "y",
+                "z"
+              ],
+              "properties": {
+                "t": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "x": {
+                  "type": "number"
+                },
+                "y": {
+                  "type": "number"
+                },
+                "z": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

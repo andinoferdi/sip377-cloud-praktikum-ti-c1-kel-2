@@ -22,7 +22,7 @@ info:
     This deployment is API-only and does not serve HTML dashboard.
 
 servers:
-  - url: https://script.google.com/macros/s/{deploymentId}/exec
+  - url: https://script.google.com/macros/s/{deploymentId}
     description: Google Apps Script Web App
     variables:
       deploymentId:
