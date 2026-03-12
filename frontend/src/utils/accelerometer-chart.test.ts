@@ -44,6 +44,19 @@ describe("accelerometer-chart", () => {
     expect(series[2]?.data[0]?.y).toBe(3);
   });
 
+  it("maps backend history items to ascending chart points", () => {
+    const backendHistoryItems = [
+      { t: "2026-03-08T00:00:01.000Z", x: 4, y: 5, z: 6 },
+      { t: "2026-03-08T00:00:02.000Z", x: 7, y: 8, z: 9 },
+    ];
+
+    const series = buildTelemetryChartSeries(backendHistoryItems);
+    expect(series[0]?.data[0]?.y).toBe(4);
+    expect(series[1]?.data[1]?.y).toBe(8);
+    expect(series[2]?.data[1]?.y).toBe(9);
+    expect(series[0]?.data[0]?.x).toBeLessThan(series[0]?.data[1]?.x ?? 0);
+  });
+
   it("appends batched samples in order and keeps rolling window", () => {
     const baseTs = 1700000000000;
     const history = Array.from({ length: 4 }, (_, index) => ({

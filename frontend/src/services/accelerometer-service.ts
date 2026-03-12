@@ -24,10 +24,22 @@ export type AccelerometerFlushData = {
 };
 
 export type AccelerometerLatestData = Partial<AccelerometerSample>;
+export type AccelerometerHistoryData = {
+  device_id: string;
+  items: AccelerometerSample[];
+};
+
+export type AccelerometerHistoryQuery = {
+  deviceId: string;
+  limit?: number;
+  from?: string;
+  to?: string;
+};
 
 const ACCELEROMETER_API_PATHS = {
   flush: "/telemetry/accel",
   latest: "/telemetry/accel/latest",
+  history: "/telemetry/accel/history",
 } as const;
 
 export const accelerometerService = {
@@ -48,6 +60,21 @@ export const accelerometerService = {
         method: "GET",
         query: {
           device_id: deviceId,
+        },
+      },
+    );
+  },
+
+  getTelemetryHistory(query: AccelerometerHistoryQuery) {
+    return requestGas<ApiResponse<AccelerometerHistoryData>>(
+      ACCELEROMETER_API_PATHS.history,
+      {
+        method: "GET",
+        query: {
+          device_id: query.deviceId,
+          limit: query.limit,
+          from: query.from,
+          to: query.to,
         },
       },
     );

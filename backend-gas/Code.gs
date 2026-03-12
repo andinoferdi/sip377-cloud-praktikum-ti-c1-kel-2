@@ -73,6 +73,9 @@ function doGet(e) {
       case 'telemetry/accel/latest':
         return sendSuccess(getAccelLatest(params.device_id));
 
+      case 'telemetry/accel/history':
+        return sendSuccess(getAccelHistory(params.device_id, params.limit, params.from, params.to));
+
       case 'telemetry/gps/latest':
         return sendSuccess(getGpsLatest(params.device_id));
 
@@ -146,6 +149,7 @@ function getApiInfo() {
         '?path=presence/sessions/active',
         '?path=presence/course/config',
         '?path=telemetry/accel/latest',
+        '?path=telemetry/accel/history',
         '?path=telemetry/gps/latest',
         '?path=telemetry/gps/history',
         '?path=ui',
@@ -1271,6 +1275,74 @@ function getAccelLatest(deviceId) {
   }
 
   return {};
+}
+
+function getAccelHistory(deviceId, limit, from, to) {
+  requireField({ device_id: deviceId }, 'device_id');
+
+  var normalizedDeviceId = String(deviceId).trim();
+  if (!normalizedDeviceId) {
+    throw new Error('missing_field: device_id');
+  }
+
+  var accelMeta = getSheetMeta(SHEET.ACCEL);
+  var data = accelMeta.sheet.getDataRange().getValues();
+
+  var maxItems = limit ? parseInt(limit, 10) : 200;
+  if (isNaN(maxItems) || maxItems <= 0) {
+    maxItems = 200;
+  }
+
+  var now = new Date();
+  var startTime = from ? parseDateSafe(from) : new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  var endTime = to ? parseDateSafe(to) : now;
+
+  if (!startTime) {
+    throw new Error('invalid_timestamp: from');
+  }
+  if (!endTime) {
+    throw new Error('invalid_timestamp: to');
+  }
+  if (endTime.getTime() < startTime.getTime()) {
+    throw new Error('invalid_range: from_to');
+  }
+
+  var points = [];
+  for (var i = 1; i < data.length; i++) {
+    if (String(getValueByHeader(data[i], accelMeta.headerMap, 'device_id')).trim() !== normalizedDeviceId) {
+      continue;
+    }
+
+    var sampleTsValue = getValueByHeader(data[i], accelMeta.headerMap, 'sample_ts');
+    var sampleDate = parseDateSafe(sampleTsValue);
+    if (!sampleDate) {
+      continue;
+    }
+
+    if (sampleDate.getTime() < startTime.getTime() || sampleDate.getTime() > endTime.getTime()) {
+      continue;
+    }
+
+    points.push({
+      t: sampleDate.toISOString(),
+      x: Number(getValueByHeader(data[i], accelMeta.headerMap, 'x')),
+      y: Number(getValueByHeader(data[i], accelMeta.headerMap, 'y')),
+      z: Number(getValueByHeader(data[i], accelMeta.headerMap, 'z')),
+    });
+  }
+
+  points.sort(function (a, b) {
+    return new Date(a.t).getTime() - new Date(b.t).getTime();
+  });
+
+  if (points.length > maxItems) {
+    points = points.slice(points.length - maxItems);
+  }
+
+  return {
+    device_id: normalizedDeviceId,
+    items: points,
+  };
 }
 
 function logGPS(body) {

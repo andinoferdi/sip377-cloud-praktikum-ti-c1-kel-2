@@ -15,6 +15,7 @@ const CONTRACT_GROUPS = [
     endpoints: [
       { method: "POST", path: "/telemetry/accel" },
       { method: "GET", path: "/telemetry/accel/latest" },
+      { method: "GET", path: "/telemetry/accel/history" },
     ],
   },
   {

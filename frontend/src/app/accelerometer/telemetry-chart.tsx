@@ -32,9 +32,12 @@ export default function TelemetryChart({
     () => ({
       chart: {
         type: "line",
-        height: 320,
+        height: "100%",
         toolbar: { show: false },
         zoom: { enabled: false },
+        redrawOnParentResize: false,
+        redrawOnWindowResize: false,
+        parentHeightOffset: 0,
         animations: {
           enabled: !isMobileLive,
           easing: "linear",
@@ -96,12 +99,12 @@ export default function TelemetryChart({
   );
 
   return (
-    <div className="rounded-2xl border border-soft bg-(--token-gray-50) p-3 dark:bg-(--token-white-5)">
+    <div className="h-[360px] rounded-2xl border border-soft bg-(--token-gray-50) p-3 dark:bg-(--token-white-5)">
       <ReactApexChart
         options={options}
         series={series}
         type="line"
-        height={320}
+        height="100%"
       />
     </div>
   );

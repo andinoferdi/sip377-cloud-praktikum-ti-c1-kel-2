@@ -101,6 +101,25 @@ async function run() {
   assert(typeof latestResponse.data?.y === "number", "latest y must be numeric.");
   assert(typeof latestResponse.data?.z === "number", "latest z must be numeric.");
 
+  const historyFrom = new Date(now.getTime() - 60_000).toISOString();
+  const historyTo = new Date(now.getTime() + 10_000).toISOString();
+  const historyResponse = await requestJson("telemetry/accel/history", {
+    query: {
+      device_id: deviceId,
+      limit: 1,
+      from: historyFrom,
+      to: historyTo,
+    },
+  });
+
+  assert(historyResponse.ok === true, "telemetry/accel/history must succeed.");
+  assert(Array.isArray(historyResponse.data?.items), "history items must be array.");
+  assert(historyResponse.data.items.length === 1, "history limit must be applied.");
+  assert(historyResponse.data.items[0]?.t, "history item timestamp must exist.");
+  assert(typeof historyResponse.data.items[0]?.x === "number", "history x must be numeric.");
+  assert(typeof historyResponse.data.items[0]?.y === "number", "history y must be numeric.");
+  assert(typeof historyResponse.data.items[0]?.z === "number", "history z must be numeric.");
+
   const invalidResponse = await requestJson("telemetry/accel", {
     method: "POST",
     body: {
@@ -120,6 +139,7 @@ async function run() {
         checks: {
           accepted: postResponse.data.accepted,
           latest: latestResponse.data,
+          history: historyResponse.data,
           missing_device_error: invalidResponse.error,
         },
       },

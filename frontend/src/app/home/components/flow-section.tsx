@@ -36,12 +36,13 @@ const MODULES: {
     endpoints: [
       "POST /telemetry/accel",
       "GET  /telemetry/accel/latest",
+      "GET  /telemetry/accel/history",
     ],
     features: [
-      "Sesi start/stop realtime",
-      "Live x, y, z mengikuti gerakan perangkat",
+      "Sender dan receiver dipisah per halaman",
       "Buffered flush ke backend selama sesi aktif",
-      "Latest per device_id untuk status tersimpan",
+      "Receiver membaca latest + history dari backend",
+      "Chart backend-first per device_id",
     ],
   },
   {
