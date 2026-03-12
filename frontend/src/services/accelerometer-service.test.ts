@@ -53,4 +53,34 @@ describe("accelerometer-service", () => {
       },
     });
   });
+
+  it("requests telemetry history with query window and limit", async () => {
+    requestGasMock.mockResolvedValueOnce({
+      ok: true,
+      data: {
+        device_id: "telemetry-1",
+        items: [
+          { t: "2026-03-07T16:00:00.000Z", x: 0.1, y: 0.2, z: 9.7 },
+          { t: "2026-03-07T16:00:01.000Z", x: 0.2, y: 0.3, z: 9.6 },
+        ],
+      },
+    });
+
+    await accelerometerService.getTelemetryHistory({
+      deviceId: "telemetry-1",
+      limit: 120,
+      from: "2026-03-07T16:00:00.000Z",
+      to: "2026-03-07T16:10:00.000Z",
+    });
+
+    expect(requestGasMock).toHaveBeenCalledWith("/telemetry/accel/history", {
+      method: "GET",
+      query: {
+        device_id: "telemetry-1",
+        limit: 120,
+        from: "2026-03-07T16:00:00.000Z",
+        to: "2026-03-07T16:10:00.000Z",
+      },
+    });
+  });
 });

@@ -13,7 +13,7 @@ CloudTrack Campus menggunakan arsitektur monorepo:
 
 Base URL deployment aktif saat ini:
 
-`https://script.google.com/macros/s/AKfycbzVJ1--9eMNpaPC7JcyPQsdbkOPkkKMq3PdUuFeHJKSQ5fTw7OahhjbXy1f4V0XMMeTtA/exec`
+`https://script.google.com/macros/s/AKfycbybo5mQVwls-F4Um7Tt0RZC2SdlXy9BBGs-MhJw-jE0eZY3q-QgAlxcknbQWRI9c3Ycug/exec`
 
 ## 2. Struktur Repo
 
@@ -60,7 +60,7 @@ cp .env.example .env
 Isi `frontend/.env`:
 
 ```env
-NEXT_PUBLIC_GAS_BASE_URL="https://script.google.com/macros/s/AKfycbzVJ1--9eMNpaPC7JcyPQsdbkOPkkKMq3PdUuFeHJKSQ5fTw7OahhjbXy1f4V0XMMeTtA/exec"
+NEXT_PUBLIC_GAS_BASE_URL="https://script.google.com/macros/s/AKfycbybo5mQVwls-F4Um7Tt0RZC2SdlXy9BBGs-MhJw-jE0eZY3q-QgAlxcknbQWRI9c3Ycug/exec"
 ```
 
 Jalankan aplikasi:
@@ -70,9 +70,11 @@ npm run docs:prepare
 npm run dev
 ```
 
-Route publik Modul 2 tersedia di:
+Route publik Modul 2:
 
-`http://localhost:3000/accelerometer`
+`http://localhost:3000/accelerometer` (redirect ke receiver)  
+`http://localhost:3000/accelerometer/receiver`  
+`http://localhost:3000/accelerometer/sender`
 
 Sinkronkan spesifikasi OpenAPI untuk halaman docs frontend:
 
@@ -106,7 +108,8 @@ Swagger UI frontend tersedia di:
 
 Route publik Modul 2 realtime tersedia di:
 
-`http://localhost:3000/accelerometer`
+`http://localhost:3000/accelerometer/receiver` (backend-first)  
+`http://localhost:3000/accelerometer/sender` (sensor sender)
 
 ### 4.3 Quality gate frontend
 
@@ -160,7 +163,7 @@ Validator-nya:
    3. `src/services/attendance-gas-service.ts`
    4. `src/services/accelerometer-service.ts`
 3. Jangan hardcode URL GAS di source code.
-4. Modul 2 Accelerometer tersedia sebagai route publik `/accelerometer`, tidak memakai auth dashboard.
+4. Modul 2 Accelerometer dipisah menjadi route publik `/accelerometer/sender` dan `/accelerometer/receiver` (`/accelerometer` redirect ke receiver), tanpa auth dashboard.
 5. Jika menambah atau mengubah endpoint yang dipakai UI, koordinasi dengan backend dan update dokumentasi.
 
 ### 4.7 Checklist PR frontend
@@ -196,18 +199,22 @@ GET:
 
 1. `?path=presence/status`
 2. `?path=presence/list`
-3. `?path=telemetry/accel/latest`
-4. `?path=telemetry/gps/latest`
-5. `?path=telemetry/gps/history`
-6. `?path=ui`
+3. `?path=presence/sessions/active`
+4. `?path=presence/course/config`
+5. `?path=telemetry/accel/latest`
+6. `?path=telemetry/accel/history`
+7. `?path=telemetry/gps/latest`
+8. `?path=telemetry/gps/history`
+9. `?path=ui`
 
 POST:
 
 1. `?path=presence/qr/generate`
 2. `?path=presence/checkin`
 3. `?path=presence/qr/stop`
-4. `?path=telemetry/accel`
-5. `?path=telemetry/gps`
+4. `?path=presence/course/config`
+5. `?path=telemetry/accel`
+6. `?path=telemetry/gps`
 
 Response envelope wajib:
 
@@ -272,7 +279,7 @@ Setelah `push`, buat version baru dan update deployment Web App dari Apps Script
 ### 6.1 Scope QA minimum per rilis
 
 1. Flow presensi QR dosen dan mahasiswa.
-2. Telemetry accel pada route publik `/accelerometer` dan telemetry GPS.
+2. Telemetry accel pada route publik `/accelerometer/sender` dan `/accelerometer/receiver`, serta telemetry GPS.
 3. Regression login/dashboard flow frontend.
 4. Konsistensi data di spreadsheet.
 
@@ -280,7 +287,7 @@ Setelah `push`, buat version baru dan update deployment Web App dari Apps Script
 
 1. URL FE hosting (Vercel) aktif.
 2. URL GAS deployment benar dan sudah di-set ke env FE.
-3. Spreadsheet aktif memiliki 5 sheet wajib.
+3. Spreadsheet aktif memiliki 6 sheet wajib.
 4. Minimal 2 browser mobile Android untuk uji scan.
 
 ### 6.3 Automated checks (frontend)
@@ -391,4 +398,5 @@ Perubahan dianggap selesai jika:
 3. QA smoke test lulus tanpa blocker kritis.
 4. Dokumentasi utama sudah diperbarui.
 5. Perubahan sudah tersinkron ke `main` sesuai alur release.
+
 

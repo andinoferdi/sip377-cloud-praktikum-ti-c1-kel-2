@@ -15,7 +15,7 @@
       "description": "Google Apps Script Web App",
       "variables": {
         "deploymentId": {
-          "default": "AKfycbzVJ1--9eMNpaPC7JcyPQsdbkOPkkKMq3PdUuFeHJKSQ5fTw7OahhjbXy1f4V0XMMeTtA",
+          "default": "AKfycbybo5mQVwls-F4Um7Tt0RZC2SdlXy9BBGs-MhJw-jE0eZY3q-QgAlxcknbQWRI9c3Ycug",
           "description": "Web App deployment ID"
         }
       }
@@ -83,7 +83,7 @@
               "minimum": 1,
               "default": 200
             },
-            "description": "Optional max items for path=presence/list, path=presence/sessions/active, or path=telemetry/gps/history"
+            "description": "Optional max items for path=presence/list, path=presence/sessions/active, path=telemetry/accel/history, or path=telemetry/gps/history"
           },
           {
             "name": "include_stopped",

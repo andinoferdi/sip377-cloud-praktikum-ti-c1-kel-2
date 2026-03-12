@@ -15,7 +15,7 @@
       "description": "Google Apps Script Web App",
       "variables": {
         "deploymentId": {
-          "default": "AKfycbzVJ1--9eMNpaPC7JcyPQsdbkOPkkKMq3PdUuFeHJKSQ5fTw7OahhjbXy1f4V0XMMeTtA",
+          "default": "AKfycbybo5mQVwls-F4Um7Tt0RZC2SdlXy9BBGs-MhJw-jE0eZY3q-QgAlxcknbQWRI9c3Ycug",
           "description": "Web App deployment ID"
         }
       }
@@ -35,7 +35,8 @@
             "schema": {
               "type": "string",
               "enum": [
-                "telemetry/accel/latest"
+                "telemetry/accel/latest",
+                "telemetry/accel/history"
               ]
             },
             "description": "Virtual route selector. Empty/default and `ui` both return API metadata JSON.\n"
@@ -47,6 +48,34 @@
               "type": "string"
             },
             "description": "Required for telemetry latest/history endpoints"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 200
+            },
+            "description": "Optional max items for path=presence/list, path=presence/sessions/active, path=telemetry/accel/history, or path=telemetry/gps/history"
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "description": "Optional ISO-8601 start time for path=telemetry/accel/history or path=telemetry/gps/history"
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "description": "Optional ISO-8601 end time for path=telemetry/accel/history or path=telemetry/gps/history"
           }
         ],
         "responses": {
@@ -64,6 +93,29 @@
                         "x": 0.15,
                         "y": 0.02,
                         "z": 9.68
+                      }
+                    }
+                  },
+                  "accelHistory": {
+                    "summary": "path=telemetry/accel/history",
+                    "value": {
+                      "ok": true,
+                      "data": {
+                        "device_id": "dev-001",
+                        "items": [
+                          {
+                            "t": "2026-02-18T10:15:20.100Z",
+                            "x": 0.1,
+                            "y": 0.02,
+                            "z": 9.7
+                          },
+                          {
+                            "t": "2026-02-18T10:15:21.300Z",
+                            "x": 0.15,
+                            "y": 0.03,
+                            "z": 9.68
+                          }
+                        ]
                       }
                     }
                   }

@@ -12,7 +12,7 @@ Frontend ini memakai Next.js App Router dan berfungsi sebagai client untuk meman
 Gunakan file `.env` di folder `frontend/`.
 
 ```env
-NEXT_PUBLIC_GAS_BASE_URL="https://script.google.com/macros/s/AKfycbzVJ1--9eMNpaPC7JcyPQsdbkOPkkKMq3PdUuFeHJKSQ5fTw7OahhjbXy1f4V0XMMeTtA/exec"
+NEXT_PUBLIC_GAS_BASE_URL="https://script.google.com/macros/s/AKfycbybo5mQVwls-F4Um7Tt0RZC2SdlXy9BBGs-MhJw-jE0eZY3q-QgAlxcknbQWRI9c3Ycug/exec"
 ```
 
 Catatan:
@@ -31,7 +31,10 @@ npm run dev
 
 Buka `http://localhost:3000`.
 Dokumentasi API interaktif tersedia di `http://localhost:3000/docs`.
-Halaman publik Modul 2 realtime tersedia di `http://localhost:3000/accelerometer`.
+Halaman publik Modul 2 tersedia di:
+`http://localhost:3000/accelerometer` (redirect ke receiver),
+`http://localhost:3000/accelerometer/receiver`,
+dan `http://localhost:3000/accelerometer/sender`.
 
 ## Swagger Docs (`/docs`)
 
@@ -147,7 +150,8 @@ Gunakan akun berikut untuk pengujian lokal:
 ## Arsitektur Singkat
 
 1. UI aktif fokus pada Modul 1 Presensi QR Dinamis.
-2. Modul 2 Accelerometer tersedia sebagai route publik realtime dengan sesi start/stop dan buffered flush ke GAS.
+2. Modul 2 Accelerometer dipisah menjadi sender (`/accelerometer/sender`) dan receiver (`/accelerometer/receiver`), dengan receiver membaca latest + history dari backend GAS.
 3. Tidak ada ORM Prisma, auth internal DB, atau API internal Next.js.
 4. Integrasi backend menggunakan direct REST call ke GAS dari client.
+
 
