@@ -6,6 +6,7 @@ import {
   Activity,
   ArrowLeft,
   CheckCircle2,
+  Copy,
   Play,
   Radio,
   RefreshCw,
@@ -13,20 +14,8 @@ import {
   Smartphone,
   Square,
 } from "lucide-react";
-import {
-  accelerometerService,
-  type AccelerometerSample,
-} from "@/services/accelerometer-service";
+import { accelerometerService } from "@/services/accelerometer-service";
 import { hasGasBaseUrl } from "@/services/gas-client";
-import {
-  appendSampleToHistory,
-  createInitialTelemetryChartGovernor,
-  shouldCommitTelemetryChartFrame,
-  TELEMETRY_CHART_MAX_POINTS,
-  TELEMETRY_CHART_FRAME_INTERVAL_STEPS,
-  TELEMETRY_CHART_MOBILE_MAX_POINTS,
-  updateTelemetryChartGovernor,
-} from "@/utils/accelerometer-chart";
 import {
   createAccelerometerSessionController,
   createInitialTelemetrySessionState,
@@ -34,7 +23,6 @@ import {
   type TelemetrySessionState,
 } from "@/utils/accelerometer-session";
 import { getOrCreateTelemetryDeviceId } from "@/utils/telemetry-device-id";
-import TelemetryChart from "./telemetry-chart";
 
 const CARD_CLASS = "overflow-hidden rounded-2xl border border-soft surface-elevated";
 const LABEL_CLASS =
@@ -45,18 +33,6 @@ function formatNumber(value: number | null | undefined) {
     return "--";
   }
   return value.toFixed(3);
-}
-
-function detectMobileTelemetryMode(win: Window) {
-  if ("matchMedia" in win) {
-    if (win.matchMedia("(max-width: 768px)").matches) {
-      return true;
-    }
-    if (win.matchMedia("(pointer: coarse)").matches) {
-      return true;
-    }
-  }
-  return false;
 }
 
 function SessionBadge({ status }: { status: TelemetrySessionState["status"] }) {
@@ -147,19 +123,10 @@ export default function AccelerometerSenderClient() {
     "Menyiapkan diagnosis sensor browser.",
   );
   const [supportHint, setSupportHint] = useState<string | null>(null);
-  const [liveHistory, setLiveHistory] = useState<AccelerometerSample[]>([]);
-  const [isMobileOptimized, setIsMobileOptimized] = useState(false);
-  const [mobileFrameIntervalMs, setMobileFrameIntervalMs] = useState<number>(
-    TELEMETRY_CHART_FRAME_INTERVAL_STEPS[0],
-  );
+  const [copyStatus, setCopyStatus] = useState<string | null>(null);
   const controllerRef = useRef<ReturnType<
     typeof createAccelerometerSessionController
   > | null>(null);
-  const liveHistoryRef = useRef<AccelerometerSample[]>([]);
-  const pendingChartSampleRef = useRef<AccelerometerSample | null>(null);
-  const chartFrameRequestRef = useRef<number | null>(null);
-  const lastChartCommitMsRef = useRef<number | null>(null);
-  const chartGovernorRef = useRef(createInitialTelemetryChartGovernor());
 
   useEffect(() => {
     const nextDeviceId = getOrCreateTelemetryDeviceId();
@@ -175,12 +142,7 @@ export default function AccelerometerSenderClient() {
     const support = detectAccelerometerSupport(window);
     setSupportMessage(support.message);
     setSupportHint(support.browserHint);
-    setIsMobileOptimized(detectMobileTelemetryMode(window));
   }, []);
-
-  useEffect(() => {
-    liveHistoryRef.current = liveHistory;
-  }, [liveHistory]);
 
   useEffect(() => {
     if (deviceId === "telemetry-loading") {
@@ -228,16 +190,7 @@ export default function AccelerometerSenderClient() {
     if (!controllerRef.current || typeof window === "undefined") {
       return;
     }
-    setLiveHistory([]);
-    liveHistoryRef.current = [];
-    pendingChartSampleRef.current = null;
-    lastChartCommitMsRef.current = null;
-    chartGovernorRef.current = createInitialTelemetryChartGovernor();
-    setMobileFrameIntervalMs(TELEMETRY_CHART_FRAME_INTERVAL_STEPS[0]);
-    if (chartFrameRequestRef.current !== null) {
-      window.cancelAnimationFrame(chartFrameRequestRef.current);
-      chartFrameRequestRef.current = null;
-    }
+    setCopyStatus(null);
     try {
       await controllerRef.current.start(window);
     } catch (error) {
@@ -258,109 +211,18 @@ export default function AccelerometerSenderClient() {
     await controllerRef.current.stop(window);
   }
 
-  useEffect(() => {
-    if (!sessionState.liveSample) {
+  async function handleCopyDeviceId() {
+    if (typeof window === "undefined" || deviceId === "telemetry-loading") {
       return;
     }
 
-    const nextSample = sessionState.liveSample;
-    if (!isMobileOptimized) {
-      const nextHistory = appendSampleToHistory(
-        liveHistoryRef.current,
-        nextSample,
-        TELEMETRY_CHART_MAX_POINTS,
-      );
-      liveHistoryRef.current = nextHistory;
-      setLiveHistory(nextHistory);
-      return;
+    try {
+      await window.navigator.clipboard.writeText(deviceId);
+      setCopyStatus("device_id disalin");
+    } catch {
+      setCopyStatus("gagal menyalin device_id");
     }
-
-    pendingChartSampleRef.current = nextSample;
-  }, [isMobileOptimized, sessionState.liveSample]);
-
-  useEffect(() => {
-    if (typeof window === "undefined" || !isMobileOptimized) {
-      return;
-    }
-
-    const status = sessionState.status;
-    const shouldRunFrameLoop =
-      status === "starting" ||
-      status === "live" ||
-      status === "flushing" ||
-      status === "blocked" ||
-      status === "stopping";
-
-    if (!shouldRunFrameLoop) {
-      if (chartFrameRequestRef.current !== null) {
-        window.cancelAnimationFrame(chartFrameRequestRef.current);
-        chartFrameRequestRef.current = null;
-      }
-      return;
-    }
-
-    const loop = (timestamp: number) => {
-      const pendingSample = pendingChartSampleRef.current;
-      if (!pendingSample) {
-        chartFrameRequestRef.current = window.requestAnimationFrame(loop);
-        return;
-      }
-
-      const governorBefore = chartGovernorRef.current;
-      if (
-        !shouldCommitTelemetryChartFrame(
-          timestamp,
-          lastChartCommitMsRef.current,
-          governorBefore.intervalMs,
-        )
-      ) {
-        chartFrameRequestRef.current = window.requestAnimationFrame(loop);
-        return;
-      }
-
-      const commitStart = performance.now();
-      pendingChartSampleRef.current = null;
-      lastChartCommitMsRef.current = timestamp;
-      const nextHistory = appendSampleToHistory(
-        liveHistoryRef.current,
-        pendingSample,
-        TELEMETRY_CHART_MOBILE_MAX_POINTS,
-      );
-      liveHistoryRef.current = nextHistory;
-      setLiveHistory(nextHistory);
-
-      const nextGovernor = updateTelemetryChartGovernor(
-        governorBefore,
-        performance.now() - commitStart,
-      );
-      chartGovernorRef.current = nextGovernor;
-      if (nextGovernor.intervalMs !== governorBefore.intervalMs) {
-        setMobileFrameIntervalMs(nextGovernor.intervalMs);
-      }
-
-      chartFrameRequestRef.current = window.requestAnimationFrame(loop);
-    };
-
-    chartFrameRequestRef.current = window.requestAnimationFrame(loop);
-    return () => {
-      if (chartFrameRequestRef.current !== null) {
-        window.cancelAnimationFrame(chartFrameRequestRef.current);
-        chartFrameRequestRef.current = null;
-      }
-    };
-  }, [isMobileOptimized, sessionState.status]);
-
-  useEffect(() => {
-    return () => {
-      if (typeof window === "undefined") {
-        return;
-      }
-      if (chartFrameRequestRef.current !== null) {
-        window.cancelAnimationFrame(chartFrameRequestRef.current);
-        chartFrameRequestRef.current = null;
-      }
-    };
-  }, []);
+  }
 
   const liveSample = sessionState.liveSample;
   const isSessionRunning =
@@ -370,9 +232,6 @@ export default function AccelerometerSenderClient() {
     sessionState.status === "blocked" ||
     sessionState.status === "stopping";
   const isStopping = sessionState.status === "stopping";
-  const isMobileGovernorActive =
-    isMobileOptimized &&
-    mobileFrameIntervalMs > TELEMETRY_CHART_FRAME_INTERVAL_STEPS[0];
 
   return (
     <section className="py-10 md:py-14">
@@ -415,6 +274,15 @@ export default function AccelerometerSenderClient() {
                 device_id
               </p>
               <p className="mt-1 font-mono text-xs">{deviceId}</p>
+              <button
+                type="button"
+                onClick={() => void handleCopyDeviceId()}
+                className="mt-2 inline-flex items-center gap-1 rounded-md border border-soft px-2 py-1 text-xs font-semibold hover:bg-(--token-gray-100) dark:hover:bg-(--token-white-5)"
+              >
+                <Copy size={12} />
+                Copy
+              </button>
+              {copyStatus ? <p className="mt-2 text-xs">{copyStatus}</p> : null}
             </div>
           </div>
 
@@ -515,15 +383,6 @@ export default function AccelerometerSenderClient() {
                 </div>
               </div>
 
-              <div className="mt-5">
-                <TelemetryChart
-                  history={liveHistory}
-                  isLive={sessionState.status !== "stopped"}
-                  isMobileOptimized={isMobileOptimized}
-                  isPerformanceCapped={isMobileGovernorActive}
-                />
-              </div>
-
               <div className="mt-5 grid gap-3 sm:grid-cols-3">
                 <MetricCard
                   label="X"
@@ -591,8 +450,8 @@ export default function AccelerometerSenderClient() {
                   </h2>
                 </div>
                 <ul className="mt-4 space-y-3 text-sm leading-6 text-(--token-gray-600) dark:text-(--token-gray-300)">
-                  <li>Halaman sender tidak mengambil data chart dari backend.</li>
-                  <li>Sumber kebenaran tampilan backend ada di halaman receiver.</li>
+                  <li>Sender hanya kirim data sensor ke backend.</li>
+                  <li>Receiver membaca history/latest dari backend.</li>
                   <li>Endpoint kirim batch: POST /telemetry/accel.</li>
                 </ul>
               </div>

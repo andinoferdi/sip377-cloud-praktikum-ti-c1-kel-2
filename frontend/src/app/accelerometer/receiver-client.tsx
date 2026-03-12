@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Database, RefreshCw, Waves } from "lucide-react";
@@ -10,6 +10,10 @@ import {
 } from "@/services/accelerometer-service";
 import { hasGasBaseUrl } from "@/services/gas-client";
 import { getOrCreateTelemetryDeviceId } from "@/utils/telemetry-device-id";
+import {
+  applyReceiverDeviceSelection,
+  createInitialReceiverBindingState,
+} from "@/utils/accelerometer-receiver";
 import TelemetryChart from "./telemetry-chart";
 
 const CARD_CLASS = "overflow-hidden rounded-2xl border border-soft surface-elevated";
@@ -63,14 +67,25 @@ function buildHistoryWindow(limit: number) {
 }
 
 export default function AccelerometerReceiverClient() {
-  const [deviceId] = useState(() => getOrCreateTelemetryDeviceId());
+  const [binding, setBinding] = useState(createInitialReceiverBindingState);
   const [historyLimit] = useState(200);
+  const hasBackend = hasGasBaseUrl();
+
+  useEffect(() => {
+    const localDeviceId = getOrCreateTelemetryDeviceId();
+    setBinding({
+      draftDeviceId: localDeviceId,
+      activeDeviceId: localDeviceId,
+    });
+  }, []);
 
   const latestQuery = useQuery({
-    queryKey: ["accelerometer-receiver-latest", deviceId],
-    enabled: hasGasBaseUrl() && !!deviceId,
+    queryKey: ["accelerometer-receiver-latest", binding.activeDeviceId],
+    enabled: hasBackend && !!binding.activeDeviceId,
     queryFn: async () => {
-      const response = await accelerometerService.getLatestTelemetry(deviceId);
+      const response = await accelerometerService.getLatestTelemetry(
+        binding.activeDeviceId,
+      );
       if (!response.ok) {
         throw new Error(response.error ?? "latest telemetry gagal");
       }
@@ -83,12 +98,16 @@ export default function AccelerometerReceiverClient() {
   });
 
   const historyQuery = useQuery({
-    queryKey: ["accelerometer-receiver-history", deviceId, historyLimit],
-    enabled: hasGasBaseUrl() && !!deviceId,
+    queryKey: [
+      "accelerometer-receiver-history",
+      binding.activeDeviceId,
+      historyLimit,
+    ],
+    enabled: hasBackend && !!binding.activeDeviceId,
     queryFn: async () => {
       const window = buildHistoryWindow(historyLimit);
       const response = await accelerometerService.getTelemetryHistory({
-        deviceId,
+        deviceId: binding.activeDeviceId,
         limit: window.limit,
         from: window.from,
         to: window.to,
@@ -110,7 +129,9 @@ export default function AccelerometerReceiverClient() {
   );
   const latestFromHistory = history.length > 0 ? history[history.length - 1] : null;
   const latestSample = latestQuery.data ?? latestFromHistory ?? null;
-  const hasBackend = hasGasBaseUrl();
+
+  const activeDeviceEmpty = !binding.activeDeviceId;
+  const activeAndDraftMatch = binding.activeDeviceId === binding.draftDeviceId.trim();
 
   return (
     <section className="py-10 md:py-14">
@@ -133,9 +154,8 @@ export default function AccelerometerReceiverClient() {
                   Accelerometer Receiver
                 </h1>
                 <p className="mt-3 max-w-3xl text-sm leading-7 text-(--token-gray-500) dark:text-(--token-gray-400)">
-                  Halaman ini tidak membaca sensor perangkat lokal. Semua grafik
-                  dan nilai X, Y, Z hanya berasal dari data yang sudah masuk ke
-                  Google Apps Script.
+                  Halaman ini tidak membaca sensor lokal. Data chart dan nilai
+                  X, Y, Z hanya dari backend GAS untuk device_id terpilih.
                 </p>
                 <div className="mt-2">
                   <Link
@@ -150,10 +170,67 @@ export default function AccelerometerReceiverClient() {
 
             <div className="rounded-2xl border border-soft surface-elevated px-4 py-3 text-sm text-(--token-gray-500) dark:text-(--token-gray-400)">
               <p className="font-semibold text-(--token-gray-800) dark:text-(--token-gray-100)">
-                device_id
+                active device_id
               </p>
-              <p className="mt-1 font-mono text-xs">{deviceId}</p>
+              <p className="mt-1 font-mono text-xs">
+                {binding.activeDeviceId || "-- belum di-set --"}
+              </p>
             </div>
+          </div>
+
+          <div className={`${CARD_CLASS} p-5`}>
+            <p className="text-sm font-semibold text-(--token-gray-900) dark:text-(--token-white)">
+              Device Binding Receiver
+            </p>
+            <p className="mt-2 text-sm text-(--token-gray-500) dark:text-(--token-gray-400)">
+              Paste device_id dari sender lalu tekan Apply agar receiver membaca
+              stream backend yang benar.
+            </p>
+            <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto_auto]">
+              <input
+                value={binding.draftDeviceId}
+                onChange={(event) =>
+                  setBinding((previous) => ({
+                    ...previous,
+                    draftDeviceId: event.target.value,
+                  }))
+                }
+                placeholder="telemetry-web-xxxxxx"
+                className="h-10 rounded-lg border border-soft bg-transparent px-3 text-sm outline-none ring-primary-500 focus:ring-2"
+              />
+              <button
+                type="button"
+                onClick={() =>
+                  setBinding((previous) => ({
+                    ...previous,
+                    activeDeviceId: applyReceiverDeviceSelection(
+                      previous.draftDeviceId,
+                    ),
+                  }))
+                }
+                className="inline-flex items-center justify-center rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+              >
+                Apply
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const localDeviceId = getOrCreateTelemetryDeviceId();
+                  setBinding({
+                    draftDeviceId: localDeviceId,
+                    activeDeviceId: localDeviceId,
+                  });
+                }}
+                className="inline-flex items-center justify-center rounded-lg border border-soft px-4 py-2 text-sm font-semibold text-(--token-gray-700) hover:bg-(--token-gray-100) dark:text-(--token-gray-200) dark:hover:bg-(--token-white-5)"
+              >
+                Reset Local
+              </button>
+            </div>
+            {!activeAndDraftMatch ? (
+              <p className="mt-2 text-xs text-amber-600 dark:text-amber-300">
+                Perubahan device_id belum aktif. Klik Apply.
+              </p>
+            ) : null}
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
@@ -179,9 +256,11 @@ export default function AccelerometerReceiverClient() {
                 </p>
               </div>
               <p className="mt-3 text-sm leading-6 text-(--token-gray-500) dark:text-(--token-gray-400)">
-                {historyQuery.isFetching || latestQuery.isFetching
-                  ? "Memperbarui data backend..."
-                  : "Data backend sinkron. Grafik memakai series dari endpoint history."}
+                {activeDeviceEmpty
+                  ? "Set device_id terlebih dahulu untuk mulai membaca backend."
+                  : historyQuery.isFetching || latestQuery.isFetching
+                    ? "Memperbarui data backend..."
+                    : "Data backend sinkron untuk device_id terpilih."}
               </p>
             </div>
           </div>
@@ -194,7 +273,7 @@ export default function AccelerometerReceiverClient() {
                     Grafik Telemetry Backend
                   </p>
                   <p className="mt-1 text-sm text-(--token-gray-500) dark:text-(--token-gray-400)">
-                    Data chart hanya dari GET /telemetry/accel/history.
+                    Data backend untuk device_id terpilih (GET /telemetry/accel/history).
                   </p>
                 </div>
                 <button
@@ -215,6 +294,7 @@ export default function AccelerometerReceiverClient() {
                 isLive
                 isMobileOptimized={false}
                 isPerformanceCapped={false}
+                lockYAxis
               />
 
               <div className="mt-5 grid gap-3 sm:grid-cols-3">
@@ -273,6 +353,15 @@ export default function AccelerometerReceiverClient() {
                         : "Gagal mengambil telemetry dari backend."}
                   </p>
                 )}
+                {!historyQuery.isFetching &&
+                !latestQuery.isFetching &&
+                history.length === 0 &&
+                !historyQuery.isError &&
+                !activeDeviceEmpty ? (
+                  <p className="mt-4 text-sm text-amber-600 dark:text-amber-300">
+                    History kosong. Pastikan device_id receiver sama dengan device_id sender.
+                  </p>
+                ) : null}
               </div>
 
               <div className={`${CARD_CLASS} p-6`}>

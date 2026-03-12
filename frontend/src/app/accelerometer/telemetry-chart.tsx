@@ -1,9 +1,9 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import type { ApexOptions } from "apexcharts";
 import { useMemo } from "react";
 import { buildTelemetryChartSeries } from "@/utils/accelerometer-chart";
+import { buildTelemetryChartOptions } from "@/utils/accelerometer-chart-options";
 import type { AccelerometerSample } from "@/services/accelerometer-service";
 
 const ReactApexChart = dynamic(() => import("react-apexcharts"), {
@@ -15,87 +15,28 @@ type TelemetryChartProps = {
   isLive: boolean;
   isMobileOptimized: boolean;
   isPerformanceCapped: boolean;
+  lockYAxis?: boolean;
 };
-
-const SERIES_COLORS = ["#2ea8ff", "#22c55e", "#f59e0b"] as const;
 
 export default function TelemetryChart({
   history,
   isLive,
   isMobileOptimized,
   isPerformanceCapped,
+  lockYAxis = false,
 }: TelemetryChartProps) {
   const series = useMemo(() => buildTelemetryChartSeries(history), [history]);
   const isMobileLive = isMobileOptimized && isLive;
 
-  const options = useMemo<ApexOptions>(
-    () => ({
-      chart: {
-        type: "line",
-        height: "100%",
-        toolbar: { show: false },
-        zoom: { enabled: false },
-        redrawOnParentResize: false,
-        redrawOnWindowResize: false,
-        parentHeightOffset: 0,
-        animations: {
-          enabled: !isMobileLive,
-          easing: "linear",
-          dynamicAnimation: {
-            speed: isMobileLive ? 1 : 260,
-          },
-        },
-      },
-      colors: [...SERIES_COLORS],
-      dataLabels: { enabled: false },
-      stroke: {
-        curve: isMobileLive ? "straight" : "smooth",
-        width: isMobileLive ? 2 : 2.5,
-      },
-      markers: {
-        size: 0,
-        hover: {
-          sizeOffset: isMobileLive ? 0 : 3,
-        },
-      },
-      legend: {
-        show: !isMobileLive || !isPerformanceCapped,
-        position: "top",
-        horizontalAlign: "left",
-      },
-      xaxis: {
-        type: "datetime",
-        labels: {
-          datetimeUTC: false,
-        },
-      },
-      yaxis: {
-        decimalsInFloat: 2,
-        labels: {
-          formatter(value) {
-            return value.toFixed(2);
-          },
-        },
-      },
-      grid: {
-        strokeDashArray: isMobileLive ? 0 : 4,
-      },
-      tooltip: {
-        enabled: !isMobileLive || !isPerformanceCapped,
-        theme: "light",
-        x: {
-          format: "HH:mm:ss",
-        },
-      },
-      noData: {
-        text: isLive
-          ? "Menunggu sampel telemetry pertama..."
-          : "Belum ada histori telemetry untuk divisualisasikan.",
-        align: "center",
-        verticalAlign: "middle",
-      },
-    }),
-    [isLive, isMobileLive, isPerformanceCapped],
+  const options = useMemo(
+    () =>
+      buildTelemetryChartOptions({
+        isLive,
+        isMobileLive,
+        isPerformanceCapped,
+        lockYAxis,
+      }),
+    [isLive, isMobileLive, isPerformanceCapped, lockYAxis],
   );
 
   return (
