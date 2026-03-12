@@ -14,6 +14,7 @@ import {
   applyReceiverDeviceSelection,
   buildReceiverFilteredSample,
   computeReceiverRefetchIntervalMs,
+  computeReceiverRetryDelayMs,
   createInitialReceiverBindingState,
   RECEIVER_Z_DEADZONE,
 } from "@/utils/accelerometer-receiver";
@@ -73,6 +74,7 @@ function buildHistoryWindow(limit: number) {
 export default function AccelerometerReceiverClient() {
   const [binding, setBinding] = useState(createInitialReceiverBindingState);
   const [historyLimit] = useState(200);
+  const [isManualRefreshing, setIsManualRefreshing] = useState(false);
   const hasBackend = hasGasBaseUrl();
 
   useEffect(() => {
@@ -107,8 +109,10 @@ export default function AccelerometerReceiverClient() {
       computeReceiverRefetchIntervalMs(query.state.data?.query_ms),
     refetchIntervalInBackground: true,
     staleTime: 2500,
-    refetchOnWindowFocus: false,
-    retry: 1,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    retry: true,
+    retryDelay: computeReceiverRetryDelayMs,
   });
 
   const history = useMemo<AccelerometerSample[]>(
@@ -137,6 +141,41 @@ export default function AccelerometerReceiverClient() {
 
   const activeDeviceEmpty = !binding.activeDeviceId;
   const activeAndDraftMatch = binding.activeDeviceId === binding.draftDeviceId.trim();
+  const hasHistory = history.length > 0;
+  const isSyncing = historyQuery.isFetching;
+
+  async function handleManualRefresh() {
+    if (isManualRefreshing || activeDeviceEmpty || !hasBackend) {
+      return;
+    }
+
+    setIsManualRefreshing(true);
+    try {
+      await historyQuery.refetch({
+        cancelRefetch: true,
+      });
+    } finally {
+      setIsManualRefreshing(false);
+    }
+  }
+
+  const receiverStatusMessage = !hasBackend
+    ? "NEXT_PUBLIC_GAS_BASE_URL belum diatur. Receiver tidak dapat memuat data."
+    : activeDeviceEmpty
+      ? "Set device_id terlebih dahulu untuk mulai membaca backend."
+      : historyQuery.isError && hasHistory
+        ? "Data terakhir tetap ditampilkan. Backend error sementara, retry otomatis berjalan."
+        : historyQuery.isError
+          ? "Gagal sinkron ke backend. Sistem akan retry otomatis."
+          : hasHistory
+            ? isSyncing
+              ? "Data terakhir tetap ditampilkan. Sinkronisasi backend berjalan..."
+              : hasStaleData
+                ? "Data backend tersedia, pembaruan terbaru masih tertunda."
+                : "Data backend sinkron untuk device_id terpilih."
+            : isSyncing
+              ? "Mencari sampel telemetry pertama..."
+              : "Belum ada histori telemetry untuk device_id terpilih. Pastikan sender sudah mengirim data.";
 
   return (
     <section className="py-10 md:py-14">
@@ -261,19 +300,7 @@ export default function AccelerometerReceiverClient() {
                 </p>
               </div>
               <p className="mt-3 text-sm leading-6 text-(--token-gray-500) dark:text-(--token-gray-400)">
-                {activeDeviceEmpty
-                  ? "Set device_id terlebih dahulu untuk mulai membaca backend."
-                  : historyQuery.isError
-                    ? "Gagal sinkron ke backend untuk device_id terpilih."
-                    : history.length > 0
-                      ? historyQuery.isFetching
-                        ? "Data terakhir tetap ditampilkan. Sinkronisasi backend berjalan..."
-                        : hasStaleData
-                          ? "Data backend tersedia, pembaruan terbaru masih tertunda."
-                          : "Data backend sinkron untuk device_id terpilih."
-                      : historyQuery.isFetching
-                        ? "Mencari sampel telemetry pertama..."
-                        : "Belum ada histori telemetry untuk device_id terpilih."}
+                {receiverStatusMessage}
               </p>
             </div>
           </div>
@@ -291,17 +318,17 @@ export default function AccelerometerReceiverClient() {
                 </div>
                 <button
                   type="button"
-                  disabled={historyQuery.isFetching}
+                  disabled={activeDeviceEmpty || !hasBackend || isManualRefreshing}
                   onClick={() => {
-                    if (historyQuery.isFetching) {
-                      return;
-                    }
-                    void historyQuery.refetch();
+                    void handleManualRefresh();
                   }}
-                  className="inline-flex items-center gap-2 rounded-lg border border-soft px-3 py-2 text-sm font-medium text-(--token-gray-600) hover:bg-(--token-gray-100) dark:text-(--token-gray-300) dark:hover:bg-(--token-white-5)"
+                  className="inline-flex items-center gap-2 rounded-lg border border-soft px-3 py-2 text-sm font-medium text-(--token-gray-600) hover:bg-(--token-gray-100) disabled:cursor-not-allowed disabled:opacity-50 dark:text-(--token-gray-300) dark:hover:bg-(--token-white-5)"
                 >
-                  <RefreshCw size={14} />
-                  Refresh
+                  <RefreshCw
+                    size={14}
+                    className={isManualRefreshing ? "animate-spin" : undefined}
+                  />
+                  {isManualRefreshing ? "Memuat..." : "Refresh"}
                 </button>
               </div>
 
@@ -332,7 +359,7 @@ export default function AccelerometerReceiverClient() {
                 />
               </div>
               <p className="mt-3 text-xs text-(--token-gray-500) dark:text-(--token-gray-400)">
-                Filtered view aktif pada panel nilai (deadzone Z ±{RECEIVER_Z_DEADZONE.toFixed(2)}). Data backend tetap raw.
+                Filtered view aktif pada panel nilai (deadzone Z +/-{RECEIVER_Z_DEADZONE.toFixed(2)}). Data backend tetap raw.
               </p>
             </div>
 
@@ -374,14 +401,15 @@ export default function AccelerometerReceiverClient() {
                     {historyQuery.error instanceof Error
                       ? historyQuery.error.message
                       : "Gagal mengambil telemetry dari backend."}
+                    {" "}Retry otomatis tetap berjalan.
                   </p>
                 )}
-                {!historyQuery.isFetching &&
+                {!isSyncing &&
                 history.length === 0 &&
                 !historyQuery.isError &&
                 !activeDeviceEmpty ? (
                   <p className="mt-4 text-sm text-amber-600 dark:text-amber-300">
-                    History kosong. Pastikan device_id receiver sama dengan device_id sender.
+                    History kosong. Pastikan device_id receiver sama dengan device_id sender dan sender sedang mengirim data.
                   </p>
                 ) : null}
               </div>
@@ -393,6 +421,7 @@ export default function AccelerometerReceiverClient() {
                 <ul className="mt-4 space-y-3 text-sm leading-6 text-(--token-gray-600) dark:text-(--token-gray-300)">
                   <li>Receiver source: GET /telemetry/accel/history</li>
                   <li>Refresh cadence: polling adaptif 2-5 detik</li>
+                  <li>Retry otomatis aktif dengan exponential backoff</li>
                   <li>Sender terpisah di route /accelerometer/sender</li>
                 </ul>
               </div>

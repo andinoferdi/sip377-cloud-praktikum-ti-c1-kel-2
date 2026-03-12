@@ -10,6 +10,7 @@ export const RECEIVER_REFETCH_INTERVAL_MAX_MS = 5000;
 export const RECEIVER_REFETCH_INTERVAL_DEFAULT_MS = 3000;
 export const RECEIVER_Z_DEADZONE = 0.02;
 export const RECEIVER_Z_SMOOTHING_ALPHA = 0.18;
+export const RECEIVER_RETRY_DELAY_CAP_MS = 15000;
 
 export function createInitialReceiverBindingState(): ReceiverBindingState {
   return {
@@ -37,6 +38,11 @@ export function computeReceiverRefetchIntervalMs(queryMs?: number) {
     RECEIVER_REFETCH_INTERVAL_MIN_MS,
     RECEIVER_REFETCH_INTERVAL_MAX_MS,
   );
+}
+
+export function computeReceiverRetryDelayMs(attempt: number) {
+  const safeAttempt = Number.isFinite(attempt) && attempt > 0 ? attempt : 1;
+  return Math.min(1000 * 2 ** safeAttempt, RECEIVER_RETRY_DELAY_CAP_MS);
 }
 
 export function buildReceiverFilteredSample(

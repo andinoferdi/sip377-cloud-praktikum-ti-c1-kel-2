@@ -3,10 +3,12 @@ import {
   applyReceiverDeviceSelection,
   buildReceiverFilteredSample,
   computeReceiverRefetchIntervalMs,
+  computeReceiverRetryDelayMs,
   createInitialReceiverBindingState,
   RECEIVER_REFETCH_INTERVAL_DEFAULT_MS,
   RECEIVER_REFETCH_INTERVAL_MAX_MS,
   RECEIVER_REFETCH_INTERVAL_MIN_MS,
+  RECEIVER_RETRY_DELAY_CAP_MS,
 } from "@/utils/accelerometer-receiver";
 
 describe("accelerometer-receiver", () => {
@@ -33,6 +35,14 @@ describe("accelerometer-receiver", () => {
     expect(computeReceiverRefetchIntervalMs(9000)).toBe(
       RECEIVER_REFETCH_INTERVAL_MAX_MS,
     );
+  });
+
+  it("computes exponential retry delay with max cap", () => {
+    expect(computeReceiverRetryDelayMs(0)).toBe(2000);
+    expect(computeReceiverRetryDelayMs(1)).toBe(2000);
+    expect(computeReceiverRetryDelayMs(2)).toBe(4000);
+    expect(computeReceiverRetryDelayMs(4)).toBe(15000);
+    expect(computeReceiverRetryDelayMs(99)).toBe(RECEIVER_RETRY_DELAY_CAP_MS);
   });
 
   it("filters z drift on receiver while keeping latest sample payload shape", () => {
