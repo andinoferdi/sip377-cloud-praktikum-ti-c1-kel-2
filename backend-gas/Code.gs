@@ -250,12 +250,15 @@ function ensureAllSheetsInitialized() {
     return;
   }
 
-  ensureBootstrapSheets();
-
+  // Keep request-time bootstrap lightweight to avoid API latency spikes.
+  // Heavy operations (sheet reordering/auto-resize) should be done manually.
   for (var i = 0; i < SHEET_ORDER.length; i++) {
     var sheetName = SHEET_ORDER[i];
     var sheet = getOrCreateSheet(sheetName);
-    ensureSheetStructure(sheetName, sheet);
+    ensureSheetHeaders(sheetName, sheet);
+    if (sheet.getFrozenRows() < 1) {
+      sheet.setFrozenRows(1);
+    }
   }
 
   SHEETS_BOOTSTRAPPED_IN_REQUEST = true;
@@ -1263,10 +1266,14 @@ function getAccelLatest(deviceId) {
   var accelMeta = getSheetMeta(SHEET.ACCEL);
   var data = accelMeta.sheet.getDataRange().getValues();
 
-  for (var i = data.length - 1; i >= 1; i--) {
+  for (var i = data.length - 1; i >= 0; i--) {
+    var sampleDate = parseDateSafe(getValueByHeader(data[i], accelMeta.headerMap, 'sample_ts'));
+    if (!sampleDate) {
+      continue;
+    }
     if (String(getValueByHeader(data[i], accelMeta.headerMap, 'device_id')).trim() === normalizedDeviceId) {
       return {
-        t: String(getValueByHeader(data[i], accelMeta.headerMap, 'sample_ts') || ''),
+        t: sampleDate.toISOString(),
         x: Number(getValueByHeader(data[i], accelMeta.headerMap, 'x')),
         y: Number(getValueByHeader(data[i], accelMeta.headerMap, 'y')),
         z: Number(getValueByHeader(data[i], accelMeta.headerMap, 'z')),
@@ -1277,7 +1284,19 @@ function getAccelLatest(deviceId) {
   return {};
 }
 
+function clampNumber(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function computeAccelHistoryScanRows(maxItems, startTime, endTime) {
+  var baseRows = Math.max(maxItems * 16, 1000);
+  var rangeMs = Math.max(endTime.getTime() - startTime.getTime(), 1);
+  var rangeMultiplier = Math.min(Math.ceil(rangeMs / (24 * 60 * 60 * 1000)), 6);
+  return clampNumber(baseRows * Math.max(rangeMultiplier, 1), 1000, 12000);
+}
+
 function getAccelHistory(deviceId, limit, from, to) {
+  var queryStartedAtMs = new Date().getTime();
   requireField({ device_id: deviceId }, 'device_id');
 
   var normalizedDeviceId = String(deviceId).trim();
@@ -1286,7 +1305,6 @@ function getAccelHistory(deviceId, limit, from, to) {
   }
 
   var accelMeta = getSheetMeta(SHEET.ACCEL);
-  var data = accelMeta.sheet.getDataRange().getValues();
 
   var maxItems = limit ? parseInt(limit, 10) : 200;
   if (isNaN(maxItems) || maxItems <= 0) {
@@ -1307,19 +1325,39 @@ function getAccelHistory(deviceId, limit, from, to) {
     throw new Error('invalid_range: from_to');
   }
 
-  var points = [];
-  for (var i = 1; i < data.length; i++) {
-    if (String(getValueByHeader(data[i], accelMeta.headerMap, 'device_id')).trim() !== normalizedDeviceId) {
-      continue;
-    }
+  var lastRow = accelMeta.sheet.getLastRow();
+  if (lastRow <= 1) {
+    return {
+      device_id: normalizedDeviceId,
+      items: [],
+      items_count: 0,
+      server_time: nowISO(),
+      query_ms: new Date().getTime() - queryStartedAtMs,
+    };
+  }
 
+  var scanRows = computeAccelHistoryScanRows(maxItems, startTime, endTime);
+  var scanStartRow = Math.max(2, lastRow - scanRows + 1);
+  var scanRowCount = lastRow - scanStartRow + 1;
+  var data = accelMeta.sheet
+    .getRange(scanStartRow, 1, scanRowCount, accelMeta.columnCount)
+    .getValues();
+
+  var points = [];
+  for (var i = data.length - 1; i >= 1; i--) {
     var sampleTsValue = getValueByHeader(data[i], accelMeta.headerMap, 'sample_ts');
     var sampleDate = parseDateSafe(sampleTsValue);
     if (!sampleDate) {
       continue;
     }
 
-    if (sampleDate.getTime() < startTime.getTime() || sampleDate.getTime() > endTime.getTime()) {
+    if (sampleDate.getTime() > endTime.getTime()) {
+      continue;
+    }
+    if (sampleDate.getTime() < startTime.getTime()) {
+      continue;
+    }
+    if (String(getValueByHeader(data[i], accelMeta.headerMap, 'device_id')).trim() !== normalizedDeviceId) {
       continue;
     }
 
@@ -1329,19 +1367,19 @@ function getAccelHistory(deviceId, limit, from, to) {
       y: Number(getValueByHeader(data[i], accelMeta.headerMap, 'y')),
       z: Number(getValueByHeader(data[i], accelMeta.headerMap, 'z')),
     });
+    if (points.length >= maxItems) {
+      break;
+    }
   }
+  points.reverse();
 
-  points.sort(function (a, b) {
-    return new Date(a.t).getTime() - new Date(b.t).getTime();
-  });
-
-  if (points.length > maxItems) {
-    points = points.slice(points.length - maxItems);
-  }
-
+  var queryMs = new Date().getTime() - queryStartedAtMs;
   return {
     device_id: normalizedDeviceId,
     items: points,
+    items_count: points.length,
+    server_time: nowISO(),
+    query_ms: queryMs,
   };
 }
 

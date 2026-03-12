@@ -12,13 +12,17 @@ import { hasGasBaseUrl } from "@/services/gas-client";
 import { getOrCreateTelemetryDeviceId } from "@/utils/telemetry-device-id";
 import {
   applyReceiverDeviceSelection,
+  buildReceiverFilteredSample,
+  computeReceiverRefetchIntervalMs,
   createInitialReceiverBindingState,
+  RECEIVER_Z_DEADZONE,
 } from "@/utils/accelerometer-receiver";
 import TelemetryChart from "./telemetry-chart";
 
 const CARD_CLASS = "overflow-hidden rounded-2xl border border-soft surface-elevated";
 const LABEL_CLASS =
   "text-[10px] font-semibold uppercase tracking-[0.08em] text-(--token-gray-400) dark:text-(--token-gray-500)";
+const RECEIVER_STALE_THRESHOLD_MS = 8000;
 
 function formatNumber(value: number | null | undefined) {
   if (typeof value !== "number" || Number.isNaN(value)) {
@@ -79,24 +83,6 @@ export default function AccelerometerReceiverClient() {
     });
   }, []);
 
-  const latestQuery = useQuery({
-    queryKey: ["accelerometer-receiver-latest", binding.activeDeviceId],
-    enabled: hasBackend && !!binding.activeDeviceId,
-    queryFn: async () => {
-      const response = await accelerometerService.getLatestTelemetry(
-        binding.activeDeviceId,
-      );
-      if (!response.ok) {
-        throw new Error(response.error ?? "latest telemetry gagal");
-      }
-      return response.data;
-    },
-    refetchInterval: 2000,
-    refetchIntervalInBackground: true,
-    refetchOnWindowFocus: false,
-    retry: 1,
-  });
-
   const historyQuery = useQuery({
     queryKey: [
       "accelerometer-receiver-history",
@@ -117,8 +103,10 @@ export default function AccelerometerReceiverClient() {
       }
       return response.data;
     },
-    refetchInterval: 2000,
+    refetchInterval: (query) =>
+      computeReceiverRefetchIntervalMs(query.state.data?.query_ms),
     refetchIntervalInBackground: true,
+    staleTime: 2500,
     refetchOnWindowFocus: false,
     retry: 1,
   });
@@ -127,8 +115,25 @@ export default function AccelerometerReceiverClient() {
     () => historyQuery.data?.items ?? [],
     [historyQuery.data],
   );
-  const latestFromHistory = history.length > 0 ? history[history.length - 1] : null;
-  const latestSample = latestQuery.data ?? latestFromHistory ?? null;
+  const latestRawSample = history.length > 0 ? history[history.length - 1] : null;
+  const latestFilteredSample = useMemo(
+    () => buildReceiverFilteredSample(history),
+    [history],
+  );
+  const latestServerTime = historyQuery.data?.server_time ?? latestRawSample?.t ?? null;
+  const latestServerAgeMs = useMemo(() => {
+    if (!latestServerTime) {
+      return null;
+    }
+    const parsed = new Date(latestServerTime).getTime();
+    if (Number.isNaN(parsed)) {
+      return null;
+    }
+    return Date.now() - parsed;
+  }, [latestServerTime]);
+  const hasStaleData =
+    typeof latestServerAgeMs === "number" &&
+    latestServerAgeMs > RECEIVER_STALE_THRESHOLD_MS;
 
   const activeDeviceEmpty = !binding.activeDeviceId;
   const activeAndDraftMatch = binding.activeDeviceId === binding.draftDeviceId.trim();
@@ -243,7 +248,7 @@ export default function AccelerometerReceiverClient() {
               </div>
               <p className="mt-3 text-sm leading-6 text-(--token-gray-500) dark:text-(--token-gray-400)">
                 {hasBackend
-                  ? "Polling latest dan history berjalan setiap 2 detik dari backend GAS."
+                  ? "Polling history adaptif 2-5 detik berdasarkan latency backend GAS."
                   : "NEXT_PUBLIC_GAS_BASE_URL belum diatur. Receiver tidak dapat memuat data."}
               </p>
             </div>
@@ -258,9 +263,17 @@ export default function AccelerometerReceiverClient() {
               <p className="mt-3 text-sm leading-6 text-(--token-gray-500) dark:text-(--token-gray-400)">
                 {activeDeviceEmpty
                   ? "Set device_id terlebih dahulu untuk mulai membaca backend."
-                  : historyQuery.isFetching || latestQuery.isFetching
-                    ? "Memperbarui data backend..."
-                    : "Data backend sinkron untuk device_id terpilih."}
+                  : historyQuery.isError
+                    ? "Gagal sinkron ke backend untuk device_id terpilih."
+                    : history.length > 0
+                      ? historyQuery.isFetching
+                        ? "Data terakhir tetap ditampilkan. Sinkronisasi backend berjalan..."
+                        : hasStaleData
+                          ? "Data backend tersedia, pembaruan terbaru masih tertunda."
+                          : "Data backend sinkron untuk device_id terpilih."
+                      : historyQuery.isFetching
+                        ? "Mencari sampel telemetry pertama..."
+                        : "Belum ada histori telemetry untuk device_id terpilih."}
               </p>
             </div>
           </div>
@@ -273,14 +286,17 @@ export default function AccelerometerReceiverClient() {
                     Grafik Telemetry Backend
                   </p>
                   <p className="mt-1 text-sm text-(--token-gray-500) dark:text-(--token-gray-400)">
-                    Data backend untuk device_id terpilih (GET /telemetry/accel/history).
+                    Data raw sensor backend untuk device_id terpilih (GET /telemetry/accel/history).
                   </p>
                 </div>
                 <button
                   type="button"
+                  disabled={historyQuery.isFetching}
                   onClick={() => {
+                    if (historyQuery.isFetching) {
+                      return;
+                    }
                     void historyQuery.refetch();
-                    void latestQuery.refetch();
                   }}
                   className="inline-flex items-center gap-2 rounded-lg border border-soft px-3 py-2 text-sm font-medium text-(--token-gray-600) hover:bg-(--token-gray-100) dark:text-(--token-gray-300) dark:hover:bg-(--token-white-5)"
                 >
@@ -295,25 +311,29 @@ export default function AccelerometerReceiverClient() {
                 isMobileOptimized={false}
                 isPerformanceCapped={false}
                 lockYAxis
+                disableAnimations
               />
 
               <div className="mt-5 grid gap-3 sm:grid-cols-3">
                 <MetricCard
                   label="X"
-                  value={formatNumber(latestSample?.x)}
+                  value={formatNumber(latestFilteredSample?.x)}
                   accent="text-sky-500"
                 />
                 <MetricCard
                   label="Y"
-                  value={formatNumber(latestSample?.y)}
+                  value={formatNumber(latestFilteredSample?.y)}
                   accent="text-emerald-500"
                 />
                 <MetricCard
-                  label="Z"
-                  value={formatNumber(latestSample?.z)}
+                  label="Z (Filtered)"
+                  value={formatNumber(latestFilteredSample?.z)}
                   accent="text-amber-500"
                 />
               </div>
+              <p className="mt-3 text-xs text-(--token-gray-500) dark:text-(--token-gray-400)">
+                Filtered view aktif pada panel nilai (deadzone Z ±{RECEIVER_Z_DEADZONE.toFixed(2)}). Data backend tetap raw.
+              </p>
             </div>
 
             <div className="grid gap-6">
@@ -334,27 +354,29 @@ export default function AccelerometerReceiverClient() {
                   />
                   <MetricCard
                     label="Polling"
-                    value="2 Detik"
+                    value="2-5 Detik"
                     accent="text-(--token-gray-900) dark:text-(--token-white)"
                   />
                   <MetricCard
                     label="Last Sample"
-                    value={formatTime(latestSample?.t)}
+                    value={formatTime(latestRawSample?.t)}
                     accent="text-(--token-gray-900) dark:text-(--token-white)"
                   />
                 </div>
+                {typeof historyQuery.data?.query_ms === "number" ? (
+                  <p className="mt-4 text-sm text-(--token-gray-500) dark:text-(--token-gray-400)">
+                    Latency backend terakhir: {Math.round(historyQuery.data.query_ms)} ms.
+                  </p>
+                ) : null}
 
-                {(historyQuery.isError || latestQuery.isError) && (
+                {historyQuery.isError && (
                   <p className="mt-4 text-sm text-rose-500">
                     {historyQuery.error instanceof Error
                       ? historyQuery.error.message
-                      : latestQuery.error instanceof Error
-                        ? latestQuery.error.message
-                        : "Gagal mengambil telemetry dari backend."}
+                      : "Gagal mengambil telemetry dari backend."}
                   </p>
                 )}
                 {!historyQuery.isFetching &&
-                !latestQuery.isFetching &&
                 history.length === 0 &&
                 !historyQuery.isError &&
                 !activeDeviceEmpty ? (
@@ -369,8 +391,8 @@ export default function AccelerometerReceiverClient() {
                   Kontrak Receiver
                 </h2>
                 <ul className="mt-4 space-y-3 text-sm leading-6 text-(--token-gray-600) dark:text-(--token-gray-300)">
-                  <li>Latest: GET /telemetry/accel/latest</li>
-                  <li>History: GET /telemetry/accel/history</li>
+                  <li>Receiver source: GET /telemetry/accel/history</li>
+                  <li>Refresh cadence: polling adaptif 2-5 detik</li>
                   <li>Sender terpisah di route /accelerometer/sender</li>
                 </ul>
               </div>

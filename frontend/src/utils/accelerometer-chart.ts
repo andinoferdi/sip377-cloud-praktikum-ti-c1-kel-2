@@ -2,7 +2,7 @@ import type { AccelerometerSample } from "@/services/accelerometer-service";
 
 export type TelemetryChartPoint = {
   x: number;
-  y: number;
+  y: number | null;
 };
 
 export type TelemetryChartSeries = {
@@ -17,6 +17,7 @@ export const TELEMETRY_CHART_GOVERNOR_UPSHIFT_STREAK = 2;
 export const TELEMETRY_CHART_GOVERNOR_DOWNSHIFT_STREAK = 8;
 export const TELEMETRY_CHART_GOVERNOR_OVERLOAD_RATIO = 0.7;
 export const TELEMETRY_CHART_GOVERNOR_RECOVERY_RATIO = 0.45;
+export const TELEMETRY_CHART_GAP_THRESHOLD_MS = 3000;
 
 export type TelemetryChartGovernorState = {
   intervalMs: number;
@@ -27,7 +28,63 @@ export type TelemetryChartGovernorState = {
 
 function toTimestamp(value: string) {
   const parsed = new Date(value).getTime();
-  return Number.isNaN(parsed) ? Date.now() : parsed;
+  if (!Number.isFinite(parsed)) {
+    return null;
+  }
+  return parsed;
+}
+
+type SortedTelemetrySample = {
+  sample: AccelerometerSample;
+  timestamp: number;
+};
+
+function buildSortedTelemetrySamples(history: AccelerometerSample[]) {
+  return history
+    .map((sample) => {
+      const timestamp = toTimestamp(sample.t);
+      if (timestamp === null) {
+        return null;
+      }
+      return {
+        sample,
+        timestamp,
+      } satisfies SortedTelemetrySample;
+    })
+    .filter((item): item is SortedTelemetrySample => item !== null)
+    .sort((left, right) => left.timestamp - right.timestamp);
+}
+
+function buildPointsWithGaps(
+  sortedSamples: SortedTelemetrySample[],
+  pickValue: (sample: AccelerometerSample) => number,
+) {
+  const points: TelemetryChartPoint[] = [];
+
+  for (let index = 0; index < sortedSamples.length; index += 1) {
+    const current = sortedSamples[index];
+    if (!current) {
+      continue;
+    }
+
+    const previous = index > 0 ? sortedSamples[index - 1] : null;
+    if (
+      previous &&
+      current.timestamp - previous.timestamp > TELEMETRY_CHART_GAP_THRESHOLD_MS
+    ) {
+      points.push({
+        x: Math.round((previous.timestamp + current.timestamp) / 2),
+        y: null,
+      });
+    }
+
+    points.push({
+      x: current.timestamp,
+      y: pickValue(current.sample),
+    });
+  }
+
+  return points;
 }
 
 export function appendSampleToHistory(
@@ -145,27 +202,20 @@ export function updateTelemetryChartGovernor(
 export function buildTelemetryChartSeries(
   history: AccelerometerSample[],
 ): TelemetryChartSeries[] {
+  const sortedSamples = buildSortedTelemetrySamples(history);
+
   return [
     {
       name: "X",
-      data: history.map((sample) => ({
-        x: toTimestamp(sample.t),
-        y: sample.x,
-      })),
+      data: buildPointsWithGaps(sortedSamples, (sample) => sample.x),
     },
     {
       name: "Y",
-      data: history.map((sample) => ({
-        x: toTimestamp(sample.t),
-        y: sample.y,
-      })),
+      data: buildPointsWithGaps(sortedSamples, (sample) => sample.y),
     },
     {
       name: "Z",
-      data: history.map((sample) => ({
-        x: toTimestamp(sample.t),
-        y: sample.z,
-      })),
+      data: buildPointsWithGaps(sortedSamples, (sample) => sample.z),
     },
   ];
 }

@@ -27,6 +27,9 @@ export type AccelerometerLatestData = Partial<AccelerometerSample>;
 export type AccelerometerHistoryData = {
   device_id: string;
   items: AccelerometerSample[];
+  items_count?: number;
+  server_time?: string;
+  query_ms?: number;
 };
 
 export type AccelerometerHistoryQuery = {

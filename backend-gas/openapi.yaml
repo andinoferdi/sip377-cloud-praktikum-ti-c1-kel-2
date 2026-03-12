@@ -26,7 +26,7 @@ servers:
     description: Google Apps Script Web App
     variables:
       deploymentId:
-        default: AKfycbybo5mQVwls-F4Um7Tt0RZC2SdlXy9BBGs-MhJw-jE0eZY3q-QgAlxcknbQWRI9c3Ycug
+        default: AKfycbzEaMmA6eoRqKPKvQTEphehaVDIMaZKgGpoN6obi8SltQln9pDbcO0M0QD0HhIuPUL2uQ
         description: Web App deployment ID
 
 security: []
@@ -192,6 +192,9 @@ paths:
                     ok: true
                     data:
                       device_id: "dev-001"
+                      items_count: 2
+                      server_time: "2026-03-12T09:20:00.000Z"
+                      query_ms: 842
                       items:
                         - t: "2026-02-18T10:15:20.100Z"
                           x: 0.1
@@ -473,5 +476,6 @@ components:
           type: number
           format: double
           example: 450.0
+
 
 

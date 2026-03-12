@@ -1,14 +1,15 @@
 import type { ApexOptions } from "apexcharts";
 
-export const TELEMETRY_RECEIVER_Y_MIN = -1;
-export const TELEMETRY_RECEIVER_Y_MAX = 1;
-export const TELEMETRY_RECEIVER_Y_TICK_AMOUNT = 4;
+export const TELEMETRY_RECEIVER_Y_MIN = -12;
+export const TELEMETRY_RECEIVER_Y_MAX = 12;
+export const TELEMETRY_RECEIVER_Y_TICK_AMOUNT = 6;
 
 type BuildTelemetryChartOptionsArgs = {
   isLive: boolean;
   isMobileLive: boolean;
   isPerformanceCapped: boolean;
   lockYAxis: boolean;
+  disableAnimations?: boolean;
 };
 
 const SERIES_COLORS = ["#2ea8ff", "#22c55e", "#f59e0b"] as const;
@@ -18,6 +19,7 @@ export function buildTelemetryChartOptions({
   isMobileLive,
   isPerformanceCapped,
   lockYAxis,
+  disableAnimations = false,
 }: BuildTelemetryChartOptionsArgs): ApexOptions {
   return {
     chart: {
@@ -29,7 +31,7 @@ export function buildTelemetryChartOptions({
       redrawOnWindowResize: false,
       parentHeightOffset: 0,
       animations: {
-        enabled: !isMobileLive,
+        enabled: disableAnimations ? false : !isMobileLive,
         dynamicAnimation: {
           speed: isMobileLive ? 1 : 260,
         },

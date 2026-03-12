@@ -13,7 +13,7 @@ CloudTrack Campus menggunakan arsitektur monorepo:
 
 Base URL deployment aktif saat ini:
 
-`https://script.google.com/macros/s/AKfycbybo5mQVwls-F4Um7Tt0RZC2SdlXy9BBGs-MhJw-jE0eZY3q-QgAlxcknbQWRI9c3Ycug/exec`
+`https://script.google.com/macros/s/AKfycbzEaMmA6eoRqKPKvQTEphehaVDIMaZKgGpoN6obi8SltQln9pDbcO0M0QD0HhIuPUL2uQ/exec`
 
 ## 2. Struktur Repo
 
@@ -60,7 +60,7 @@ cp .env.example .env
 Isi `frontend/.env`:
 
 ```env
-NEXT_PUBLIC_GAS_BASE_URL="https://script.google.com/macros/s/AKfycbybo5mQVwls-F4Um7Tt0RZC2SdlXy9BBGs-MhJw-jE0eZY3q-QgAlxcknbQWRI9c3Ycug/exec"
+NEXT_PUBLIC_GAS_BASE_URL="https://script.google.com/macros/s/AKfycbzEaMmA6eoRqKPKvQTEphehaVDIMaZKgGpoN6obi8SltQln9pDbcO0M0QD0HhIuPUL2uQ/exec"
 ```
 
 Jalankan aplikasi:
@@ -398,5 +398,6 @@ Perubahan dianggap selesai jika:
 3. QA smoke test lulus tanpa blocker kritis.
 4. Dokumentasi utama sudah diperbarui.
 5. Perubahan sudah tersinkron ke `main` sesuai alur release.
+
 
 

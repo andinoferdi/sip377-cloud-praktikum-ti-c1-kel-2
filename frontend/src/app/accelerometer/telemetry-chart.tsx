@@ -16,6 +16,7 @@ type TelemetryChartProps = {
   isMobileOptimized: boolean;
   isPerformanceCapped: boolean;
   lockYAxis?: boolean;
+  disableAnimations?: boolean;
 };
 
 export default function TelemetryChart({
@@ -24,6 +25,7 @@ export default function TelemetryChart({
   isMobileOptimized,
   isPerformanceCapped,
   lockYAxis = false,
+  disableAnimations = false,
 }: TelemetryChartProps) {
   const series = useMemo(() => buildTelemetryChartSeries(history), [history]);
   const isMobileLive = isMobileOptimized && isLive;
@@ -35,8 +37,9 @@ export default function TelemetryChart({
         isMobileLive,
         isPerformanceCapped,
         lockYAxis,
+        disableAnimations,
       }),
-    [isLive, isMobileLive, isPerformanceCapped, lockYAxis],
+    [isLive, isMobileLive, isPerformanceCapped, lockYAxis, disableAnimations],
   );
 
   return (

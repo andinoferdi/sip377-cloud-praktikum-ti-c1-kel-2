@@ -3,6 +3,7 @@ import {
   createInitialTelemetryChartGovernor,
   TELEMETRY_CHART_MAX_POINTS,
   TELEMETRY_CHART_FRAME_INTERVAL_STEPS,
+  TELEMETRY_CHART_GAP_THRESHOLD_MS,
   appendSampleToHistory,
   appendSamplesToHistory,
   buildTelemetryChartSeries,
@@ -46,8 +47,8 @@ describe("accelerometer-chart", () => {
 
   it("maps backend history items to ascending chart points", () => {
     const backendHistoryItems = [
-      { t: "2026-03-08T00:00:01.000Z", x: 4, y: 5, z: 6 },
       { t: "2026-03-08T00:00:02.000Z", x: 7, y: 8, z: 9 },
+      { t: "2026-03-08T00:00:01.000Z", x: 4, y: 5, z: 6 },
     ];
 
     const series = buildTelemetryChartSeries(backendHistoryItems);
@@ -55,6 +56,36 @@ describe("accelerometer-chart", () => {
     expect(series[1]?.data[1]?.y).toBe(8);
     expect(series[2]?.data[1]?.y).toBe(9);
     expect(series[0]?.data[0]?.x).toBeLessThan(series[0]?.data[1]?.x ?? 0);
+  });
+
+  it("inserts null sentinel point when telemetry gap exceeds threshold", () => {
+    const start = Date.parse("2026-03-08T00:00:00.000Z");
+    const history = [
+      { t: new Date(start).toISOString(), x: 1, y: 2, z: 3 },
+      {
+        t: new Date(start + TELEMETRY_CHART_GAP_THRESHOLD_MS + 1000).toISOString(),
+        x: 4,
+        y: 5,
+        z: 6,
+      },
+    ];
+
+    const series = buildTelemetryChartSeries(history);
+    const xSeries = series[0]?.data ?? [];
+
+    expect(xSeries).toHaveLength(3);
+    expect(xSeries[1]?.y).toBeNull();
+  });
+
+  it("drops invalid timestamp points from chart series", () => {
+    const history = [
+      { t: "invalid-timestamp", x: 10, y: 20, z: 30 },
+      { t: "2026-03-08T00:00:01.000Z", x: 1, y: 2, z: 3 },
+    ];
+
+    const series = buildTelemetryChartSeries(history);
+    expect(series[0]?.data).toHaveLength(1);
+    expect(series[0]?.data[0]?.y).toBe(1);
   });
 
   it("appends batched samples in order and keeps rolling window", () => {

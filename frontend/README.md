@@ -12,7 +12,7 @@ Frontend ini memakai Next.js App Router dan berfungsi sebagai client untuk meman
 Gunakan file `.env` di folder `frontend/`.
 
 ```env
-NEXT_PUBLIC_GAS_BASE_URL="https://script.google.com/macros/s/AKfycbybo5mQVwls-F4Um7Tt0RZC2SdlXy9BBGs-MhJw-jE0eZY3q-QgAlxcknbQWRI9c3Ycug/exec"
+NEXT_PUBLIC_GAS_BASE_URL="https://script.google.com/macros/s/AKfycbzEaMmA6eoRqKPKvQTEphehaVDIMaZKgGpoN6obi8SltQln9pDbcO0M0QD0HhIuPUL2uQ/exec"
 ```
 
 Catatan:
@@ -153,5 +153,6 @@ Gunakan akun berikut untuk pengujian lokal:
 2. Modul 2 Accelerometer dipisah menjadi sender (`/accelerometer/sender`) dan receiver (`/accelerometer/receiver`), dengan receiver membaca latest + history dari backend GAS.
 3. Tidak ada ORM Prisma, auth internal DB, atau API internal Next.js.
 4. Integrasi backend menggunakan direct REST call ke GAS dari client.
+
 
 
