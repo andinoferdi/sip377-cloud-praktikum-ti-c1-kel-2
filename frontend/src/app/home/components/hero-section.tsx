@@ -73,6 +73,12 @@ export default function HeroSection() {
                   Buka Telemetry Live
                 </Link>
                 <Link
+                  href="/gps"
+                  className="inline-flex items-center gap-2.5 rounded-xl border border-soft px-6 py-3 text-sm font-semibold text-(--token-gray-800) transition-colors hover:bg-(--token-gray-100) dark:text-(--token-gray-100) dark:hover:bg-(--token-white-5)"
+                >
+                  Buka GPS Map
+                </Link>
+                <Link
                   href="/login"
                   className="inline-flex items-center gap-2.5 rounded-xl bg-primary-600 px-6 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-80 dark:hover:opacity-90"
                 >
