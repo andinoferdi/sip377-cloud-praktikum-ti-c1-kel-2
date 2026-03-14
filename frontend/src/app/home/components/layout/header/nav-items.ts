@@ -8,6 +8,10 @@ export const navItems = [
     label: "Accelerometer",
   },
   {
+    href: "/gps",
+    label: "GPS Map",
+  },
+  {
     href: "/#kontrak",
     label: "Kontrak API",
   },

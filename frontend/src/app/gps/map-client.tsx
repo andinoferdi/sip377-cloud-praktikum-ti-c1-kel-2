@@ -12,11 +12,16 @@ const CARD_CLASS =
   "overflow-hidden rounded-2xl border border-soft surface-elevated";
 const LABEL_CLASS =
   "text-[10px] font-semibold uppercase tracking-[0.08em] text-(--token-gray-400) dark:text-(--token-gray-500)";
+const EMPTY_GPS_ITEMS: GpsPoint[] = [];
 
 type ReceiverBinding = {
   draftDeviceId: string;
   activeDeviceId: string;
 };
+
+function hasCoordinate(value: unknown): value is number | string {
+  return value !== null && value !== undefined && value !== "";
+}
 
 function formatCoord(value: number | null | undefined) {
   if (value === null || value === undefined) return "--";
@@ -52,7 +57,6 @@ function MetricCard({
 }
 
 // Leaflet loaded via CDN at runtime
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type LeafletLib = any;
 
 declare global {
@@ -64,17 +68,37 @@ declare global {
 function useLeaflet(onReady: () => void) {
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (window.L) { onReady(); return; }
+    if (window.L) {
+      onReady();
+      return;
+    }
 
-    const link = document.createElement("link");
-    link.rel = "stylesheet";
-    link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
-    document.head.appendChild(link);
+    const styleSelector = 'link[data-leaflet-loader="true"]';
+    const scriptSelector = 'script[data-leaflet-loader="true"]';
 
-    const script = document.createElement("script");
-    script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
-    script.onload = () => onReady();
-    document.head.appendChild(script);
+    let styleEl = document.querySelector<HTMLLinkElement>(styleSelector);
+    if (!styleEl) {
+      styleEl = document.createElement("link");
+      styleEl.rel = "stylesheet";
+      styleEl.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+      styleEl.dataset.leafletLoader = "true";
+      document.head.appendChild(styleEl);
+    }
+
+    let scriptEl = document.querySelector<HTMLScriptElement>(scriptSelector);
+    if (!scriptEl) {
+      scriptEl = document.createElement("script");
+      scriptEl.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+      scriptEl.dataset.leafletLoader = "true";
+      document.head.appendChild(scriptEl);
+    }
+
+    const handleLoad = () => onReady();
+    scriptEl.addEventListener("load", handleLoad);
+
+    return () => {
+      scriptEl?.removeEventListener("load", handleLoad);
+    };
   }, [onReady]);
 }
 
@@ -112,6 +136,14 @@ export default function GpsMapClient() {
       attribution: "© OpenStreetMap contributors",
     }).addTo(map);
     mapInstanceRef.current = map;
+
+    return () => {
+      markerRef.current = null;
+      startMarkerRef.current = null;
+      polylineRef.current = null;
+      map.remove();
+      mapInstanceRef.current = null;
+    };
   }, [leafletReady]);
 
   const latestQuery = useQuery({
@@ -149,17 +181,26 @@ export default function GpsMapClient() {
   });
 
   const latest = latestQuery.data;
-  const historyItems: GpsPoint[] = historyQuery.data?.items ?? [];
+  const historyItems: GpsPoint[] = historyQuery.data?.items ?? EMPTY_GPS_ITEMS;
 
   // Update map when latest changes
   useEffect(() => {
     if (!leafletReady || !mapInstanceRef.current) return;
-    if (!latest?.lat || !latest?.lng) return;
+    const map = mapInstanceRef.current;
+    if (!hasCoordinate(latest?.lat) || !hasCoordinate(latest?.lng)) {
+      if (markerRef.current) {
+        map.removeLayer(markerRef.current);
+        markerRef.current = null;
+      }
+      return;
+    }
 
     const L = window.L;
-    const map = mapInstanceRef.current;
     const lat = Number(latest.lat);
     const lng = Number(latest.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      return;
+    }
 
     if (!markerRef.current) {
       const icon = L.divIcon({
@@ -184,10 +225,20 @@ export default function GpsMapClient() {
   // Update polyline when history changes
   useEffect(() => {
     if (!leafletReady || !mapInstanceRef.current) return;
-    if (historyItems.length === 0) return;
+    const map = mapInstanceRef.current;
+    if (historyItems.length === 0) {
+      if (polylineRef.current) {
+        map.removeLayer(polylineRef.current);
+        polylineRef.current = null;
+      }
+      if (startMarkerRef.current) {
+        map.removeLayer(startMarkerRef.current);
+        startMarkerRef.current = null;
+      }
+      return;
+    }
 
     const L = window.L;
-    const map = mapInstanceRef.current;
     const latlngs = historyItems.map(
       (p) => [Number(p.lat), Number(p.lng)] as [number, number],
     );
@@ -252,7 +303,7 @@ export default function GpsMapClient() {
                     href="/gps/sender"
                     className="text-sm font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400"
                   >
-                    ← Buka Sender
+                    Kembali ke Sender
                   </Link>
                 </div>
               </div>

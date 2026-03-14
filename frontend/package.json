@@ -12,6 +12,7 @@
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
     "test:e2e:qr": "playwright test e2e/modul1-qr.spec.ts",
+    "test:e2e:gps": "playwright test e2e/modul3-gps.spec.ts",
     "docs:prepare": "npm run docs:sync-openapi && npm run docs:sync-openapi-modules && npm run docs:sync-swagger-ui-assets",
     "docs:sync-openapi": "node ../scripts/sync-openapi-to-frontend.mjs",
     "docs:check-openapi-sync": "node ../scripts/check-openapi-sync.mjs",

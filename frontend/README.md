@@ -35,6 +35,10 @@ Halaman publik Modul 2 tersedia di:
 `http://localhost:3000/accelerometer` (redirect ke receiver),
 `http://localhost:3000/accelerometer/receiver`,
 dan `http://localhost:3000/accelerometer/sender`.
+Halaman publik Modul 3 tersedia di:
+`http://localhost:3000/gps` (redirect ke sender),
+`http://localhost:3000/gps/sender`,
+dan `http://localhost:3000/gps/map`.
 
 ## Swagger Docs (`/docs`)
 
@@ -94,6 +98,12 @@ E2E UI Modul 1 (Playwright):
 npm run test:e2e:qr
 ```
 
+E2E UI Modul 3 (Playwright):
+
+```bash
+npm run test:e2e:gps
+```
+
 ## Governance Konflik Rules vs Implementasi
 
 Jika terjadi konflik antara rules dan implementasi aktif, gunakan standar adjudikasi lintas tim di:
@@ -151,8 +161,9 @@ Gunakan akun berikut untuk pengujian lokal:
 
 1. UI aktif fokus pada Modul 1 Presensi QR Dinamis.
 2. Modul 2 Accelerometer dipisah menjadi sender (`/accelerometer/sender`) dan receiver (`/accelerometer/receiver`), dengan receiver membaca latest + history dari backend GAS.
-3. Tidak ada ORM Prisma, auth internal DB, atau API internal Next.js.
-4. Integrasi backend menggunakan direct REST call ke GAS dari client.
+3. Modul 3 GPS dipisah menjadi sender (`/gps/sender`) dan map receiver (`/gps/map`), dengan map membaca latest + history dari backend GAS.
+4. Tidak ada ORM Prisma, auth internal DB, atau API internal Next.js.
+5. Integrasi backend menggunakan direct REST call ke GAS dari client.
 
 
 
