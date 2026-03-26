@@ -317,7 +317,17 @@ npm run build
 3. POST GPS berhasil.
 4. GET GPS latest dan history mengembalikan data valid.
 
-### 6.6 Defect reporting format
+### 6.6 Manual swap rehearsal (wajib sebelum presentasi)
+
+1. Isi `Own GAS URL` dan `Partner GAS URL` pada panel `Swap Control` (frontend runtime).
+2. Aktifkan mode swap lalu jalankan `Preset A` (sender -> partner, visualizer -> own).
+3. Uji modul 1, 2, 3 dan pastikan request sender masuk ke server partner.
+4. Jalankan `Preset B` (sender -> own, visualizer -> partner) lalu ulangi uji modul 1, 2, 3.
+5. Jalankan script:
+   1. `cd frontend`
+   2. `OWN_BASE_URL="..." PARTNER_BASE_URL="..." npm run qa:swap:rehearsal`
+
+### 6.7 Defect reporting format
 
 Saat membuat bug report, wajib isi:
 
@@ -375,6 +385,7 @@ Saat backend deploy ke URL baru:
 4. Update contoh URL di `frontend/README.md`.
 5. Update `servers.variables.deploymentId.default` di `backend-gas/openapi.yaml`.
 6. Jalankan smoke test presensi end-to-end.
+7. Verifikasi panel `Swap Control` masih membaca env default dengan benar.
 
 ## 10. Troubleshooting Singkat
 

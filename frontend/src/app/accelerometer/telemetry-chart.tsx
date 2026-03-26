@@ -43,7 +43,7 @@ export default function TelemetryChart({
   );
 
   return (
-    <div className="h-[360px] rounded-2xl border border-soft bg-(--token-gray-50) p-3 dark:bg-(--token-white-5)">
+    <div className="h-90 rounded-2xl border border-soft bg-(--token-gray-50) p-3 dark:bg-(--token-white-5)">
       <ReactApexChart
         options={options}
         series={series}

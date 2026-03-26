@@ -4,11 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Database, RefreshCw, Waves } from "lucide-react";
+import { useSwapBackendAvailability } from "@/lib/swap/use-swap-backend-availability";
 import {
   accelerometerService,
   type AccelerometerSample,
 } from "@/services/accelerometer-service";
-import { hasGasBaseUrl } from "@/services/gas-client";
 import { getOrCreateTelemetryDeviceId } from "@/utils/telemetry-device-id";
 import {
   applyReceiverDeviceSelection,
@@ -75,7 +75,8 @@ export default function AccelerometerReceiverClient() {
   const [binding, setBinding] = useState(createInitialReceiverBindingState);
   const [historyLimit] = useState(200);
   const [isManualRefreshing, setIsManualRefreshing] = useState(false);
-  const hasBackend = hasGasBaseUrl();
+  const { isHydrated, hasVisualizerBackend } = useSwapBackendAvailability();
+  const hasBackend = isHydrated && hasVisualizerBackend;
 
   useEffect(() => {
     const localDeviceId = getOrCreateTelemetryDeviceId();
@@ -160,7 +161,9 @@ export default function AccelerometerReceiverClient() {
   }
 
   const receiverStatusMessage = !hasBackend
-    ? "NEXT_PUBLIC_GAS_BASE_URL belum diatur. Receiver tidak dapat memuat data."
+    ? isHydrated
+      ? "NEXT_PUBLIC_GAS_BASE_URL belum diatur. Receiver tidak dapat memuat data."
+      : "Menyiapkan status backend swap runtime."
     : activeDeviceEmpty
       ? "Set device_id terlebih dahulu untuk mulai membaca backend."
       : historyQuery.isError && hasHistory
@@ -286,7 +289,9 @@ export default function AccelerometerReceiverClient() {
                 </p>
               </div>
               <p className="mt-3 text-sm leading-6 text-(--token-gray-500) dark:text-(--token-gray-400)">
-                {hasBackend
+                {!isHydrated
+                  ? "Menyiapkan status backend swap runtime."
+                  : hasBackend
                   ? "Polling history adaptif 2-5 detik berdasarkan latency backend GAS."
                   : "NEXT_PUBLIC_GAS_BASE_URL belum diatur. Receiver tidak dapat memuat data."}
               </p>

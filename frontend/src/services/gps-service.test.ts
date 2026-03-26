@@ -35,6 +35,7 @@ describe("gps-service", () => {
         accuracy_m: 12.5,
         altitude_m: 33.2,
       },
+      targetRole: "sender",
     });
   });
 
@@ -51,6 +52,7 @@ describe("gps-service", () => {
       query: {
         device_id: "telemetry-1",
       },
+      targetRole: "visualizer",
     });
   });
 
@@ -81,6 +83,7 @@ describe("gps-service", () => {
         from: "2026-03-12T10:00:00.000Z",
         to: "2026-03-12T11:00:00.000Z",
       },
+      targetRole: "visualizer",
     });
   });
 

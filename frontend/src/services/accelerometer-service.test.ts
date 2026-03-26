@@ -35,6 +35,7 @@ describe("accelerometer-service", () => {
           { t: "2026-03-07T16:00:00.200Z", x: 0.3, y: 0.4, z: 9.6 },
         ],
       },
+      targetRole: "sender",
     });
   });
 
@@ -51,6 +52,7 @@ describe("accelerometer-service", () => {
       query: {
         device_id: "telemetry-1",
       },
+      targetRole: "visualizer",
     });
   });
 
@@ -81,6 +83,7 @@ describe("accelerometer-service", () => {
         from: "2026-03-07T16:00:00.000Z",
         to: "2026-03-07T16:10:00.000Z",
       },
+      targetRole: "visualizer",
     });
   });
 });

@@ -62,12 +62,12 @@ export default function AppSidebar({ role }: AppSidebarProps) {
       onMouseEnter={() => !isExpanded && setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       className={[
-        "fixed left-0 top-0 z-50 mt-[53px] flex h-screen flex-col border-r border-soft bg-(--token-white) transition-all duration-300 ease-in-out dark:bg-(--color-surface-dark-elevated) lg:mt-0",
+        "fixed left-0 top-0 z-50 mt-13.25 flex h-screen flex-col border-r border-soft bg-(--token-white) transition-all duration-300 ease-in-out dark:bg-(--color-surface-dark-elevated) lg:mt-0",
         isExpanded || isMobileOpen
-          ? "w-[260px]"
+          ? "w-65"
           : isHovered
-            ? "w-[260px]"
-            : "w-[72px]",
+            ? "w-65"
+            : "w-18",
         isMobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
       ].join(" ")}
     >

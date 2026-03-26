@@ -28,7 +28,7 @@ export default function LoginPage() {
       />
 
       {/* Back link */}
-      <div className="relative w-full max-w-[400px]">
+      <div className="relative w-full max-w-100">
         <Link
           href="/"
           className="inline-flex items-center gap-1.5 text-xs font-medium text-(--token-gray-400) transition-colors hover:text-(--token-gray-700) dark:text-(--token-gray-500) dark:hover:text-(--token-gray-200)"
@@ -39,7 +39,7 @@ export default function LoginPage() {
       </div>
 
       {/* Card */}
-      <div className="relative mt-5 w-full max-w-[400px] overflow-hidden rounded-2xl border border-soft surface-elevated">
+      <div className="relative mt-5 w-full max-w-100 overflow-hidden rounded-2xl border border-soft surface-elevated">
         {/* Card header */}
         <div className="border-b border-soft px-8 py-6">
           <Link href="/" className="inline-flex items-center">

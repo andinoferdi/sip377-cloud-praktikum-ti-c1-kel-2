@@ -4,6 +4,7 @@ import { Poppins } from 'next/font/google';
 import './globals.css';
 import { QueryProvider } from '../providers/query-provider';
 import { ToasterProvider } from '../providers/toaster';
+import SwapControlPanel from '@/components/swap/swap-control-panel';
 
 const poppins = Poppins({
   subsets: ['latin'],
@@ -44,6 +45,7 @@ export default function RootLayout({
           <QueryProvider>
             <ToasterProvider />
             <div className="isolate flex flex-col flex-1">{children}</div>
+            <SwapControlPanel />
           </QueryProvider>
         </ThemeProvider>
       </body>

@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, MapPin, Navigation, RefreshCw } from "lucide-react";
+import { useSwapBackendAvailability } from "@/lib/swap/use-swap-backend-availability";
 import { gpsService, type GpsPoint } from "@/services/gps-service";
-import { hasGasBaseUrl } from "@/services/gas-client";
 import { getOrCreateTelemetryDeviceId } from "@/utils/telemetry-device-id";
 
 const CARD_CLASS =
@@ -109,7 +109,8 @@ export default function GpsMapClient() {
   });
   const [historyLimit] = useState(200);
   const [leafletReady, setLeafletReady] = useState(false);
-  const hasBackend = hasGasBaseUrl();
+  const { isHydrated, hasVisualizerBackend } = useSwapBackendAvailability();
+  const hasBackend = isHydrated && hasVisualizerBackend;
 
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);

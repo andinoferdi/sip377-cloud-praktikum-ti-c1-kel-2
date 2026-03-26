@@ -6,7 +6,12 @@ vi.mock("@/services/fetcher", () => ({
   fetcher: fetcherMock,
 }));
 
-import { buildGasUrl, hasGasBaseUrl, requestGas } from "@/services/gas-client";
+import {
+  buildGasUrl,
+  hasGasBaseUrl,
+  normalizeGasBaseUrl,
+  requestGas,
+} from "@/services/gas-client";
 
 const ORIGINAL_GAS_BASE_URL = process.env.NEXT_PUBLIC_GAS_BASE_URL;
 
@@ -38,6 +43,13 @@ describe("gas-client", () => {
     process.env.NEXT_PUBLIC_GAS_BASE_URL =
       "https://script.google.com/macros/s/DEPLOYMENT/exec";
     expect(hasGasBaseUrl()).toBe(true);
+  });
+
+  it("normalizes contaminated NEXT_PUBLIC_GAS_BASE_URL value", () => {
+    const normalized = normalizeGasBaseUrl(
+      'NEXT_PUBLIC_GAS_BASE_URL="https://script.google.com/macros/s/DEPLOYMENT/exec"',
+    );
+    expect(normalized).toBe("https://script.google.com/macros/s/DEPLOYMENT/exec");
   });
 
   it("sends GAS POST as simple request with text/plain body", async () => {

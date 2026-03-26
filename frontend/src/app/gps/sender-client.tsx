@@ -13,8 +13,8 @@ import {
   ShieldAlert,
   Square,
 } from "lucide-react";
+import { useSwapBackendAvailability } from "@/lib/swap/use-swap-backend-availability";
 import { gpsService } from "@/services/gps-service";
-import { hasGasBaseUrl } from "@/services/gas-client";
 import { getOrCreateTelemetryDeviceId } from "@/utils/telemetry-device-id";
 
 const CARD_CLASS =
@@ -144,6 +144,10 @@ export default function GpsSenderClient() {
   const [deviceId, setDeviceId] = useState("telemetry-loading");
   const [gpsState, setGpsState] = useState<GpsState>(createInitialState);
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
+  const [hasGeolocationSupport, setHasGeolocationSupport] = useState<boolean | null>(
+    null,
+  );
+  const { isHydrated, hasSenderBackend } = useSwapBackendAvailability();
 
   const watchIdRef = useRef<number | null>(null);
   const sendTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -156,7 +160,9 @@ export default function GpsSenderClient() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (!navigator.geolocation) {
+    const supported = !!navigator.geolocation;
+    setHasGeolocationSupport(supported);
+    if (!supported) {
       setGpsState((prev) => ({
         ...prev,
         status: "unsupported",
@@ -178,7 +184,7 @@ export default function GpsSenderClient() {
 
   async function sendCurrentPosition() {
     const pos = latestPosRef.current;
-    if (!pos || isSendingRef.current || !hasGasBaseUrl()) return;
+    if (!pos || isSendingRef.current || !isHydrated || !hasSenderBackend) return;
 
     isSendingRef.current = true;
     const { latitude: lat, longitude: lng, accuracy, altitude } = pos.coords;
@@ -352,7 +358,9 @@ export default function GpsSenderClient() {
                 </p>
               </div>
               <p className="mt-3 text-sm leading-6 text-(--token-gray-500) dark:text-(--token-gray-400)">
-                {typeof window !== "undefined" && navigator.geolocation
+                {hasGeolocationSupport === null
+                  ? "Menyiapkan diagnosis GPS browser."
+                  : hasGeolocationSupport
                   ? "Geolocation API tersedia. Klik Start untuk meminta izin lokasi."
                   : "Geolocation API tidak didukung di browser ini."}
               </p>
@@ -366,7 +374,9 @@ export default function GpsSenderClient() {
                 </p>
               </div>
               <p className="mt-3 text-sm leading-6 text-(--token-gray-500) dark:text-(--token-gray-400)">
-                {hasGasBaseUrl()
+                {!isHydrated
+                  ? "Menyiapkan status backend swap runtime."
+                  : hasSenderBackend
                   ? "Titik GPS dikirim setiap 5 detik ke POST /telemetry/gps."
                   : "Env backend belum diatur. GPS tetap bisa dibaca, tetapi pengiriman akan gagal."}
               </p>

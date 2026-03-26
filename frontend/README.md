@@ -9,7 +9,7 @@ Frontend ini memakai Next.js App Router dan berfungsi sebagai client untuk meman
 
 ## Environment Variable
 
-Gunakan file `.env` di folder `frontend/`.
+Gunakan file `frontend/.env.local`.
 
 ```env
 NEXT_PUBLIC_GAS_BASE_URL="https://script.google.com/macros/s/AKfycbzEaMmA6eoRqKPKvQTEphehaVDIMaZKgGpoN6obi8SltQln9pDbcO0M0QD0HhIuPUL2uQ/exec"
@@ -20,6 +20,13 @@ Catatan:
 1. `NEXT_PUBLIC_GAS_BASE_URL` harus mengarah ke URL deployment Web App GAS yang berakhiran `/exec`.
 2. Jika variabel ini kosong, halaman Modul 1 tetap berjalan dalam mode mock lokal.
 3. Request `POST` ke GAS dikirim sebagai `Content-Type: text/plain;charset=UTF-8` untuk menghindari preflight CORS browser pada Web App GAS.
+4. Saat mode swap test, endpoint bisa diganti saat runtime via panel `Swap Control` (pojok kanan bawah) tanpa rebuild.
+5. Hindari menaruh variabel frontend hanya di root `.env` karena bisa membuat status backend SSR dan client tidak konsisten.
+
+Troubleshooting hydration swap:
+
+1. Jika muncul pesan `Hydration failed`, pastikan `NEXT_PUBLIC_GAS_BASE_URL` ada di `frontend/.env.local` dengan format URL murni.
+2. Jika panel swap pernah menyimpan data lama, klik `Reset` di `Swap Control`, lalu refresh halaman.
 
 ## Menjalankan Aplikasi
 
@@ -90,6 +97,12 @@ Smoke test kontrak Modul 2 realtime:
 
 ```bash
 npm run qa:modul2:api-smoke
+```
+
+Smoke test rehearsal swap lintas endpoint:
+
+```bash
+OWN_BASE_URL="https://script.google.com/macros/s/.../exec" PARTNER_BASE_URL="https://script.google.com/macros/s/.../exec" npm run qa:swap:rehearsal
 ```
 
 E2E UI Modul 1 (Playwright):
@@ -164,6 +177,25 @@ Gunakan akun berikut untuk pengujian lokal:
 3. Modul 3 GPS dipisah menjadi sender (`/gps/sender`) dan map receiver (`/gps/map`), dengan map membaca latest + history dari backend GAS.
 4. Tidak ada ORM Prisma, auth internal DB, atau API internal Next.js.
 5. Integrasi backend menggunakan direct REST call ke GAS dari client.
+
+## Swap Test Runtime (Presentasi)
+
+Panel `Swap Control` tersedia global di UI (pojok kanan bawah) dan menyimpan konfigurasi ke localStorage browser.
+
+Langkah ringkas:
+
+1. Isi `Own GAS URL` (server kelompok sendiri) dan `Partner GAS URL` (server kelompok lawan).
+2. Aktifkan mode swap.
+3. Gunakan preset:
+   - `Preset A`: `sender -> partner`, `visualizer -> own`.
+   - `Preset B`: `sender -> own`, `visualizer -> partner`.
+4. Klik `Simpan`, lalu jalankan demo modul 1-3 tanpa rebuild.
+5. Pastikan saat presentasi Anda menunjukkan ringkasan endpoint aktif (sender/visualizer) di panel.
+
+Catatan:
+
+1. Jika partner diacak mendadak, cukup ganti `Partner GAS URL`, lalu `Simpan`.
+2. Jika URL partner kosong, sistem otomatis fallback ke own URL (aman untuk rehearsal lokal).
 
 
 

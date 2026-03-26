@@ -520,7 +520,7 @@ export default function MahasiswaScanPage() {
             <div className="relative overflow-hidden rounded-xl border border-soft bg-black">
               <div
                 id={SCANNER_REGION_ID}
-                className="h-[280px] w-full sm:h-[320px]"
+                className="h-70 w-full sm:h-80"
               />
 
               {scanSuccessFlash && (
@@ -530,7 +530,7 @@ export default function MahasiswaScanPage() {
               {showLiveScannerOverlay && (
                 <div className="pointer-events-none absolute inset-0">
                   <div className="absolute inset-0 bg-black/20" />
-                  <div className="absolute left-1/2 top-1/2 h-[170px] w-[170px] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-cyan-300/70 shadow-[0_0_0_9999px_rgba(0,0,0,0.25)]">
+                  <div className="absolute left-1/2 top-1/2 h-42.5 w-42.5 -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-cyan-300/70 shadow-[0_0_0_9999px_rgba(0,0,0,0.25)]">
                     <span className="absolute -left-px -top-px h-5 w-5 rounded-tl-xl border-l-2 border-t-2 border-cyan-300" />
                     <span className="absolute -right-px -top-px h-5 w-5 rounded-tr-xl border-r-2 border-t-2 border-cyan-300" />
                     <span className="absolute -bottom-px -left-px h-5 w-5 rounded-bl-xl border-b-2 border-l-2 border-cyan-300" />

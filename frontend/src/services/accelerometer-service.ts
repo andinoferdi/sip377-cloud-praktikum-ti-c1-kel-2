@@ -52,6 +52,7 @@ export const accelerometerService = {
       {
         method: "POST",
         json: payload,
+        targetRole: "sender",
       },
     );
   },
@@ -64,6 +65,7 @@ export const accelerometerService = {
         query: {
           device_id: deviceId,
         },
+        targetRole: "visualizer",
       },
     );
   },
@@ -79,6 +81,7 @@ export const accelerometerService = {
           from: query.from,
           to: query.to,
         },
+        targetRole: "visualizer",
       },
     );
   },
