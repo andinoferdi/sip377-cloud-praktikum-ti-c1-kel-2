@@ -3,12 +3,13 @@ import { getCurrentYear } from "@/lib/utils";
 import Link from "next/link";
 
 const FOOTER_LINKS = [
-  { href: "/#modul", label: "Modul" },
+  { href: "/dashboard", label: "QR Presence" },
   { href: "/accelerometer", label: "Accelerometer" },
   { href: "/gps", label: "GPS Map" },
-  { href: "/#kontrak", label: "Kontrak API" },
-  { href: "/login", label: "Login" },
-  { href: "/dashboard", label: "Dashboard" },
+  { href: "/docs", label: "Swagger API" },
+  { href: "/docs/modul-1", label: "Swagger Modul 1" },
+  { href: "/docs/modul-2", label: "Swagger Modul 2" },
+  { href: "/docs/modul-3", label: "Swagger Modul 3" },
 ] as const;
 
 const TECH_STACK = [

@@ -11,4 +11,8 @@ export const navItems = [
     href: "/gps",
     label: "GPS Map",
   },
+  {
+    href: "/docs",
+    label: "Swagger API",
+  },
 ] as const;

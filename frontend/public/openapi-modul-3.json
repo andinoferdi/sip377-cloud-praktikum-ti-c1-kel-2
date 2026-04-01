@@ -1,0 +1,246 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "GAS Backend API v1 - Presensi QR Dinamis, Telemetry, GPS - Modul 3 - GPS Map",
+    "version": "1.0.0",
+    "license": {
+      "name": "Academic Use Only",
+      "url": "https://creativecommons.org/licenses/by-nc/4.0/"
+    },
+    "description": "Dokumentasi endpoint untuk Modul 3 - GPS telemetry."
+  },
+  "servers": [
+    {
+      "url": "https://script.google.com/macros/s/{deploymentId}",
+      "description": "Google Apps Script Web App",
+      "variables": {
+        "deploymentId": {
+          "default": "AKfycbybo5mQVwls-F4Um7Tt0RZC2SdlXy9BBGs-MhJw-jE0eZY3q-QgAlxcknbQWRI9c3Ycug",
+          "description": "Web App deployment ID"
+        }
+      }
+    }
+  ],
+  "security": [],
+  "paths": {
+    "/exec": {
+      "get": {
+        "summary": "Multi-purpose GET endpoint (routed by `path` query)",
+        "operationId": "doGet",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "telemetry/gps/latest",
+                "telemetry/gps/history"
+              ]
+            },
+            "description": "Virtual route selector. Empty/default and `ui` both return API metadata JSON.\n"
+          },
+          {
+            "name": "device_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Required for telemetry latest/history endpoints"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 200
+            },
+            "description": "Optional max items for telemetry history endpoints."
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "description": "Optional ISO-8601 start time for telemetry history endpoints."
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "description": "Optional ISO-8601 end time for telemetry history endpoints."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "JSON envelope response",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "gpsLatest": {
+                    "summary": "path=telemetry/gps/latest",
+                    "value": {
+                      "ok": true,
+                      "data": {
+                        "device_id": "dev-001",
+                        "lat": -6.2088,
+                        "lng": 106.8456,
+                        "accuracy_m": 8.4,
+                        "altitude_m": 16.2,
+                        "ts": "2026-02-18T10:15:29.300Z",
+                        "recorded_at": "2026-02-18T10:15:29.900Z"
+                      }
+                    }
+                  },
+                  "gpsHistory": {
+                    "summary": "path=telemetry/gps/history",
+                    "value": {
+                      "ok": true,
+                      "data": {
+                        "device_id": "dev-001",
+                        "items": [
+                          {
+                            "device_id": "dev-001",
+                            "lat": -6.2088,
+                            "lng": 106.8456,
+                            "accuracy_m": 8.4,
+                            "altitude_m": 16.2,
+                            "ts": "2026-02-18T10:15:20.100Z",
+                            "recorded_at": "2026-02-18T10:15:20.500Z"
+                          },
+                          {
+                            "device_id": "dev-001",
+                            "lat": -6.2087,
+                            "lng": 106.8458,
+                            "accuracy_m": 8.1,
+                            "altitude_m": 16.1,
+                            "ts": "2026-02-18T10:15:21.300Z",
+                            "recorded_at": "2026-02-18T10:15:21.700Z"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {
+                "example": {
+                  "ok": false,
+                  "error": "missing_field: device_id"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Multi-purpose POST endpoint (routed by `path` query)",
+        "operationId": "doPost",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "telemetry/gps"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/LogGPSRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JSON envelope response",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "gpsLog": {
+                    "summary": "path=telemetry/gps",
+                    "value": {
+                      "ok": true,
+                      "data": {
+                        "accepted": 1
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error envelope",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "LogGPSRequest": {
+        "type": "object",
+        "required": [
+          "device_id",
+          "lat",
+          "lng"
+        ],
+        "properties": {
+          "device_id": {
+            "type": "string",
+            "example": "dev-001"
+          },
+          "lat": {
+            "type": "number",
+            "example": -6.2088
+          },
+          "lng": {
+            "type": "number",
+            "example": 106.8456
+          },
+          "accuracy_m": {
+            "type": "number",
+            "example": 8.4
+          },
+          "altitude_m": {
+            "type": "number",
+            "example": 16.2
+          },
+          "ts": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    }
+  }
+}
+

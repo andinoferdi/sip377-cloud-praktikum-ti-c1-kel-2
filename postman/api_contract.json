@@ -1,102 +1,334 @@
 {
-	"info": {
-		"name": "API Contract Simple v1 - Praktik Komputasi Awan",
-		"description": "Collection resmi mengikuti UI Contract (Versi A - GAS).",
-		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-	},
-	"item": [
-		{
-			"name": "Modul 01 - Presensi QR",
-			"item": [
-				{
-					"name": "POST Generate QR",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Status is 200 OK\", function () { pm.response.to.have.status(200); });",
-									"var json = pm.response.json();",
-									"pm.test(\"Response is successful\", function () { pm.expect(json.ok).to.be.true; });",
-									"if(json.data && json.data.qr_token) { pm.environment.set(\"qr_token\", json.data.qr_token); }"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [ { "key": "Content-Type", "value": "text/plain" } ],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"course_id\": \"{{course_id}}\",\n  \"session_id\": \"{{session_id}}\",\n  \"ts\": \"2026-03-03T10:00:00Z\"\n}"
-						},
-						"url": {
-							"raw": "https://script.google.com/macros/s/AKfycbzwGB2egCMblZrIQUQJketAhlABHr5jde6JoBAwdY6RhiuLlcs3Wzm1C71cQykB-awqEw/exec/presence/qr/generate",
-							"protocol": "https",
-							"host": [ "script", "google", "com" ],
-							"path": [ "macros", "s", "AKfycbzwGB2egCMblZrIQUQJketAhlABHr5jde6JoBAwdY6RhiuLlcs3Wzm1C71cQykB-awqEw", "exec", "presence", "qr", "generate" ]
-						}
-					}
-				},
-				{
-					"name": "POST Check-in",
-					"request": {
-						"method": "POST",
-						"header": [ { "key": "Content-Type", "value": "text/plain" } ],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"user_id\": \"{{mahasiswa_id}}\",\n  \"device_id\": \"{{device_id}}\",\n  \"course_id\": \"{{course_id}}\",\n  \"session_id\": \"{{session_id}}\",\n  \"qr_token\": \"{{qr_token}}\",\n  \"ts\": \"2026-03-03T10:05:00Z\"\n}"
-						},
-						"url": {
-							"raw": "https://script.google.com/macros/s/AKfycbzwGB2egCMblZrIQUQJketAhlABHr5jde6JoBAwdY6RhiuLlcs3Wzm1C71cQykB-awqEw/exec/presence/checkin",
-							"protocol": "https",
-							"host": [ "script", "google", "com" ],
-							"path": [ "macros", "s", "AKfycbzwGB2egCMblZrIQUQJketAhlABHr5jde6JoBAwdY6RhiuLlcs3Wzm1C71cQykB-awqEw", "exec", "presence", "checkin" ]
-						}
-					}
-				},
-				{
-					"name": "GET Status Presensi",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "https://script.google.com/macros/s/AKfycbzwGB2egCMblZrIQUQJketAhlABHr5jde6JoBAwdY6RhiuLlcs3Wzm1C71cQykB-awqEw/exec/presence/status?user_id={{mahasiswa_id}}&course_id={{course_id}}&session_id={{session_id}}",
-							"protocol": "https",
-							"host": [ "script", "google", "com" ],
-							"path": [ "macros", "s", "AKfycbzwGB2egCMblZrIQUQJketAhlABHr5jde6JoBAwdY6RhiuLlcs3Wzm1C71cQykB-awqEw", "exec", "presence", "status" ],
-							"query": [
-								{ "key": "user_id", "value": "{{mahasiswa_id}}" },
-								{ "key": "course_id", "value": "{{course_id}}" },
-								{ "key": "session_id", "value": "{{session_id}}" }
-							]
-						}
-					}
-				}
-			]
-		},
-		{
-			"name": "Modul 03 - GPS Tracking",
-			"item": [
-				{
-					"name": "POST Log GPS",
-					"request": {
-						"method": "POST",
-						"header": [ { "key": "Content-Type", "value": "text/plain" } ],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"device_id\": \"{{device_id}}\",\n  \"ts\": \"2026-03-03T10:15:30Z\",\n  \"lat\": -7.2575,\n  \"lng\": 112.7521,\n  \"accuracy_m\": 12.5\n}"
-						},
-						"url": {
-							"raw": "https://script.google.com/macros/s/AKfycbzwGB2egCMblZrIQUQJketAhlABHr5jde6JoBAwdY6RhiuLlcs3Wzm1C71cQykB-awqEw/exec/telemetry/gps",
-							"protocol": "https",
-							"host": [ "script", "google", "com" ],
-							"path": [ "macros", "s", "AKfycbzwGB2egCMblZrIQUQJketAhlABHr5jde6JoBAwdY6RhiuLlcs3Wzm1C71cQykB-awqEw", "exec", "telemetry", "gps" ]
-						}
-					}
-				}
-			]
-		}
-	]
+  "info": {
+    "name": "API Contract Simple v1 - Praktik Komputasi Awan",
+    "description": "Collection resmi mengikuti kontrak aktif GAS berbasis query path.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Modul 01 - Presensi QR",
+      "item": [
+        {
+          "name": "POST Generate QR",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "var json = pm.response.json();",
+                  "pm.test('Envelope has ok', function () { pm.expect(json).to.have.property('ok'); });",
+                  "if (json.ok && json.data && json.data.qr_token) { pm.environment.set('qr_token', json.data.qr_token); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/plain;charset=UTF-8"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"course_id\": \"{{course_id}}\",\n  \"session_id\": \"{{session_id}}\",\n  \"meeting_no\": 1,\n  \"owner_identifier\": \"{{owner_identifier}}\",\n  \"ts\": \"2026-04-01T10:00:00Z\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}?path=presence/qr/generate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [
+                {
+                  "key": "path",
+                  "value": "presence/qr/generate"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST Check-in",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/plain;charset=UTF-8"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{mahasiswa_id}}\",\n  \"device_id\": \"{{device_id}}\",\n  \"course_id\": \"{{course_id}}\",\n  \"session_id\": \"{{session_id}}\",\n  \"qr_token\": \"{{qr_token}}\",\n  \"ts\": \"2026-04-01T10:05:00Z\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}?path=presence/checkin",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [
+                {
+                  "key": "path",
+                  "value": "presence/checkin"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET Status Presensi",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}?path=presence/status&user_id={{mahasiswa_id}}&course_id={{course_id}}&session_id={{session_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [
+                {
+                  "key": "path",
+                  "value": "presence/status"
+                },
+                {
+                  "key": "user_id",
+                  "value": "{{mahasiswa_id}}"
+                },
+                {
+                  "key": "course_id",
+                  "value": "{{course_id}}"
+                },
+                {
+                  "key": "session_id",
+                  "value": "{{session_id}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET Presence List",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}?path=presence/list&course_id={{course_id}}&session_id={{session_id}}&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [
+                {
+                  "key": "path",
+                  "value": "presence/list"
+                },
+                {
+                  "key": "course_id",
+                  "value": "{{course_id}}"
+                },
+                {
+                  "key": "session_id",
+                  "value": "{{session_id}}"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST Stop QR",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/plain;charset=UTF-8"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"course_id\": \"{{course_id}}\",\n  \"session_id\": \"{{session_id}}\",\n  \"owner_identifier\": \"{{owner_identifier}}\",\n  \"ts\": \"2026-04-01T10:10:00Z\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}?path=presence/qr/stop",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [
+                {
+                  "key": "path",
+                  "value": "presence/qr/stop"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Modul 02 - Accelerometer",
+      "item": [
+        {
+          "name": "POST Telemetry Accel",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/plain;charset=UTF-8"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"device_id\": \"{{device_id}}\",\n  \"ts\": \"2026-04-01T10:15:00Z\",\n  \"samples\": [\n    {\n      \"t\": \"2026-04-01T10:14:59Z\",\n      \"x\": 0.11,\n      \"y\": 0.02,\n      \"z\": 9.76\n    },\n    {\n      \"t\": \"2026-04-01T10:15:00Z\",\n      \"x\": 0.12,\n      \"y\": 0.03,\n      \"z\": 9.75\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}?path=telemetry/accel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [
+                {
+                  "key": "path",
+                  "value": "telemetry/accel"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET Accel Latest",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}?path=telemetry/accel/latest&device_id={{device_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [
+                {
+                  "key": "path",
+                  "value": "telemetry/accel/latest"
+                },
+                {
+                  "key": "device_id",
+                  "value": "{{device_id}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET Accel History",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}?path=telemetry/accel/history&device_id={{device_id}}&limit=50",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [
+                {
+                  "key": "path",
+                  "value": "telemetry/accel/history"
+                },
+                {
+                  "key": "device_id",
+                  "value": "{{device_id}}"
+                },
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Modul 03 - GPS Tracking",
+      "item": [
+        {
+          "name": "POST Log GPS",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/plain;charset=UTF-8"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"device_id\": \"{{device_id}}\",\n  \"lat\": -7.2575,\n  \"lng\": 112.7521,\n  \"accuracy_m\": 12.5,\n  \"altitude_m\": 18.2,\n  \"ts\": \"2026-04-01T10:25:30Z\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}?path=telemetry/gps",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [
+                {
+                  "key": "path",
+                  "value": "telemetry/gps"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET GPS Latest",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}?path=telemetry/gps/latest&device_id={{device_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [
+                {
+                  "key": "path",
+                  "value": "telemetry/gps/latest"
+                },
+                {
+                  "key": "device_id",
+                  "value": "{{device_id}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET GPS History",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}?path=telemetry/gps/history&device_id={{device_id}}&limit=50",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [
+                {
+                  "key": "path",
+                  "value": "telemetry/gps/history"
+                },
+                {
+                  "key": "device_id",
+                  "value": "{{device_id}}"
+                },
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
 }
