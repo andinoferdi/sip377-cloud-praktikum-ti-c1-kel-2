@@ -105,6 +105,16 @@ Smoke test rehearsal swap lintas endpoint:
 OWN_BASE_URL="https://script.google.com/macros/s/.../exec" PARTNER_BASE_URL="https://script.google.com/macros/s/.../exec" npm run qa:swap:rehearsal
 ```
 
+Output bukti otomatis:
+
+1. `frontend/.qa-artifacts/swap-rehearsal/latest.json`
+2. `frontend/.qa-artifacts/swap-rehearsal/latest.md`
+
+Catatan:
+
+1. Swap test nyata mensyaratkan `OWN_BASE_URL` dan `PARTNER_BASE_URL` berbeda.
+2. Jika hanya rehearsal internal, tambahkan `ALLOW_SAME_BASE_URL=1`.
+
 E2E UI Modul 1 (Playwright):
 
 ```bash

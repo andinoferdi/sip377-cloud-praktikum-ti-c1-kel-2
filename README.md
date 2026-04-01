@@ -326,6 +326,8 @@ npm run build
 5. Jalankan script:
    1. `cd frontend`
    2. `OWN_BASE_URL="..." PARTNER_BASE_URL="..." npm run qa:swap:rehearsal`
+   3. Laporan bukti otomatis tersimpan di `frontend/.qa-artifacts/swap-rehearsal/latest.json` dan `latest.md`.
+   4. Untuk rehearsal internal (own dan partner sama), set `ALLOW_SAME_BASE_URL=1`.
 
 ### 6.7 Defect reporting format
 
