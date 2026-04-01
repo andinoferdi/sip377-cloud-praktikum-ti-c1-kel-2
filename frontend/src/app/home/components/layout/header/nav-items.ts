@@ -1,7 +1,7 @@
 export const navItems = [
   {
-    href: "/#modul",
-    label: "Modul",
+    href: "/dashboard",
+    label: "QR Presence",
   },
   {
     href: "/accelerometer",
@@ -10,9 +10,5 @@ export const navItems = [
   {
     href: "/gps",
     label: "GPS Map",
-  },
-  {
-    href: "/#kontrak",
-    label: "Kontrak API",
   },
 ] as const;

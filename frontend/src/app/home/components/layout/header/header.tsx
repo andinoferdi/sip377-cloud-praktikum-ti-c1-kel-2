@@ -70,13 +70,6 @@ export default function Header() {
           <div className="flex items-center gap-2">
             <ThemeToggle />
 
-            <Link
-              href="/login"
-              className="hidden lg:inline-flex items-center rounded-lg border border-soft bg-primary-600 px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-80 dark:hover:opacity-90"
-            >
-              Masuk
-            </Link>
-
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -106,15 +99,6 @@ export default function Header() {
                 {item.label}
               </Link>
             ))}
-            <div className="pt-3 mt-2 border-t border-soft">
-              <Link
-                href="/login"
-                className="block rounded-lg bg-primary-600 px-4 py-2.5 text-center text-sm font-semibold text-white transition-opacity hover:opacity-80"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Masuk
-              </Link>
-            </div>
           </nav>
         </div>
       )}
