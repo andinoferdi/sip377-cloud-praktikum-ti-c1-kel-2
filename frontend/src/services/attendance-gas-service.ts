@@ -34,6 +34,7 @@ export const attendanceGasService = {
     return requestGas<ApiResponse<AttendanceQrData>>(ATTENDANCE_API_PATHS.generate, {
       method: "POST",
       json: payload,
+      targetRole: "visualizer",
     });
   },
 
@@ -41,6 +42,7 @@ export const attendanceGasService = {
     return requestGas<ApiResponse<StopSessionData>>(ATTENDANCE_API_PATHS.stopSession, {
       method: "POST",
       json: payload,
+      targetRole: "visualizer",
     });
   },
 
@@ -48,6 +50,7 @@ export const attendanceGasService = {
     return requestGas<ApiResponse<CheckInData>>(ATTENDANCE_API_PATHS.checkIn, {
       method: "POST",
       json: payload,
+      targetRole: "sender",
     });
   },
 
@@ -55,6 +58,7 @@ export const attendanceGasService = {
     return requestGas<ApiResponse<AttendanceStatusData>>(ATTENDANCE_API_PATHS.status, {
       method: "GET",
       query: params,
+      targetRole: "visualizer",
     });
   },
 
@@ -62,6 +66,7 @@ export const attendanceGasService = {
     return requestGas<ApiResponse<AttendanceListData>>(ATTENDANCE_API_PATHS.list, {
       method: "GET",
       query: params,
+      targetRole: "visualizer",
     });
   },
 
@@ -71,6 +76,7 @@ export const attendanceGasService = {
       {
         method: "GET",
         query: params,
+        targetRole: "visualizer",
       },
     );
   },
@@ -81,6 +87,7 @@ export const attendanceGasService = {
       {
         method: "GET",
         query: params,
+        targetRole: "visualizer",
       },
     );
   },
@@ -91,6 +98,7 @@ export const attendanceGasService = {
       {
         method: "POST",
         json: payload,
+        targetRole: "visualizer",
       },
     );
   },

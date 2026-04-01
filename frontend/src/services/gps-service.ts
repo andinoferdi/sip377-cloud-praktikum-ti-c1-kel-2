@@ -52,6 +52,7 @@ export const gpsService = {
     return requestGas<ApiResponse<GpsLogData>>(GPS_API_PATHS.log, {
       method: "POST",
       json: payload,
+      targetRole: "sender",
     });
   },
 
@@ -59,6 +60,7 @@ export const gpsService = {
     return requestGas<ApiResponse<GpsLatestData>>(GPS_API_PATHS.latest, {
       method: "GET",
       query: { device_id: deviceId },
+      targetRole: "visualizer",
     });
   },
 
@@ -71,6 +73,7 @@ export const gpsService = {
         from: query.from,
         to: query.to,
       },
+      targetRole: "visualizer",
     });
   },
 };

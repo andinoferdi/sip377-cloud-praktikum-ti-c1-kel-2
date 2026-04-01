@@ -1,0 +1,203 @@
+(0:00) Ini kelasnya S1 dan C2, dan masing-masing kelompok punya GAS sendiri. Punya GAS, nah GAS-nya ini kan itu ada Google Sheet-nya. Nah di sini, di GAS itu saya kira ada dua macam klien.
+(0:22) Jadi klien yang pertama adalah untuk kirim data. Ada dua macam klien, yang pertama itu untuk kirim data. Yang kedua itu untuk menampilkan data.
+(0:46) Atau ini visualisasi data. Baik presensi, kalau presensi, atau di sini admin. Jadi kalau yang presensi ada yang menampilkan QR, ada yang untuk scan.
+(1:13) Nah kalian di sini biasanya itu kalian pakai satu server yang sama. Seharusnya ini menggunakan dua server yang sama, seharusnya. Dan komunikasi antar klien ke servernya itu sudah menggunakan API.
+(1:43) Jadi bukan semuanya itu baik klien 1 dan klien 2 itu dalam satu server. Saya kira kemarin kan kayak gitu. Seperti klien ini seperti dua halaman website yang berbeda dalam satu server sendiri.
+(2:10) Seharusnya tidak seperti itu. Nah ini nanti yang saya minta itu adalah ini di kelompok setelahnya juga ada GAS. Yang GAS ini juga terkoneksi dengan sheet-nya masing-masing.
+(2:35) Di sini juga ada dua macam klien. Klien yang ini adalah untuk kirim data. Terus juga ada yang visualisasi data.
+(3:03) Atau admin. Nah yang saya minta ketika uji swap test ini, itu adalah tiap kelompok nanti punya menggunakan GAS-nya masing-masing. Jadi misalkan kelompok C1 ini yang jadi kliennya, itu yang mengirim data.
+(3:43) Misalkan ini jadi klien, ini mengirim data ke servernya yang jadi admin-nya. Jadi di sini mengirimkan data yang nanti dishare. Nah masing-masing kali itu nanti saya minta untuk share.
+(4:01) Yang kirim data ini silahkan di-share, yang visualisasi ini juga di-share. Jadi di sini adalah dua GAS. Bukan misalkan C2 juga menggunakan ini.
+(4:16) Misalkan C2 pakai ini di sini. Ini kan berarti misalkan ini dicoba C1, ini C2. Ini maksudnya kelompok yang dari C1 dan kelompok yang dari C2.
+(4:32) Ini kalian masih menggunakan satu server yang sama. Itu pasti saya yakin bisa. Hanya kalian itu share akun atau share alamat webnya.
+(4:54) Jadi di sini yang saya harapkan itu adalah, ini saya bisa menghapus atau tidak bisa. Yang saya harapkan itu adalah yang C1 ini jadi klien, yang C2 itu jadi admin-nya. Atau di sini itu jadi yang menampilkan data.
+(5:14) Jadi di sini dari GAS-nya C1 itu mengirimkan data ke GAS-nya C2. Atau misalkan kalau nanti itu yang C2 yang jadi klien, misalkan di sini C2 yang jadi klien, C1 ini yang nanti jadi admin-nya. Jadi ini nanti juga mengirimkan data ke sini.
+(5:44) Komunikasi ini kan pakai API. Seharusnya kemarin kalian juga sama, antara klien yang untuk kirim data dan klien visualisasi data itu seharusnya kalian memakai dua GAS. Atau misalkan kalau kalian masih menggunakan satu GAS, seharusnya komunikasi di dalamnya itu sudah menggunakan API atau endpoint.
+(6:10) Jadi nanti tinggal mengganti endpoint-nya. Kalau misalkan kalian perlu ada dua GAS. Jadi seperti itu, kalian gunakan GAS-nya kalian sendiri.
+(6:24) Bukan menggunakan GAS kelompok yang lainnya. Oke, itu yang perlu saya sampaikan sebelum ini. Saya pilih kelompok-kelompoknya yang untuk presentasi.
+(6:45) Saya mau cek kalian sudah bisa swap atau belum. C1 ya, jadi C1 ini adalah yang mengirimkan data. Yang C5 ini berarti C2 kelompok 5 yang visualisasi data.
+(7:30) Nanti silakan kalian share screen ya. Dan bagi C1, kelompok 1, dan C2, kelompok 5 bisa angkat tangan ya. Semuanya.
+(7:48) C1, kelompok 1 itu ada Aleron, Safrizal, Felicia, Nur Aziza, sama Noga. Silakan semuanya angkat tangan ya. Jadi bukan perwakilan, tapi semua yang angkat tangan.
+(8:04) Yang tidak angkat tangan saya batalkan presensinya. Terus C2, kelompok 5 itu ada Akbar Zahron, Ahlul Mufi, Muhammad Faizin, Avantido, sama Devaduy. Nanti saya cek satu-satu yang tidak angkat tangan, saya batalkan presensinya.
+(8:35) Mohon maaf Bapak, untuk Ahlul Mufi itu kelompok 2 ya Pak. Ini yang kan C2, kelompok 5. Oh ya sebentar ya.
+(8:35) Oh ya C2, kelompok 5, mohon maaf.
+(8:47) C2, kelompok 5 ada Camilatus, Yuro, Wafi Husna, dan Vestiana. Silakan angkat tangan. C2, kelompok 5.
+(8:47) Biar saya cek satu-satu ya.
+(9:14) Cek satu-satu. Haleron ada. Savrizel ada.
+(9:23) Felicia. Felicia Paramdayani. Ini tidak ada ya.
+(9:33) Saya cek di presensi ada atau tidak. C1. Halo Pak.
+(9:52) Angkat tangan ya. Halo. Ya, angkat tangan.
+(10:00) Ya Pak, saya Felicia. Tidak bisa resen, Pak. Tidak bisa resen, kenapa Mbak?
+(10:00) Ya Pak, saya join pakai Zoom website, ini tidak ada resennya.
+(10:17) Oke, saya ini ya. Pinnya. Oke.
+(10:32) Ini ada yang presensi lagi nih sepertinya ya. Tadi harusnya ada. Ada empat ya, biar saya nanti cek ya.
+(11:02) Nurazizah. Ini ada enggak? Nurazizah tidak ada.
+(11:02) Noga.
+(11:11) Mohon maaf Pak, Nurazizah hadir. Ini tadi sinyalnya nge-lag. Jadi saya reconnect.
+(11:17) Oke. Noga ada. Terus C2.
+(11:27) Kelompok 5. Kamilatus. Kamilatus ada.
+(11:27) Juro.
+(11:36) Juro ada. Wavi. Wavi ada.
+(11:42) Vestiana. Vestiana. Vestiana juga ada.
+(11:49) Oke. Jadi. Bentar.
+(11:59) Ini saya ini ya. apa namanya? Stop share ya.
+(11:59) Silakan.
+(12:03) Kalian bisa share screen ya. Ini bisa. apa namanya?
+(12:03) Dua kelompok masing-masing.
+(12:11) Silakan. Yang apa namanya? Yang.
+(12:11) Perwakilan bisa share screen ya.
+(12:19) Jadi yang jadi. Yang jadi klien itu C1. Silakan perwakilan bisa share screen.
+(13:22) Silakan bisa share screen dulu. Perwakilannya. Permisi Pak.
+(13:33) Mohon maaf. Saya mewakili kelompok 1 dari C1. Saya mau menyampaikan dulu Pak.
+(13:43) Berdasarkan penjelasan Bapak yang Tarusan Bapak menyampaikan. Itu kelompok kami belum memenuhi Penjelasan tersebut Pak. Jadi kelompok kami, klien dan Adminnya masih Satu GAS.
+(13:55) Jadi belum berhubungan Dua GAS gitu Pak. Pakai API. Mohon maaf Pak.
+(14:02) Oke. Dari C25 gimana? C25.
+(14:02) C2 kelompok 5 ya? Permisi Pak.
+(14:26) Saya mau dari kelompok 5 C2. Sepertinya sama kayak Kelompok yang satunya itu Pak. Belum memenuhi kriteria yang Pakai dua GAS.
+(14:36) Tapi bolehkah untuk kasih Presentasi terlebih dahulu Biar tahu tampilannya seperti apa? apa namanya? Sebenarnya bukan dua GAS ya.
+(14:36) Maksudnya ini apa namanya? Kalian itu nanti Pakai klien Dan ini apa namanya? Yang kelompok yang lainnya juga Maksudnya kalian itu konek ke gasnya Kelompok yang lain.
+(14:36) Kelompok yang lain.
+(15:07) Saya nggak tahu kodingannya kalian Kalau kemarin kalian sudah Menggunakan sesuai Panduan yang API kan harusnya bisa. Maksudnya Saya nggak tahu kalau kalian di hardcode atau tidak. Nah ini saya mau Kenapa kok perlu di swap test seperti itu?
+(15:07) Saya mau memastikan apa namanya? Kalian Benar-benar pakai API atau tidak? Karena kalau misalkan Tidak pakai API Langsung di hardcode kan juga itu bisa.
+(15:40) Saya kira tidak perlu ya. apa namanya? Tidak perlu ditampilkan Ini tadi kelompok berapa?
+(15:40) Ini tadi kelompok 5 C2 ya. Jadi Kalian pastikan besok karena di Pertemuan selanjutnya kan Offline ya.
+(16:01) Bisa itu ya. Kalian bisa Ditest dulu Dengan Masing-masing atau dengan Kelompoknya kalian sendiri. Kalian bisa nggak Misalkan hanya Mengganti endpointnya.
+(16:17) Jadi pakai 2 GAS. Kalau kalian sudah terbiasa Atau sudah apa namanya? Saya nggak tahu di teorinya ya.
+(16:17) Dijelaskan atau tidak dengan API dengan Message loosely coupled Jadi Bukan yang tightly coupled.
+(16:46) Jadi ininya apa namanya? Kalau bahasa Ngatainnya saya Microservice Seharusnya bisa pakai apa ya. Jadi kalian Misalkan servernya Atau Bagian yang lainnya Atau klien yang lainnya itu menggunakan Bahasa yang berbeda itu Tidak masalah.
+(16:46) Misalkan yang Kliennya itu pakai PHP Servernya pakai apa namanya? Golang atau pakai Misalkan JavaScript Itu tetap akan bisa diakses.
+(17:25) Jadi yang penting itu adalah Masing-masing Dari keduanya itu Bisa Connect ke API Dan bisa baca JSON Jadi bahasanya itu Tidak Tidak penting Oke saya kira Itu ya.
+(17:25) Jadi Karena yang kedua Kelompok itu Belum Memenuhi Atau kalau salah satu Kelompoknya itu tidak memenuhi Persyaratannya berarti kelompok yang lainnya Juga tidak bisa Maksudnya Yang menampilkan Atau yang kirim data Itu tidak Tidak Menggunakan API Kelompok yang lainnya pasti tidak bisa Connect karena kan Untuk koneksi Antara satu dengan yang lain itu perlu Perlu
+(17:25) API Yang paling Gampang itu kalau ini ya apa namanya kalian Mencoba Ini kalian bisa Pakai ini ya Sebentar Dan bisa nyoba Menggunakan Bahasa Atau Mekanisme ini ya Mekanisme Biar kalian Terbiasa dengan ini ya Dengan apa namanya Mekanisme Klien dan Server yang menggunakan API atau menggunakan Message ya Ini kita kan menggunakan message ya
+(17:25) Bukan Menggunakan apa namanya Request Itu ya Bukan menggunakan apa namanya Response Atau disini klien server Itu ya Antara satu dengan yang Lainnya itu Tidak terikat ya Aplikasi satu dengan aplikasi yang lainnya Tidak terikat satu dengan yang lain Jadi kalau misalkan App satu ini crash App dua itu masih Masih bisa jalan Masih bisa
+(17:25) jalan Begitu pula sebaiknya Kalau app dua yang crash App satu itu masih tetap Bisa jalan karena komunikasi antara Keduanya itu tidak saling tergantung Ini Makanya kita menggunakan API Itu Disini Kalau kalian mau nyoba Supaya Terbiasa dengan ini Menggunakan Mobile app Kalian bisa pakai mobile app Apapun Bisa pakai android Atau Iphone Itu misalkan
+(17:25) kalian Menggunakan Ini ya apa namanya Misalkan kalian pakai Bahasa tertentu Saya lupa bahasa Yang sekarang itu Untuk android Mungkin Bahasa aplikasi android Disini Disini ada Servernya By default Kalau aplikasi android Dia tidak bisa Koneksi ke database Misalkan kalian Mau koneksi ke database android Dia akan stand alone Di hpnya Biasanya pakai sklite Sklite
+(17:25) Sklite atau yang lainnya Kalau Kalian ke server Ke database Itu kan Kalian tidak bisa connect Maksudnya Tidak bisa langsung query Ke server Jadi di server ini biasanya kita buatkan dulu API-nya Yang kalian mungkin Kemarin coba menggunakan golang Ini bisa dipakai Bahasa apapun bisa pakai hp Bisa pakai javascript Nah ini Aplikasi android Ini
+(17:25) connect ke API-nya Biasanya itu Menggunakan web server Yang web server Ini nanti terkoneksi ke Database Bisa pakai Flutter Bisa pakai flutter Bisa pakai react Atau misalkan kalian mau pakai Yang versi jadul Bisa pakai kotlin Atau pakai java Atau pakai bahasa yang lainnya Sekarang bahasa Sangat banyak sekali Nah itu Disini Kita langsung kelihatan
+(17:25) Kalau disini itu adalah dua sistem Yang berbeda Dua sistem yang berbeda Jadi satu sistem dengan sistem yang lain Tidak bisa Terkoneksi Karena mereka Berdiri sendiri Jadi bukan Yang di hp itu adalah Ini apa namanya Ngeakses web Ngeakses web Web nya misalkan disini Ada Alamat tertentu Untuk Web Untuk halaman apa namanya Landing page
+(17:25) Atau apa.
+(17:25) Jadi disini Bukan ngeakses webnya Kalau ngeakses webnya apa namanya Webnya ini itu ada di dalamnya sini Ada di dalamnya server Nah yang saya minta itu Adalah mereka Masing-masing punya Sistem sendiri-sendiri Jadi Atau aplikasi Standalone sendiri-sendiri Dan komunikasinya itu pakai API Nah itu Jadi Bukan dari Saya tidak tahu kemarin kalian Membuatnya bagaimana Membuatnya
+(17:25) bagaimana Tapi yang saya minta Itu adalah yang menggunakan API Oke Saya kira itu ya Terima kasih Kelompok C1 dan Kelompok 1C1 dan kelompok 5C2 Bisa Diturunkan tangannya ya Ini saya akan ngecek lagi Kelompok yang lainnya Mohon maaf pak izin bertanya Silahkan Sebelumnya perkenalkan saya Nur Aliza Dari kelompok 1C1 Nah ini kan Untuk
+(17:25) pertemuan sekarang kan Kelompok kita ditunjuk Untuk presentasi namun karena ada Sesuatu sehingga kita tidak bisa Presentasi sekarang Nah untuk Pertemuan selanjutnya apakah dikasih kesempatan Untuk presentasi lagi ya pak Atau cukup ini aja Nah sebenarnya presentasi Presentasi disitu itu Saya ini ya apa namanya Pengen ngecek Kalian itu berprogres atau tidak Kalian sebenarnya tidak
+(17:25) perlu Harus presentasi Saya Hanya Ngecek kalian benar-benar Ngerjakan atau tidak Dan itu kan saya ajak Ada beberapa mungkin yang disitu Saya minta untuk volunteer Tapi sebenarnya Itu saya ajak Jadi tidak ada Tidak ada Keharusan Untuk presentasi Yang penting itu Nanti di laporannya Dan yang mendapatkan nilai apa namanya Tambah Nilai keaktifan Yang kemarin
+(17:25) itu Volunteer Saya kira itu Nanti yang saya Cek adalah Di laporannya Dan besok Di pertemuan minggu depan juga sama ya Maksudnya saya juga akan Tidak akan Semuanya saya cek satu persatu Tapi akan saya Akan saya ajak Dan apa namanya Kalau misalkan kalian Tidak kebahagiaan Untuk yang Tidak terpilih Yang untuk presentasi Atau yang
+(17:25) saya cek Saya akan cek di laporannya Disitu harusnya ada endpoint-nya Saya kira Saya kira itu Saya kira itu Ada pertanyaan lainnya Isi Pak Faisal Mohon maaf saya Saya izin memastikan Pak Jadi nanti misalkan di swap test itu Kita akan Ngubah link GAS kita di coding kita Sebenarnya bukan link gasnya ya Tapi API-nya
+(17:25) ya Jadi API Untuk akses Ininya apa namanya gasnya Dan itu Gasnya itu adalah yang dari Kelompok lain Jadi nanti akan saya Cek ininya ya Kalau dua Dua komputer itu Seharusnya Kalau memakai dua Dua GAS Alamatnya itu pasti beda Tapi kalau misalkan alamat depannya Itu sama Alamat depannya Contohnya ini ya Misalkan Ininya ya
+(17:25) Ininya Sama Antara kelompok satu dan Kelompok yang satu Dan kelompok yang lainnya Itu pasti menggunakan server yang sama Jadi saya akan minta kalian Menggunakan dua server yang Berbeda yang apa namanya Ketika demo Saya kira itu Berarti Berarti Itu ya pak Bukannya Selama ini sudah server masing-masing ya pak Per mahasiswa itu Iya servernya
+(17:25) masing-masing Tapi disitu kelompok yang lainnya kan Harus mengakses dari Dari servernya sendiri Karena ini kan swap test Jadi misalkan Kelompok yang satu itu menampilkan PR nya Kelompok yang lainnya yang scan Memakai gasnya dia sendiri Iya pak Jadi Iya Berarti kan kita tidak Perlu bisa bertukar Link script gitu pak Link gasnya gitu pak
+(0:00) Ya harus. Kalau misalkan enggak, gimana bisa presensi, gimana kalian tukar-menukar token-nya? Oh gitu Pak.
+(0:00) Ya kan tidak bisa, kan token-nya gimana cara baca token-nya? Kalau misalkan apa yang kelompok satunya itu misalkan nampilkan ini, nampilkan QR gitu ya.
+(0:29) Terus kelompok yang lainnya itu hanya scan misalkan, tanpa misalkan tukar-tukaran token kan enggak mungkin bisa. Kan di situ ada token-nya. Terus misalkan kelompok yang satunya misalkan akselerometer itu ya.
+(0:46) Akselerometer kalau yang satunya ngirim, satunya menampilkan kan berarti harus ngirim ke gasnya yang kelompok menampilkan. Jadi bukan yang ngirim data akselerometernya bukan dari gasnya yang menampilkan juga. Saya ini kan ya, apa namanya?
+(0:46) Mungkin supaya lebih jelas, ini saya skenario-nya saya tampilkan satu per satu ya.
+(1:23) Misalkan yang untuk presensi, presensi berarti kelompok yang lain, kelompok yang pertama ya yang membuat menampilkan QR ya. Tampil QR. Terus misalkan ini adalah C1.
+(1:47) Terus yang C2, di sini ya yang scan QR. Nah kalau misalkan, dan ini memakai gasnya masing-masing ya. Ini pakai GAS 1, ini pakai GAS 2.
+(1:47) Nah kalau misalkan kalian tidak terkoneksi dengan API antara GAS 1 dan GAS 2 yang nggak mungkin berhasil.
+(2:15) Soalnya di sini tokennya gimana? Token di, pastikan beda itu ya. Nanti di sini misalkan scan ke sini, apa namanya dari C2 ini scan ke punya C1.
+(2:15) Terus mengisikan ininya gimana? apa namanya siapa yang nge-get? Di sini kan nanti akan ada seed-nya ya.
+(2:40) Di sini juga ada seed-nya sendiri-sendiri. Kalau misalkan ini scan QR kan nggak mungkin disimpan di seed-nya ini, apa namanya kelompok yang dari C2. Kan disimpannya kan di kelompoknya yang C1.
+(2:56) Nah ini kalau misalkan tidak ada tukar-menukar menggunakan API gimana? Nah jadi yang kemarin kalian ini pakai, saya kira itu kalian masih menggunakan 1 GAS. Yang menampilkan QR dan yang scan QR itu juga dari GAS yang sama.
+(2:56) Ya itu pasti bisa.
+(3:19) Nah tetapi di sini ini kan harus memakai GAS-nya sendiri-sendiri. Ini yang presensi. Terus selanjutnya ini saya tambahkan lagi ya.
+(3:48) Nah sekarang ini misalkan yang akselerometer. Berarti yang misalkan dari C1 ini adalah yang menampilkan datanya ya. Misalkan valisasi data.
+(4:08) Yang menampilkan data IGZ-nya ya atau kalian pakainya apa ya di situ. Nah yang C2 ini adalah yang ngirimkan. Ini yang kirim data.
+(4:26) Dan ini pakai GAS-nya masing-masing. Ini pakai GAS 1, GAS 2. Di sini punya sheet sendiri ya.
+(4:26) Di sini juga pakai sheet sendiri.
+(4:46) Dan sheet ini pasti berbeda-beda. Nah itu nanti tergantung siapa yang jadi yang kirim dan visualisasi data ya. Bisa yang nanti C1 yang ngirim data, C2 yang visualisasi data.
+(5:01) Jadi ya dua-duanya harus bisa. Terus yang GPS juga sama. Jadi yang misalkan C1, di sini C2.
+(5:21) Di sini misalkan ini yang visualisasi, menampilkan data. Sebenarnya yang visualisasi sama yang kirim data ini sama-sama klien. Visualisasi data.
+(5:36) Nah di sini yang tampil map-nya. Yang menampilkan map-nya. Terus yang C2, ini berarti yang kirim.
+(5:54) Kirim data menggunakan GPS-nya dia masing-masing. Ini GAS 1, ini GAS 2. Ini juga punya sheet sendiri-sendiri.
+(5:54) Di sini harus bisa terkoneksi satu dengan yang lainnya.
+(6:24) Kemudian kan API-nya sudah ada di panduannya. Sudah ada di panduannya yang API yang harus ada. Saya kira itu.
+(6:38) Jadi bukan menggunakan GAS. Jadi di sini ketika misalkan nanti GPS. Saya minta untuk demo.
+(6:49) Yang untuk visualisasi data, ini pasti ini beda. apa namanya, yang exact-nya itu. Apps, Apps Script dan apa sampai exact ini.
+(7:02) Itu pasti beda dengan yang di sini. Apps sama exact-nya. Ini pasti beda.
+(7:11) Kalau misalkan link-nya ini sama, berarti kalian menggunakan GAS yang sama. Jadi kalau GAS yang sama, berarti sheet-nya juga sama. Berarti kalian menggunakan server yang sama.
+(7:24) Berarti tidak ada data exchange di situ. Data exchange antara satu server dengan server yang lainnya. Kalau misalkan seperti itu, kita tidak menggunakan fitur atau kemampuan dari cloud yang sebenarnya.
+(7:58) Maksudnya tidak pakai cloud pun itu tidak apa-apa. Tapi cloud itu salah satu yang paling keunggulannya di distribusi ini. Jadi punya server-nya itu saling, mungkin di teori dijelaskan, kita pakainya itu loosely coupled.
+(8:24) Jadi tidak tergantung satu dengan yang lainnya. Jadi masing-masing itu independen. Mau yang lainnya error, jadi sistem yang lainnya juga tidak sama-sama error.
+(8:43) Kalau misalkan di microservice, saya tidak tahu kalian ini pakai yang mana. apa namanya teorinya yang kalian dapatkan untuk microservice. Entah itu di teorinya di cloud ini atau di teorinya mungkin ketika golong kemarin.
+(9:05) Misalkan kalian di aplikasi Shopee atau Tokopedia. Ini misalkan yang untuk display product itu microservice sendiri. Display itu sendiri.
+(9:27) Terus yang untuk payment sendiri. Yang untuk search itu juga sendiri. Terus yang untuk browse itu juga mungkin sendiri.
+(9:44) Jadi misalkan payment-nya error, yang lainnya itu masih bisa jalan. Karena mereka memang server-nya sendiri. Nah itu kan microservice seperti itu, ini sama.
+(10:02) Jadi kita mau mempraktekan itu. Ada yang lain yang mau ditanyakan? Baik, Pak.
+(10:02) Terima kasih, Pak.
+(10:13) Oke. Jadi saya akan cek satu lagi ya. Saya nanti pastikan dulu sudah bisa atau belum.
+(10:45) 1, 5. 1, 5. Oke.
+(10:45) 2, kelompok 4. Oke. Terus kita uji untuk yang GPS ya.
+(11:39) Terus yang jadi client-nya ya, ini yang kirim data ya. Yang kirim data dari kelas C1. Ini Yakob Yaja.
+(12:06) Saya juga kirim di chat. Oke. Kelompok 5 C1 dan kelompok 4 C2 bisa angkat tangan ya.
+(12:38) Biar saya cek satu persatu. Yang 1, kelompok 5. Ada Abdul Alim.
+(12:38) Terus ada Aditya Pratama.
+(13:09) Ada Arya Maulana. Terus ada Jindy Elvira. Sama yang dari Endria.
+(13:22) Terus yang dari C2. Kelompok 4 itu ada Ananda Naufal. Ada Helmy Syait.
+(13:37) Ada Panji Bahtiar. Sama Abdillah Muharrarul. Ini angkat tangan ya.
+(13:49) Kalau tidak angkat tangan saya batalkan presensinya ya. Biar saya mulai dulu dari yang kelompok C1 ya. Kelompok 5, Abdul Alim ada.
+(14:22) Biar saya cek di presensinya ya. Angkat tangan ya. Aditya Pratama ada.
+(14:43) Ada Arya Maulana. Saya cek di presensinya ada atau tidak ya. Endria ini 077.
+(15:49) Di sini harusnya hadir ya. Tapi tidak respon, saya batalkan presensinya ya. Bapak mohon maaf, itu menurut saya belum terabsen.
+(16:03) Tadi kan saya hadir Pak. Hadirnya setelah kapan ya Mbak? Setelah presensi atau sebelumnya?
+(16:03) Sebelum presensi, tapi tadi saya tidak bisa scan karena sinyalnya reconnect terus Pak. Tapi ini tadi saya sudah minta untuk ini ya.
+(16:21) apa namanya on cam dan angkat tangan yang tidak bisa presensi. Oh iya, saya sudah raise hand Pak. Tapi tidak on cam sepertinya ya?
+(16:21) Iya, karena reconnect terus tadi sinyalnya Pak.
+(16:38) Oke, nanti saya pertimbangkan Mbak. Terus Cindy ada, Cindy juga tidak ada. Nindari, Nindari memang tidak ada ya.
+(17:07) Ini tadi siapa Nur? Kenapa? Kenapa?
+(17:07) Cindy reconnect katanya. Tadi info di grup baterainya tinggal 5. Oke ya, seharusnya kalian bisa ini sendiri ya.
+(17:07) apa namanya mempersiapkan ya.
+(17:28) Iya Mbak. Saya pertimbangkan dulu ya. Ini tadi Nur Aziza.
+(17:41) Jadi walaupun online itu bukan misalkan ditinggal gitu ya. Kalau saya biasanya selalu nge-check ya. Ditinggal ya saya patalkan atau tidak respon ya saya patalkan kehadirannya.
+(17:58) Terus yang C2. C2 tadi kelompok 4. C2 kelompok 4.
+(17:58) C2 kelompok 4 Ananda. Ada di situ Helmi.
+(18:18) Helmi ada. Panji, Bahtiyar. Tidak ada Mbak.
+(18:26) Oh, iya Panji ada. Abdillah. Abdillah.
+(18:34) Saya cek lagi ya. Abdillah memang tidak hadir ya. Oke.
+(19:19) Oke, saya kira itu. Ini perwakilan dari kelompok 5 C1 dan dari kelompok 4 C2. Apakah sudah bisa untuk ini didemokan?
+(19:19) Yang swap testnya.
+(19:52) Dari yang kelompok 5 C1. Apakah sudah bisa? Masih belum bisa Pak.
+(19:52) Belum bisa ya.
+(20:04) Oke, tidak apa-apa. Terus yang kelompok 4 C2. Kelompok 4 C2.
+(20:16) Iya Pak, sama kita masih belum bisa Pak. Masih belum sesuai dengan kriteria. Oke, jadi.
+(20:25) Karena minggu depan itu kita swap testnya ya. Pastikan sudah bisa. Atau silakan kalian masing-masing mencoba.
+(20:38) Masing-masing mencoba untuk bisa memenuhi kriteria itu ya. Jadi kalau misalkan kalian tidak menggunakan itu ya. apa namanya.
+(20:53) Itu simpel sekali. Itu simpel sekali. Walaupun ya menggunakan GAS.
+(21:01) apa namanya. Mungkin kalian masih belum terbiasa ya. Tapi pakai ChatGPT kan pasti bisa.
+(21:12) Atau yang lainnya. Yang lainnya saya kira kemungkinan bisanya itu sangat tinggi. Tapi yang di sini yang ingin kita perhatikan itu bukan hanya itu ya.
+(21:26) Tapi exchange-nya itu juga harus kelihatan. Oke, saya kira itu. Terima kasih.
+(21:36) Ini perwakilan dari kelompok 5C1 dan kelompok 4C2 ya. Bisa diturunkan tangannya. Oke, saya kira itu.
+(21:50) Dan untuk teman-teman yang lainnya juga ya. Silakan di koordinasi atau misalkan dicoba dalam satu kelompok gitu ya. Pakai dua GAS itu ya.
+(22:06) Maksimalkan atau coba di masing-masing API-nya ya. Bisa atau tidak gitu ya. Itu kan bisa pakai dua GAS dalam.
+(22:18) Karena satu kelompok kan anggotanya lebih dari satu gitu ya. Jadi bisa memakai akunnya masing-masing. Oke, saya kira itu.
+(22:30) Saya kira itu. Ada pertanyaan? Permisi, Pak.
+(22:30) Yang persensi.
+(22:43) Itu buat client-nya itu perlu dimasukin ke sheet-nya juga nggak, Pak? Kan ada client ada yang server-nya gitu kan. Ada client ada yang QR-nya, yang buat QR-nya gitu kan.
+(22:43) Nah itu kan yang client itu nge-scan QR-nya.
+(22:59) Nah itu pasti masuk ke sheet-nya yang di-QR itu kan, Pak. Kalau yang di sheet-nya, yang client-nya itu masuk juga nggak, Pak? Nggak perlu.
+(22:59) Nggak perlu ya? Nggak perlu.
+(23:10) Tapi kalau misalkan mau sebagai story ya silakan. Itu fitur baru menurut saya. Story misalkan untuk membuktikan kalau kalian sudah scan.
+(23:28) Ya silakan. Atau misalkan nanti untuk sinkronisasi selanjutnya itu juga silakan. Maksudnya kalau tidak connect itu masih bisa atau tidak ada internet itu masih bisa terekam.
+(23:48) Walaupun nanti kalau ada koneksi internet baru misalkan dikirim ke server-nya. Ya silakan. Ini baru ya.
+(24:00) Fitur yang menurut saya fitur baru. Kalau mau ya silakan. Kalau tidak juga tidak apa-apa.
+(24:09) Ada yang lain? Terus buat yang GPS ini kan kirim data juga kan, Pak? Itu yang dikirim apa ya, Pak?
+(24:09) Yang client sama temennya ini buat apa ya yang dikirim itu? Yang GPS? Yang dikirim tetap ininya ya.
+(24:09) apa namanya? Tetap latitude-longitude ya. Sama device ID setidaknya itu.
+(24:28) Berarti dalam bentuk apa, Pak? Dalam bentuk QR atau dalam bentuk apa? Yang client-nya itu?
+(24:28) Maksudnya gimana? Kan nanti juga kayak tukar API gitu kan, Pak? Nah itu nanti client-nya bisa mengakses GPS-nya kita itu nanti dalam bentuk apa?
+(24:28) Enggak, yang kita ngirim ke server. Yang client itu ngirim ke server. Bentar ya.
+(24:57) Kalau kita dari panduan yang kemarin di ini, di PPT itu. Nah ini kan ini sebagai ininya ya, sebagai yang apa namanya client-nya itu kan dia ngirim gitu ya. Dia post ya.
+(25:15) Dia post ada device ID-nya, ada apa namanya? Ada waktunya itu ya, latitude-longitude. Sama di sini diminta akurasi ya.
+(25:15) Di sini kalau misalkan kalian tidak bisa mendapatkan akurasi ya pakai dummy enggak apa-apa.
+(25:34) Jadi ini dikirim, dikirim ke server gitu ya. Dikirim ke GAS-nya kelompok lain gitu ya. Nah GAS-nya kelompok lain kan tinggal ini, menampilkan data ini yang dikirimkan.
+(25:48) Oh berarti yang dasis itu API-nya ya Pak yang post itu? Kenapa? Yang diakses sama client itu yang API post-nya itu kan yang telemetri GPS ini dalam bentuk GPS ini?
+(25:48) Iya. Yang client-nya itu yang penting bisa nge-post. Tapi post-nya ini adalah post ke kelompok lain.
+(26:09) Jadi di kelompok lain itu nanti tinggal ini ya, tinggal menampilkannya. Misalkan di sini pakai ID device keberapa gitu ya. Ini ditampilkan di map-nya.
+(26:25) Bisa ini ya, bisa memahami ya. Berarti tadi masukkan-masukkan link-nya gitu, link API-nya gitu? Iya, betul.
+(26:25) Jadi hanya tukar-tukaran ini-nya saja, apa namanya, API-nya saja.
+(26:38) Baik Pak, terima kasih Pak. Oke. Jadi komunikasi itu harus menggunakan API.
+(26:47) Kalau tidak menggunakan API kan nggak bisa. Jadi tidak bisa langsung bypass ke, saya belum pernah nyoba ya, langsung bypass ke sheet-nya kelompok lain itu ya. Atau sheet-nya GAS yang lain itu ya.
+(27:03) Saya belum pernah nyoba ya. Kalau misalkan kalian mau bypass ya, saya kira tujuan kita bukan mencoba bypass-nya ya, tujuan kita kan mencoba API-nya. Nah ini kalau misalkan mau lebih komprehensif lagi itu klien dan servernya itu menggunakan dua bahasa yang berbeda.
+(27:31) Misalkan kliennya misalkan pakai Flutter gitu ya. Terus yang servernya misalkan pakai GAS gitu ya. Itu kan tinggal masukkan ini-nya ya, endpoint-nya ya, tinggal masukkan endpoint-nya.
+(27:42) Saya kira itu ada lagi pertanyaan? Oke, kalau tidak ada pertanyaan, saya lupa kemarin belum upload ini-nya ya, apa namanya, upload, apa namanya, untuk sertifikasinya ya. Saya catat ya, setelah ini akan saya upload ya, yang untuk UTS.
+(27:42) Jadi yang ini, yang praktek ini, yang modul 1, 2, 3 ini ya, presensi, accelerometer sama GPS, saya berharap sih UTS selesai.
+(28:28) Tapi kalau misalkan belum selesai ya kita nanti lihat, kita nanti lihat apa namanya, perkembangannya dulu seperti apa. Karena ini kan tinggal kalian ngotak-natik kodingannya ya. Kalau kodingannya kemarin sudah ada, API-nya sudah sesuai, seharusnya untuk mengubah itu tidak butuh effort yang banyak.
+(28:54) Saya kira itu, kalau tidak ada pertanyaan, saya kira cukup untuk pertemuan kita. Sekali lagi, karena ini masih suasana awal, saya mohon maaf layak dan batin, kita ketemu lagi di minggu depan. Terima kasih, selamat siang, assalamualaikum warahmatullahi wabarakatuh.

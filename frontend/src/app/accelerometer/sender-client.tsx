@@ -14,8 +14,8 @@ import {
   Smartphone,
   Square,
 } from "lucide-react";
+import { useSwapBackendAvailability } from "@/lib/swap/use-swap-backend-availability";
 import { accelerometerService } from "@/services/accelerometer-service";
-import { hasGasBaseUrl } from "@/services/gas-client";
 import {
   createAccelerometerSessionController,
   createInitialTelemetrySessionState,
@@ -124,6 +124,7 @@ export default function AccelerometerSenderClient() {
   );
   const [supportHint, setSupportHint] = useState<string | null>(null);
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
+  const { isHydrated, hasSenderBackend } = useSwapBackendAvailability();
   const controllerRef = useRef<ReturnType<
     typeof createAccelerometerSessionController
   > | null>(null);
@@ -152,7 +153,10 @@ export default function AccelerometerSenderClient() {
     const controller = createAccelerometerSessionController({
       deviceId,
       async flushSamples(payload) {
-        if (!hasGasBaseUrl()) {
+        if (!isHydrated) {
+          throw new Error("Menunggu sinkronisasi swap runtime.");
+        }
+        if (!hasSenderBackend) {
           throw new Error("NEXT_PUBLIC_GAS_BASE_URL belum diatur.");
         }
 
@@ -184,7 +188,7 @@ export default function AccelerometerSenderClient() {
       void controller.dispose(window);
       controllerRef.current = null;
     };
-  }, [deviceId]);
+  }, [deviceId, hasSenderBackend, isHydrated]);
 
   async function handleStart() {
     if (!controllerRef.current || typeof window === "undefined") {
@@ -312,7 +316,9 @@ export default function AccelerometerSenderClient() {
                 </p>
               </div>
               <p className="mt-3 text-sm leading-6 text-(--token-gray-500) dark:text-(--token-gray-400)">
-                {hasGasBaseUrl()
+                {!isHydrated
+                  ? "Menyiapkan status backend swap runtime."
+                  : hasSenderBackend
                   ? "Flush interval default 1.2 detik aktif. Data dikirim batch ke endpoint POST /telemetry/accel."
                   : "Env backend belum diatur. Sensor tetap bisa hidup, tetapi pengiriman batch akan gagal."}
               </p>

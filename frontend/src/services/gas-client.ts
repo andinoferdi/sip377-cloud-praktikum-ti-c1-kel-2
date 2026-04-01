@@ -1,4 +1,8 @@
 import { fetcher } from "@/services/fetcher";
+import {
+  resolveSwapBaseUrl,
+  type SwapTargetRole,
+} from "@/services/swap-runtime-config";
 
 type Primitive = string | number | boolean;
 
@@ -9,6 +13,8 @@ type GasRequestOptions = {
   query?: QueryParams;
   json?: unknown;
   signal?: AbortSignal;
+  targetRole?: SwapTargetRole;
+  baseUrlOverride?: string;
 };
 
 function trimTrailingSlash(value: string) {
@@ -19,19 +25,69 @@ function normalizeGasPath(path: string) {
   return path.replace(/^\/+/, "");
 }
 
+const GAS_BASE_URL_PREFIX = "NEXT_PUBLIC_GAS_BASE_URL=";
+
+function stripWrappedQuotes(value: string) {
+  if (
+    (value.startsWith('"') && value.endsWith('"')) ||
+    (value.startsWith("'") && value.endsWith("'"))
+  ) {
+    return value.slice(1, -1).trim();
+  }
+  return value;
+}
+
+export function normalizeGasBaseUrl(value: string | null | undefined) {
+  let normalized = String(value ?? "").trim();
+
+  while (normalized.startsWith(GAS_BASE_URL_PREFIX)) {
+    normalized = normalized.slice(GAS_BASE_URL_PREFIX.length).trim();
+  }
+
+  return stripWrappedQuotes(normalized);
+}
+
 export function getGasBaseUrl() {
-  return (process.env.NEXT_PUBLIC_GAS_BASE_URL ?? "").trim();
+  return normalizeGasBaseUrl(process.env.NEXT_PUBLIC_GAS_BASE_URL);
 }
 
-export function hasGasBaseUrl() {
-  return getGasBaseUrl().length > 0;
+export function getResolvedGasBaseUrl(
+  targetRole: SwapTargetRole = "visualizer",
+  baseUrlOverride?: string,
+) {
+  return resolveSwapBaseUrl(targetRole, getGasBaseUrl(), {
+    baseUrlOverride,
+  }).baseUrl;
 }
 
-export function buildGasUrl(path: string, query?: QueryParams) {
-  const base = getGasBaseUrl();
+export function hasGasBaseUrl(
+  targetRole: SwapTargetRole = "visualizer",
+  baseUrlOverride?: string,
+) {
+  return getResolvedGasBaseUrl(targetRole, baseUrlOverride).length > 0;
+}
+
+type BuildGasUrlOptions = {
+  targetRole?: SwapTargetRole;
+  baseUrlOverride?: string;
+};
+
+export function buildGasUrl(
+  path: string,
+  query?: QueryParams,
+  options: BuildGasUrlOptions = {},
+) {
+  const resolved = resolveSwapBaseUrl(
+    options.targetRole ?? "visualizer",
+    getGasBaseUrl(),
+    {
+      baseUrlOverride: options.baseUrlOverride,
+    },
+  );
+  const base = resolved.baseUrl;
   if (!base) {
     throw new Error(
-      "NEXT_PUBLIC_GAS_BASE_URL belum diatur. Mode direct GAS tidak tersedia.",
+      "GAS base URL belum diatur untuk role ini. Atur env atau Swap Control runtime.",
     );
   }
 
@@ -57,7 +113,10 @@ export async function requestGas<T>(
   options: GasRequestOptions = {},
 ) {
   const method = options.method ?? "GET";
-  const url = buildGasUrl(path, options.query);
+  const url = buildGasUrl(path, options.query, {
+    targetRole: options.targetRole,
+    baseUrlOverride: options.baseUrlOverride,
+  });
 
   if (method === "POST" && options.json !== undefined) {
     return fetcher<T>(url, {

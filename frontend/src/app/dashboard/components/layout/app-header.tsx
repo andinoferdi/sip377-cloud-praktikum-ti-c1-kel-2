@@ -62,7 +62,7 @@ export default function AppHeader({ session }: AppHeaderProps) {
               {session.name.charAt(0).toUpperCase()}
             </span>
             <div className="text-xs leading-tight">
-              <p className="max-w-[120px] truncate font-semibold text-(--token-gray-800) dark:text-(--token-white)">
+              <p className="max-w-30 truncate font-semibold text-(--token-gray-800) dark:text-(--token-white)">
                 {session.name}
               </p>
               <p className="capitalize text-(--token-gray-400) dark:text-(--token-gray-500)">

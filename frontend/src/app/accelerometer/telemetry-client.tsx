@@ -16,11 +16,11 @@ import {
   Square,
   TimerReset,
 } from "lucide-react";
+import { useSwapBackendAvailability } from "@/lib/swap/use-swap-backend-availability";
 import {
   accelerometerService,
   type AccelerometerSample,
 } from "@/services/accelerometer-service";
-import { hasGasBaseUrl } from "@/services/gas-client";
 import {
   appendSampleToHistory,
   createInitialTelemetryChartGovernor,
@@ -79,12 +79,19 @@ function detectMobileTelemetryMode(win: Window) {
   return false;
 }
 
-function buildSavedStatusText(state: TelemetrySessionState) {
+function buildSavedStatusText(
+  state: TelemetrySessionState,
+  options: { isHydrated: boolean; hasSenderBackend: boolean },
+) {
   if (state.lastFlushError) {
     return state.lastFlushError;
   }
 
-  if (!hasGasBaseUrl()) {
+  if (!options.isHydrated) {
+    return "Menyiapkan status backend swap runtime.";
+  }
+
+  if (!options.hasSenderBackend) {
     return "NEXT_PUBLIC_GAS_BASE_URL belum diatur. Backend flush dinonaktifkan.";
   }
 
@@ -192,6 +199,8 @@ export default function AccelerometerClient() {
   const [mobileFrameIntervalMs, setMobileFrameIntervalMs] = useState<number>(
     TELEMETRY_CHART_FRAME_INTERVAL_STEPS[0],
   );
+  const { isHydrated, hasSenderBackend, hasVisualizerBackend } =
+    useSwapBackendAvailability();
   const controllerRef = useRef<ReturnType<
     typeof createAccelerometerSessionController
   > | null>(null);
@@ -210,7 +219,7 @@ export default function AccelerometerClient() {
 
   const latestQuery = useQuery({
     queryKey: ["accelerometer-latest", deviceId],
-    enabled: hasGasBaseUrl() && deviceId !== "telemetry-loading",
+    enabled: isHydrated && hasVisualizerBackend && deviceId !== "telemetry-loading",
     queryFn: async () => {
       const response = await accelerometerService.getLatestTelemetry(deviceId);
       if (!response.ok) {
@@ -250,7 +259,11 @@ export default function AccelerometerClient() {
     const controller = createAccelerometerSessionController({
       deviceId,
       async flushSamples(payload) {
-        if (!hasGasBaseUrl()) {
+        if (!isHydrated) {
+          throw new Error("Menunggu sinkronisasi swap runtime.");
+        }
+
+        if (!hasSenderBackend) {
           throw new Error("NEXT_PUBLIC_GAS_BASE_URL belum diatur.");
         }
 
@@ -285,7 +298,7 @@ export default function AccelerometerClient() {
       void controller.dispose(window);
       controllerRef.current = null;
     };
-  }, [deviceId]);
+  }, [deviceId, hasSenderBackend, isHydrated]);
 
   async function handleStart() {
     if (!controllerRef.current || typeof window === "undefined") {
@@ -552,7 +565,9 @@ export default function AccelerometerClient() {
                 </p>
               </div>
               <p className="mt-3 text-sm leading-6 text-(--token-gray-500) dark:text-(--token-gray-400)">
-                {hasGasBaseUrl()
+                {!isHydrated
+                  ? "Menyiapkan status backend swap runtime."
+                  : hasSenderBackend
                   ? "Endpoint GAS aktif. Flush sample berjalan selama sesi realtime."
                   : "Env backend belum diatur. Live reading tetap bisa berjalan, tetapi data tidak dapat dikirim ke GAS."}
               </p>
@@ -764,10 +779,13 @@ export default function AccelerometerClient() {
                   <p className="mt-2 text-lg font-semibold text-(--token-gray-900) dark:text-(--token-white)">
                     {formatTime(sessionState.lastFlushAt)}
                   </p>
-                  <p className="mt-3 text-sm leading-6 text-(--token-gray-600) dark:text-(--token-gray-300)">
-                    {buildSavedStatusText(sessionState)}
-                  </p>
-                </div>
+                    <p className="mt-3 text-sm leading-6 text-(--token-gray-600) dark:text-(--token-gray-300)">
+                      {buildSavedStatusText(sessionState, {
+                        isHydrated,
+                        hasSenderBackend,
+                      })}
+                    </p>
+                  </div>
 
                 {latestQuery.isError ? (
                   <p className="mt-4 text-sm text-rose-500">

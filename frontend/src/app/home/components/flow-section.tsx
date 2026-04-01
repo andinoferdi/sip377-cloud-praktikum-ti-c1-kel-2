@@ -182,7 +182,7 @@ export default function FlowSection() {
                         className="flex items-start gap-2.5 text-xs leading-relaxed text-(--token-gray-600) dark:text-(--token-gray-300)"
                       >
                         <span
-                          className={`mt-[5px] h-1.5 w-1.5 shrink-0 rounded-full ${acc.dot}`}
+                          className={`mt-1.25 h-1.5 w-1.5 shrink-0 rounded-full ${acc.dot}`}
                         />
                         {feat}
                       </li>

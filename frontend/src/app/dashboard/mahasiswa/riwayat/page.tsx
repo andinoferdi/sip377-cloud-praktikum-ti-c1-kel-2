@@ -97,7 +97,7 @@ export default function MahasiswaHistoryPage() {
                     <td className="whitespace-nowrap px-4 py-3 text-sm text-(--token-gray-700) dark:text-(--token-gray-300)">
                       {item.course_id}
                     </td>
-                    <td className="max-w-[160px] truncate px-4 py-3 font-mono text-xs text-(--token-gray-500) dark:text-(--token-gray-400)">
+                    <td className="max-w-40 truncate px-4 py-3 font-mono text-xs text-(--token-gray-500) dark:text-(--token-gray-400)">
                       {item.session_id}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-(--token-gray-500) dark:text-(--token-gray-400)">
